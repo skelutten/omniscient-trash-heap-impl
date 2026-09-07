@@ -1,8 +1,15 @@
-# The Omniscient Trash Heap
+# The Omniscient Trash Heap — Reference Implementation
 
 > *All the sources. All the wisdom. Some of the trash.*
 
-**The Omniscient Trash Heap** (`trashheap`) är ett deterministiskt kunskapskompilerings- och verifieringssystem (LLM Wiki Knowledge Architecture v3.8.10). Systemet garanterar formell verifierbarhet, flerskiktad validering (Lager 1–5), strikt epistemisk proveniens, hybrid återhämtning (RRF över BM25, kunskapsgraf och tät vektorrepresentation), strukturell kodanalys (AST) samt tvåvägs interoperabilitet med Google Open Knowledge Foundation (OKF v0.2).
+**The Omniscient Trash Heap** (`trashheap`) är den officiella och fullt verifierade Python-referensimplementationen av kunskapsarkitekturen LLM Wiki (v3.8.10). Systemet tillhandahåller deterministisk kunskapskompilering, flerskiktad validering (Lager 1–5), strikt epistemisk proveniens, hybrid återhämtning (RRF över BM25, kunskapsgraf och tät vektorrepresentation), strukturell kodanalys (AST) samt tvåvägs interoperabilitet med Google Open Knowledge Foundation (OKF v0.2).
+
+### Specifikationer & Planer
+Detta repository fokuserar strikt på den körbara implementationen och testerna. Normativa specifikationer, arkitekturkrav och den fullständiga implementationshistoriken hanteras i specifikationsrepot:
+👉 **[skelutten/omniscient-trash-heap-spec](https://github.com/skelutten/omniscient-trash-heap-spec)**
+- [Normativa specifikationer (`specs/`)](https://github.com/skelutten/omniscient-trash-heap-spec/tree/master/specs)
+- [Implementationsplaner (`plans/`)](https://github.com/skelutten/omniscient-trash-heap-spec/tree/master/plans)
+- [Beslutslogg (`plans/DECISION_LOG.md`)](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/plans/DECISION_LOG.md)
 
 ---
 
@@ -93,7 +100,7 @@ uv run trashheap query "poker" --corpus-root /home/daniel6651/wiki --include-dra
 
 ### Varför behövs `--include-drafts` för gamla wikin?
 
-Enligt migreringsspecifikationen ([Plan 60](plans/60-OLD-WIKI-MIGRATION.md) / Kontraktsregel 10) importeras legacy-artiklar med säkerhetsstatus `status: draft`. Detta förhindrar att omodererat material automatiskt markeras som formellt fastställd sanning (`status: established`).
+Enligt migreringsspecifikationen ([Plan 60](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/plans/60-OLD-WIKI-MIGRATION.md) / Kontraktsregel 10) importeras legacy-artiklar med säkerhetsstatus `status: draft`. Detta förhindrar att omodererat material automatiskt markeras som formellt fastställd sanning (`status: established`).
 
 Sökmotorn filtrerar som standard bort `draft`-objekt i kanoniskt läge. Med flaggan `--include-drafts` inkluderas alla migrerade artiklar i sökresultaten.
 
