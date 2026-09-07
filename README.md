@@ -126,6 +126,137 @@ Bayesian inference is a method of statistical inference in which Bayes' theorem 
 
 ---
 
+## ⚙️ Architectural Engines & Capabilities
+
+Below is an overview of how the core subsystems interact to turn chaotic inputs into audited, queryable, interconnected knowledge:
+
+| Engine | Primary Specifications | Role & Core Mechanism | Output Artifact |
+|---|---|---|---|
+| **Ingest & Promotion Pipeline** | [`INGEST-PIPELINE.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/INGEST-PIPELINE.md), [`INGEST.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/INGEST.md), [`REVIEW-PROMOTION.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/REVIEW-PROMOTION.md) | Captures untrusted raw sources, sanitizes prompts, routes scopes, stages candidate proposals, and executes atomic DPCP promotion. | Immutable `raw/` captures & canonical notes in `personal/` or `engineering/` |
+| **Hybrid & Graph Retrieval** | [`RETRIEVAL.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/RETRIEVAL.md), [`GRAPH-RETRIEVAL.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/GRAPH-RETRIEVAL.md) | 8-stage search pipeline combining BM25, BFS graph traversal, offline dense vectors, and AST symbols via Reciprocal Rank Fusion ($k=60$). | Grounded, bounded Evidence Bundles with full cryptographic provenance |
+| **Graph Intelligence** | [`GRAPH-INTELLIGENCE.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/GRAPH-INTELLIGENCE.md), [`DISCOVERY.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/DISCOVERY.md) | Read-only graph analysis: centrality, community detection, dialectic tension/contradiction discovery, cycle detection, and orphan audits. | Derived analytical indexes, graph metrics, and discovery proposals |
+| **Structural Knowledge Graph (SKG)** | [`STRUCTURAL-GRAPH.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/STRUCTURAL-GRAPH.md) | Deterministic AST code intelligence linking source code symbols (`FILE`, `CLASS`, `FUNCTION`) directly to knowledge specifications. | Code-to-spec traceability graph ([`structural_registry.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/schemas/registry/structural_registry.yaml)) |
+| **Multi-Layer Validation Gate** | [`VALIDATION.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/VALIDATION.md) | 3-layer deterministic compilation gate checking schema syntax, relational invariants, and epistemic policies with 50+ fail-closed error codes. | Bit-for-bit conformance gate ([`conformance_matrix.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/conformance_matrix.yaml)) |
+
+---
+
+### 1. 📥 Ingest & Promotion Pipeline: The Quarantine Firewall
+
+Most LLM tools give the model direct write permissions to your notes. The Omniscient Trash Heap treats the LLM as an unprivileged, stochastic worker quarantined behind strict transaction barriers:
+
+```text
+External Source (URL, Chat, PDF, Code)
+       │
+       ▼  (CSCC: Crash-Safe Source Capture Commit — dual fsync + parent directory barriers)
+Immutable Capture (`raw/`)
+       │
+       ▼  (Sanitization & Prompt Injection Fencing — tag escaping + <untrusted_source> wrappers)
+Extraction & Synthesis (Zero-Tool Capability Firewall)
+       │
+       ▼  (Scope Router: Cache ➔ Git Anchor ➔ Keyword Rules ➔ Fallback)
+       │
+       ▼  (3-Point Granularity Filter: Macro G1, Meso G2, Micro G3)
+Candidate Proposal (`staging/discovery/` — pending status, 90-day TTL)
+       │
+       ▼  (Human-in-the-Loop Review & HMAC Signature Binding)
+Promotion Engine (DPCP: SQLite WAL Journal with rollback)
+       │
+       ▼  (Atomic os.replace)
+Canonical Knowledge Object (`personal/` or `engineering/`)
+```
+
+- **CSCC (Crash-Safe Source Capture Commit):** An 8-step protocol for capturing raw documents with cryptographic SHA-256 verification and dual `fsync` barriers across parent directory boundaries to survive power loss.
+- **Prompt Injection Fencing:** Untrusted input is strictly enclosed in `<untrusted_source>` tags. Any occurrences of closing tags inside the raw source are sanitized to `&lt;/untrusted_source&gt;` prior to LLM inspection (`D105`).
+- **Scope Router:** Deterministically assigns objects to `personal` or `engineering` scopes via a 4-tier decision cascade: cached decisions $\rightarrow$ repository anchor heuristics $\rightarrow$ keyword/toolchain rules $\rightarrow$ probabilistic fallback.
+- **Granularity Gate (G1–G3):** Enforces proper document splitting so notes remain atomic rather than monolithic kitchen-sink files.
+- **DPCP (Durable Promotion Commit Protocol):** A transactional journal with rollback to move approved candidate proposals into canonical storage using atomic `os.replace`.
+- **Filesystem Paranoia:** The engine actively verifies filesystem capabilities. On native Linux/macOS filesystems (Tier 1: ext4, XFS, Btrfs, APFS), true POSIX atomic replacement is guaranteed; on WSL2 DrvFs mounts (`/mnt/c/`, Tier 2), it detects translation degradation and issues diagnostic warnings.
+
+---
+
+### 2. 🔍 Hybrid & Graph Retrieval: 4-Way Reciprocal Rank Fusion (RRF)
+
+Searching your second brain shouldn't rely on fuzzy vector similarity alone. The system executes an 8-stage hybrid retrieval pipeline combining lexical precision with graph topology:
+
+```text
+User Query
+    │
+    ▼
+1. Query Understanding (Intent, entities, explicit node IDs)
+    │
+    ▼
+2. Scope & Facet Pre-filter (Scope isolation, domain, status, validity period)
+    │
+    ▼
+3. Seed Retrieval (BM25 Okapi lexical search + 384-dim dense vectors) ──► Top-K Seeds
+    │
+    ▼
+4. BFS Graph Expansion (Traverse typed ontology relations by category priority)
+    │
+    ▼
+5. Post-Filter (Epistemic authority, confidence threshold, scope firewall)
+    │
+    ▼
+6. 4-Way Hybrid Fusion (RRF k=60 combining Lexical + Vector + Subgraph + AST)
+    │
+    ▼
+7. Hybrid Reranking (Cross-encoder scoring with deterministic RRF fallback)
+    │
+    ▼
+8. Evidence Bundle (Bounded excerpts ≤ 250 chars with strict provenance hashes)
+```
+
+- **Lexical BM25 Okapi:** Exact terminology and code token matching ($k_1=1.5, b=0.75$) with $[0.0, 1.0]$ normalization.
+- **BFS Graph Topology Expansion:** Explores neighborhood subgraphs starting from seed nodes. Graph traversal prioritizes structural (`PART_OF`), dependency (`DEPENDS_ON`), and engineering (`IMPLEMENTS`) links over generic associations.
+- **Offline Dense Vectors:** Opt-in 384-dimensional dense vectors scored via *max-over-chunks aggregation* (empirically settling the *SCALE-001* hypothesis by ensuring focused paragraphs inside longer notes are properly scored).
+- **Evidence Bundles:** Queries generate self-contained, auditable JSON payloads (`evidence_bundle.json`) with character-bounded excerpts ($\le 250$ chars), node hashes, and relation lineages for verified grounding.
+
+---
+
+### 3. 🧠 Graph Intelligence: The Analytic Microscope
+
+The Graph Intelligence engine operates strictly on read-only projections of the canonical graph ([`GRAPH-INTELLIGENCE.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/GRAPH-INTELLIGENCE.md)), ensuring analytical passes never mutate human notes without explicit review:
+
+- **Centrality & Bottleneck Detection:** Computes PageRank, betweenness, and degree centrality to surface high-leverage architectural nodes and identify single-point-of-failure concepts.
+- **Community Clustering:** Runs graph partition algorithms (e.g. Leiden-style modularity) to discover emergent thematic clusters without breaking or polluting the directory taxonomy.
+- **Dialectical Tension & Contradiction Discovery:** Surfaces conflicting assertions across documents (e.g. conflicting specifications or divergent definitions) by analyzing `CONTRADICTS`, `EXTENDS`, and `SUPERSEDES` relation edges.
+- **Integrity & Cycle Auditing:** Enforces Directed Acyclic Graph (DAG) invariants on hierarchical relations (`PART_OF`, `INSTANCE_OF`) to eliminate circular logic (**GRAPH-001** / **E010**), while flagging orphaned notes that lack inbound or outbound connections.
+- **Knowledge Gap Analysis:** Surfaces missing documentation links, unverified empirical claims (`evidence: unverified`), or dead ends in dependency chains.
+
+---
+
+### 4. 🧬 Structural Knowledge Graph (SKG): Code-to-Knowledge Traceability
+
+Most software documentation drifts away from the implementation within weeks. The Structural Knowledge Graph constructs a deterministic bridge between source code and knowledge objects:
+
+```text
+Source Code (AST / Treesitter)          Canonical Knowledge Base
+┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│ File: trashheap/retrieval.py    │    │ Spec: RETRIEVAL.md              │
+│   Class: HybridRetriever        │───►│   Feature: FET-HYBRID_RRF       │
+│     Function: reciprocal_rank() │    │   Requirement: REQ-RRF-K60      │
+└─────────────────────────────────┘    └─────────────────────────────────┘
+          ▲                                       ▲
+          └────────── IMPLEMENTS / VERIFIES ──────┘
+```
+
+- **Separated Registry:** Governed independently by [`structural_registry.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/schemas/registry/structural_registry.yaml) to ensure AST relations (`CALLS`, `IMPORTS`, `CONTAINS`, `TESTS_SYMBOL`) never contaminate the human semantic [`relation_registry.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/schemas/registry/relation_registry.yaml).
+- **Deterministic AST Extraction:** Machine-builds language syntax graphs from Python/TypeScript codebases.
+- **Bidirectional Traceability:** Enables answering questions like *"Which architectural requirements are affected if we alter `HybridRetriever.fuse()`?"* or *"Which unit tests verify `REQ-RRF-K60`?"*.
+
+---
+
+### 5. 🛡️ Multi-Layer Validation Gate: The Zero-Tolerance Compiler
+
+Knowledge is continuously compiled and verified through a 3-layer deterministic validation gate:
+
+- **Layer 1: Syntax & Schema Validation:** Validates Pydantic schemas, guarantees frontmatter keys use `extra: forbid`, verifies slug path determinism, and checks mandatory facet compliance per object type.
+- **Layer 2: Relational & Graph Invariants:** Verifies allowed `source_types` and `target_types` per relation, guarantees inverse view uniqueness (**REL-008**), prevents duplicate edges, and detects DAG cycles.
+- **Layer 3: Epistemic & Policy Drift:** Enforces that procedural objects (`Workflow`, `Procedure`) meet strict executability axioms (W1–W3), validates confidence scores, and prevents Agent Skills drift (`E050`).
+- **Fail-Closed Error Hierarchy:** More than 50 deterministic error codes across partitioned namespaces (`E001`–`E050` base linter, `E101`–`E199` ingestion, `E201`–`E299` graph intelligence, `E301`–`E399` structural graph).
+
+---
+
 ## 📜 Specifications & Contracts
 
 This repository is the **executable reference implementation** (`trashheap`). The authoritative, normative specifications, 11 declarative YAML registries, and full architectural decision records live in:
