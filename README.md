@@ -125,7 +125,7 @@ ln -sfn $(pwd)/.agents/skills/trashheap ~/.agents/skills/trashheap
 The system strictly enforces physical separation between code, test fixtures, and real wiki corpora:
 
 1. **Engine & Implementation:**
-   - Location: `/home/daniel6651/omniscient-trash-heap-agy` (this repository)
+   - Location: `/home/daniel6651/omniscient-trash-heap-impl` (this repository)
    - CLI package: `trashheap/`
    - Local test suites: `tests/`
 2. **Canonical Reference Corpus (Test Fixtures):**
@@ -133,7 +133,7 @@ The system strictly enforces physical separation between code, test fixtures, an
    - Contains 20 certified reference Knowledge Objects used for conformance testing and CI gates. Standard default for `--corpus-root`.
 3. **Converted Real-World Wiki:**
    - Location: `/home/daniel6651/wiki`
-   - Contains **572 migrated articles** categorized under `personal/` taxonomy directories (e.g. `02_formal_sciences_mathematics/`, `04_psychology_cognition/`).
+   - Contains **572 migrated articles** categorized under `personal/` taxonomy directories (e.g. `02_formella_vetenskaper_matematik/` [formal sciences & mathematics], `04_psykologi_kognition/` [psychology & cognition]).
    - Every note carries full YAML frontmatter and unbroken provenance back to its original source (`source_refs`).
 4. **Historical Raw Capture:**
    - Location: `/home/daniel6651/wiki-old/wiki`
@@ -191,8 +191,8 @@ cat /home/daniel6651/wiki/personal/02_formella_vetenskaper_matematik/PERS-DOC-MI
 Add these to your `~/.bashrc` for instant terminal access without typing paths:
 
 ```bash
-alias mywiki='uv run --directory /home/daniel6651/omniscient-trash-heap-agy trashheap query --corpus-root /home/daniel6651/wiki --include-drafts'
-alias mywikishow='uv run --directory /home/daniel6651/omniscient-trash-heap-agy trashheap show --corpus-root /home/daniel6651/wiki'
+alias mywiki='uv run --directory /home/daniel6651/omniscient-trash-heap-impl trashheap query --corpus-root /home/daniel6651/wiki --include-drafts'
+alias mywikishow='uv run --directory /home/daniel6651/omniscient-trash-heap-impl trashheap show --corpus-root /home/daniel6651/wiki'
 ```
 
 Then simply use:
