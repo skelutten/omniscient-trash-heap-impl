@@ -48,6 +48,12 @@ for p in fixtures:
 print(f'  ✓ {len(fixtures)} canonical fixtures parsed and frontmatter-verified')
 "
 
+echo "==> Checking Agent Skills drift (E050)..."
+$PYTHON -m trashheap.cli generate-skills --check
+
+echo "==> Running multi-layered linter across canonical fixtures..."
+$PYTHON -m trashheap.cli lint fixtures/canonical
+
 echo "==> Running pytest test suite..."
 $PYTEST -q
 

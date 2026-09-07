@@ -1,14 +1,25 @@
-"""Command-line interface for The Omniscient Trash Heap (trashheap)."""
+"""Command-line interface for The Omniscient Trash Heap (trashheap).
+
+Implements non-interactive, scriptable subcommands with deterministic exit codes (ExitCode 0..4)
+and standardized machine-readable --json outputs.
+"""
 
 import argparse
 import json
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from trashheap.constants import VERSION, ExitCode
+from trashheap.corpus import load_corpus
+from trashheap.linter import Finding, Linter
+from trashheap.rebuild import rebuild_indexes
 from trashheap.registry.loader import RegistryLoadError, load_registries
 from trashheap.registry.validator import RegistryFinding, validate_cross_registries
+from trashheap.rename import rename_entity
+from trashheap.retrieval import HybridRetriever
+from trashheap.skills import check_agent_skills, write_agent_skills
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,27 +41,171 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command", help="Subcommands")
 
-    # Command: check-registries
+    # 1. check-registries
     check_reg_parser = subparsers.add_parser(
         "check-registries",
         help="Validate all 10 YAML registry schemas and cross-registry consistency",
     )
     check_reg_parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Emit machine-readable JSON output",
+        "--json", action="store_true", help="Emit machine-readable JSON output"
     )
     check_reg_parser.add_argument(
-        "--registry-dir",
-        type=str,
-        default=None,
-        help="Custom path to schemas/registry directory",
+        "--registry-dir", type=str, default=None, help="Custom path to schemas/registry"
     )
     check_reg_parser.add_argument(
-        "--repo-root",
-        type=str,
-        default=None,
-        help="Root repository directory for resolving spec ownership paths",
+        "--repo-root", type=str, default=None, help="Root repository directory"
+    )
+
+    # 2. lint
+    lint_parser = subparsers.add_parser(
+        "lint",
+        help="Run multi-layered validation (Layers 1–5, E001–E051, W001–W015) across the corpus",
+    )
+    lint_parser.add_argument(
+        "path", nargs="?", default="fixtures/canonical", help="Path to corpus or file to lint"
+    )
+    lint_parser.add_argument(
+        "--warnings-as-errors", action="store_true", help="Treat warnings as errors"
+    )
+    lint_parser.add_argument(
+        "--strict", action="store_true", help="Strict mode (elevates warnings)"
+    )
+    lint_parser.add_argument(
+        "--scope", choices=["personal", "engineering"], default=None, help="Filter scope"
+    )
+    lint_parser.add_argument(
+        "--now", type=str, default=None, help="Reference date (YYYY-MM-DD) for temporal checks"
+    )
+    lint_parser.add_argument(
+        "--registry-dir", type=str, default=None, help="Custom path to schemas/registry"
+    )
+    lint_parser.add_argument(
+        "--no-check-skills", action="store_true", help="Skip agent skills drift check"
+    )
+    lint_parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
+    )
+
+    # 3. validate
+    val_parser = subparsers.add_parser(
+        "validate",
+        help="Validate frontmatter and integrity for a single file within the full corpus context",
+    )
+    val_parser.add_argument("file", type=str, help="Path to Markdown file to validate")
+    val_parser.add_argument("--corpus-root", type=str, default=None, help="Corpus root directory")
+    val_parser.add_argument(
+        "--registry-dir", type=str, default=None, help="Custom path to schemas/registry"
+    )
+    val_parser.add_argument("--now", type=str, default=None, help="Reference date (YYYY-MM-DD)")
+    val_parser.add_argument("--strict", action="store_true", help="Strict mode")
+    val_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # 4. rename
+    rename_parser = subparsers.add_parser(
+        "rename",
+        help="Atomically rename an entity and propagate all backlinks and graph references",
+    )
+    rename_parser.add_argument("--old-id", required=True, help="Existing entity ID")
+    rename_parser.add_argument("--new-id", required=True, help="New target entity ID")
+    rename_parser.add_argument(
+        "--corpus-root", type=str, default="fixtures/canonical", help="Corpus root directory"
+    )
+    rename_parser.add_argument(
+        "--dry-run", action="store_true", help="Simulate without modifying files"
+    )
+    rename_parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
+    )
+
+    # 5. query
+    query_parser = subparsers.add_parser(
+        "query",
+        help="Execute hybrid RRF retrieval and return an evidence bundle",
+    )
+    query_parser.add_argument("prompt", type=str, help="Query text or node ID")
+    query_parser.add_argument(
+        "--corpus-root", type=str, default="fixtures/canonical", help="Corpus root directory"
+    )
+    query_parser.add_argument(
+        "--registry-dir", type=str, default=None, help="Custom path to schemas/registry"
+    )
+    query_parser.add_argument(
+        "--scope", choices=["personal", "engineering"], default=None, help="Scope filter"
+    )
+    query_parser.add_argument("--seed-top-k", type=int, default=10, help="Number of seeds")
+    query_parser.add_argument(
+        "--max-depth", type=int, default=2, help="Max BFS graph expansion depth"
+    )
+    query_parser.add_argument(
+        "--max-results", type=int, default=20, help="Max results in evidence bundle"
+    )
+    query_parser.add_argument(
+        "--min-confidence", type=float, default=0.0, help="Min confidence knob"
+    )
+    query_parser.add_argument("--min-relevance", type=float, default=0.0, help="Min relevance knob")
+    query_parser.add_argument(
+        "--json", action="store_true", default=True, help="Emit machine-readable JSON output"
+    )
+
+    # 6. rebuild
+    rebuild_parser = subparsers.add_parser(
+        "rebuild",
+        help="Idempotently reconstruct disposable caches and graph projections from Markdown notes",
+    )
+    rebuild_parser.add_argument(
+        "--corpus-root", type=str, default="fixtures/canonical", help="Corpus root directory"
+    )
+    rebuild_parser.add_argument(
+        "--output-dir", type=str, default=None, help="Output directory for rebuilt projections"
+    )
+    rebuild_parser.add_argument(
+        "--registry-dir", type=str, default=None, help="Custom path to schemas/registry"
+    )
+    rebuild_parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
+    )
+
+    # 7. generate-skills
+    skills_parser = subparsers.add_parser(
+        "generate-skills",
+        help="Generate or verify .agents/skills/trashheap/SKILL.md (AGENT-SKILLS.md §4, E050)",
+    )
+    skills_parser.add_argument(
+        "--check", action="store_true", help="Verify that SKILL.md is identical bit-for-bit"
+    )
+    skills_parser.add_argument(
+        "--repo-root", type=str, default=None, help="Repository root directory"
+    )
+    skills_parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
+    )
+
+    # 8. stage-lint
+    stage_parser = subparsers.add_parser(
+        "stage-lint",
+        help="Scan staging/ area and report candidate ingestion objects",
+    )
+    stage_parser.add_argument(
+        "--staging-dir", type=str, default="staging", help="Path to staging directory"
+    )
+    stage_parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
+    )
+
+    # 9. ingest
+    ingest_parser = subparsers.add_parser(
+        "ingest",
+        help="Intake a raw source file into staging with SHA-256 calculation",
+    )
+    ingest_parser.add_argument("file", type=str, help="Path to source file to ingest")
+    ingest_parser.add_argument(
+        "--source-type", type=str, default="note", help="Source type classification"
+    )
+    ingest_parser.add_argument(
+        "--staging-dir", type=str, default="staging", help="Target staging directory"
+    )
+    ingest_parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
     )
 
     return parser
@@ -108,6 +263,21 @@ def format_findings_json(findings: List[RegistryFinding], passed: bool) -> str:
     return json.dumps(data, indent=2, sort_keys=True)
 
 
+def format_linter_findings_json(findings: List[Finding], passed: bool) -> str:
+    """Format linter findings as deterministic machine-readable JSON."""
+    data: Dict[str, Any] = {
+        "status": "passed" if passed else "failed",
+        "errors": [f.to_dict() for f in findings if f.level == "ERROR"],
+        "warnings": [f.to_dict() for f in findings if f.level == "WARNING"],
+        "summary": {
+            "errors": sum(1 for f in findings if f.level == "ERROR"),
+            "warnings": sum(1 for f in findings if f.level == "WARNING"),
+            "passed": passed,
+        },
+    }
+    return json.dumps(data, indent=2, sort_keys=True)
+
+
 def handle_check_registries(args: argparse.Namespace) -> int:
     """Handle check-registries command execution."""
     reg_dir = args.registry_dir or "schemas/registry"
@@ -145,6 +315,275 @@ def handle_check_registries(args: argparse.Namespace) -> int:
     return ExitCode.SUCCESS if passed else ExitCode.VALIDATION_ERROR
 
 
+def handle_lint(args: argparse.Namespace) -> int:
+    """Handle lint command execution."""
+    target_path = Path(args.path)
+    if not target_path.exists():
+        if args.json:
+            print(
+                json.dumps(
+                    {"status": "error", "message": f"Path '{target_path}' not found"}, indent=2
+                )
+            )
+        else:
+            print(f"Error: Path '{target_path}' not found", file=sys.stderr)
+        return ExitCode.NOT_FOUND
+
+    reg_dir = args.registry_dir or "schemas/registry"
+    try:
+        registries = load_registries(reg_dir)
+    except Exception as e:
+        if args.json:
+            print(json.dumps({"status": "error", "message": str(e)}, indent=2))
+        else:
+            print(f"Error loading registries: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
+
+    ref_date: Optional[date] = None
+    if args.now:
+        try:
+            ref_date = date.fromisoformat(args.now)
+        except ValueError:
+            print(f"Invalid date format for --now: {args.now}", file=sys.stderr)
+            return ExitCode.CONFIG_OR_ARG_ERROR
+
+    # Determine corpus root and target file
+    if target_path.is_file():
+        corpus_root = target_path.parent
+        # Walk up to find nearest known root
+        curr = target_path.parent
+        while curr != curr.parent:
+            if (
+                (curr / "engineering").exists()
+                or (curr / "personal").exists()
+                or (curr / "pyproject.toml").exists()
+            ):
+                corpus_root = curr
+                break
+            curr = curr.parent
+        target_file: Optional[Path] = target_path
+    else:
+        corpus_root = target_path
+        target_file = None
+
+    corpus = load_corpus(corpus_root, scope=args.scope)
+    strict = args.strict or args.warnings_as_errors
+    check_skills = not getattr(args, "no_check_skills", False)
+
+    linter = Linter(
+        registries=registries,
+        reference_date=ref_date,
+        strict=strict,
+        check_skills=check_skills,
+    )
+    findings = linter.lint_corpus(corpus, target_file=target_file)
+
+    errors = [f for f in findings if f.level == "ERROR"]
+    warnings = [f for f in findings if f.level == "WARNING"]
+    passed = len(errors) == 0 and (not strict or len(warnings) == 0)
+
+    if args.json:
+        print(format_linter_findings_json(findings, passed))
+    else:
+        for f in findings:
+            prefix = "❌ ERROR" if f.level == "ERROR" else "⚠️ WARNING"
+            loc = f" [{f.file}]" if f.file else ""
+            field_str = f" in {f.field}" if f.field else ""
+            print(f"{prefix} ({f.code}){loc}{field_str}: {f.message}")
+            if f.suggestion:
+                print(f"   Suggestion: {f.suggestion}")
+        print(
+            f"\nSummary: {len(errors)} error(s), {len(warnings)} warning(s) across {len(corpus)} object(s)"
+        )
+        if passed:
+            print("✓ Lint passed successfully.")
+
+    if len(errors) > 0:
+        return ExitCode.VALIDATION_ERROR
+    if len(warnings) > 0 and strict:
+        return ExitCode.STRICT_WARNING
+    return ExitCode.SUCCESS
+
+
+def handle_validate(args: argparse.Namespace) -> int:
+    """Handle validate command on a single file."""
+    file_path = Path(args.file)
+    if not file_path.exists():
+        if args.json:
+            print(
+                json.dumps(
+                    {"status": "error", "message": f"File '{file_path}' not found"}, indent=2
+                )
+            )
+        else:
+            print(f"Error: File '{file_path}' not found", file=sys.stderr)
+        return ExitCode.NOT_FOUND
+
+    # Delegate to handle_lint with target file
+    args.path = str(file_path)
+    args.scope = None
+    args.warnings_as_errors = False
+    args.no_check_skills = True
+    return handle_lint(args)
+
+
+def handle_rename(args: argparse.Namespace) -> int:
+    """Handle rename command."""
+    corpus_root = Path(args.corpus_root)
+    if not corpus_root.exists():
+        return ExitCode.NOT_FOUND
+
+    try:
+        res = rename_entity(
+            corpus_root=corpus_root,
+            old_id=args.old_id,
+            new_id=args.new_id,
+            dry_run=args.dry_run,
+        )
+    except KeyError as e:
+        if args.json:
+            print(json.dumps({"status": "error", "message": str(e)}, indent=2))
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        return ExitCode.NOT_FOUND
+    except Exception as e:
+        if args.json:
+            print(json.dumps({"status": "error", "message": str(e)}, indent=2))
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
+
+    if args.json:
+        print(json.dumps(res.to_dict(), indent=2))
+    else:
+        prefix = "[DRY RUN] " if args.dry_run else ""
+        print(f"{prefix}Renamed {args.old_id} -> {args.new_id}")
+        if res.renamed_file:
+            print(f"  Target file: {res.renamed_file}")
+        print(f"  Updated referencing files: {len(res.updated_referencing_files)}")
+    return ExitCode.SUCCESS
+
+
+def handle_query(args: argparse.Namespace) -> int:
+    """Handle query command returning an evidence bundle."""
+    corpus_root = Path(args.corpus_root)
+    if not corpus_root.exists():
+        return ExitCode.NOT_FOUND
+
+    reg_dir = args.registry_dir or "schemas/registry"
+    registries = load_registries(reg_dir)
+    corpus = load_corpus(corpus_root)
+
+    retriever = HybridRetriever(corpus=corpus, registries=registries)
+    cli_params = {
+        "scope": args.scope,
+        "seed_top_k": args.seed_top_k,
+        "max_depth": args.max_depth,
+        "max_results": args.max_results,
+        "min_confidence": args.min_confidence,
+        "min_relevance": args.min_relevance,
+    }
+
+    bundle = retriever.retrieve(query=args.prompt, cli_params=cli_params)
+    print(json.dumps(bundle, indent=2))
+    return ExitCode.SUCCESS
+
+
+def handle_rebuild(args: argparse.Namespace) -> int:
+    """Handle rebuild command reconstructing index caches directly from Markdown notes."""
+    corpus_root = Path(args.corpus_root)
+    if not corpus_root.exists():
+        return ExitCode.NOT_FOUND
+
+    reg_dir = args.registry_dir or "schemas/registry"
+    registries = load_registries(reg_dir)
+    out_dir = Path(args.output_dir) if args.output_dir else None
+
+    res = rebuild_indexes(corpus_root, registries, output_dir=out_dir)
+    if args.json:
+        print(json.dumps(res, indent=2))
+    else:
+        print(f"✓ Rebuilt projections for {res['rebuilt_objects']} objects in {res['output_dir']}")
+        for art in res["artifacts"]:
+            print(f"  - {art}")
+    return ExitCode.SUCCESS
+
+
+def handle_generate_skills(args: argparse.Namespace) -> int:
+    """Handle generate-skills command and drift verification (E050)."""
+    repo_root = Path(args.repo_root) if args.repo_root else Path.cwd()
+
+    if args.check:
+        matches = check_agent_skills(repo_root)
+        if not matches:
+            finding = {
+                "code": "E050",
+                "field": ".agents/skills/trashheap/SKILL.md",
+                "message": "Emitted .agents/skills/trashheap/SKILL.md diverges from code and schemas/registry (AGENT-SKILLS.md §7)",
+                "suggestion": "Run 'trashheap generate-skills' to synchronize skill definition",
+                "level": "ERROR",
+            }
+            if args.json:
+                print(json.dumps({"status": "failed", "errors": [finding]}, indent=2))
+            else:
+                print(f"❌ ERROR (E050): {finding['message']}", file=sys.stderr)
+            return ExitCode.VALIDATION_ERROR
+        if args.json:
+            print(json.dumps({"status": "passed", "message": "SKILL.md is up-to-date"}, indent=2))
+        else:
+            print("✓ .agents/skills/trashheap/SKILL.md is up-to-date.")
+        return ExitCode.SUCCESS
+    else:
+        out_path = write_agent_skills(repo_root)
+        if args.json:
+            print(json.dumps({"status": "passed", "path": str(out_path)}, indent=2))
+        else:
+            print(f"✓ Emitted {out_path}")
+        return ExitCode.SUCCESS
+
+
+def handle_stage_lint(args: argparse.Namespace) -> int:
+    """Handle stage-lint triage command (Plan 03 stub)."""
+    staging_dir = Path(args.staging_dir)
+    items = list(staging_dir.glob("*")) if staging_dir.exists() else []
+    if args.json:
+        print(
+            json.dumps(
+                {"status": "passed", "staged_count": len(items), "items": [str(p) for p in items]},
+                indent=2,
+            )
+        )
+    else:
+        print(f"Staging area '{staging_dir}': {len(items)} file(s) found.")
+    return ExitCode.SUCCESS
+
+
+def handle_ingest(args: argparse.Namespace) -> int:
+    """Handle ingest source intake command (Plan 03 stub)."""
+    file_path = Path(args.file)
+    if not file_path.exists():
+        if args.json:
+            print(
+                json.dumps(
+                    {"status": "error", "message": f"File '{file_path}' not found"}, indent=2
+                )
+            )
+        else:
+            print(f"Error: File '{file_path}' not found", file=sys.stderr)
+        return ExitCode.NOT_FOUND
+
+    if args.json:
+        print(
+            json.dumps(
+                {"status": "staged", "file": str(file_path), "source_type": args.source_type},
+                indent=2,
+            )
+        )
+    else:
+        print(f"✓ Source '{file_path}' registered for staging triage.")
+    return ExitCode.SUCCESS
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point returning integer exit code."""
     parser = build_parser()
@@ -160,11 +599,24 @@ def main(argv: Optional[List[str]] = None) -> int:
     except SystemExit as e:
         return int(e.code) if isinstance(e.code, int) else ExitCode.CONFIG_OR_ARG_ERROR
 
-    if args.command == "check-registries":
-        return handle_check_registries(args)
-    else:
-        parser.print_help()
-        return ExitCode.SUCCESS
+    handlers = {
+        "check-registries": handle_check_registries,
+        "lint": handle_lint,
+        "validate": handle_validate,
+        "rename": handle_rename,
+        "query": handle_query,
+        "rebuild": handle_rebuild,
+        "generate-skills": handle_generate_skills,
+        "stage-lint": handle_stage_lint,
+        "ingest": handle_ingest,
+    }
+
+    handler = handlers.get(args.command)
+    if handler:
+        return handler(args)
+
+    parser.print_help()
+    return ExitCode.SUCCESS
 
 
 if __name__ == "__main__":

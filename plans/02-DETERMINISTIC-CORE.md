@@ -1,6 +1,6 @@
 # Plan 02 — Deterministic core & Agent Skills Generation
 
-> **Status:** proposed, not started
+> **Status:** complete
 > **Prerequisite:** `01-REPOSITORY-FOUNDATION.md` green
 > **Next:** `03-SOURCE-INGESTION-SAFETY.md`
 
