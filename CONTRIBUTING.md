@@ -16,13 +16,11 @@ Before proposing changes, ensure you understand the system's non-negotiable axio
 
 ## 2. Repository Layout
 
-- **`input-artifacts/`**: Product discovery and vision documents (`initiative.md`, `problem_statement.md`, `END-TO-END-CONTRACT-EXAMPLE.md`).
-- **`PRD.md`**: Master Product Requirements Document, aligned with 21 functional requirements and testable acceptance criteria.
-- **`specs/`**: Normative technical specifications (`ARCHITECTURE.md`, `DATA_MODEL.md`, `ONTOLOGY.md`, `VALIDATION.md`, `AGENT-SKILLS.md`, etc.).
+- **`trashheap/`**: Core executable Python package (CLI, retrieval, linter, graph intelligence, AST analysis, staging).
+- **`tests/`**: Pytest test suite covering all 37 invariant families across Layers 1–5.
+- **`fixtures/`**: Certified reference Knowledge Objects (`fixtures/canonical/`) and adversarial security payloads (`fixtures/adversarial/`).
 - **`schemas/registry/`**: Declarative YAML registries defining object types, relations, taxonomies, and governance.
-- **`plans/`**: Sequenced execution plans (`00-ROADMAP.md`, `01-REPOSITORY-FOUNDATION.md` through `05-CONNECTORS-OPERATIONS-CI.md`).
-- **`plans/DECISION_LOG.md`**: Auditable record of every `Dnn` decision identifier cited in the specs, plus the EPI-SPEC-001 sign-offs authorising post-freeze changes. A new decision MUST be logged in the same commit that first cites its identifier.
-- **`prompts/prd-pipeline/`**: Complete cognitive reasoning and review prompt suite.
+- **`specs/` & `plans/` & `PRD.md`**: Authoritative normative specifications, requirements, and implementation plans are maintained in the companion specification repository: [`skelutten/omniscient-trash-heap-spec`](https://github.com/skelutten/omniscient-trash-heap-spec).
 
 ---
 

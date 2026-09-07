@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "trashheap"
 version = "3.8.10"
 description = "The Omniscient Trash Heap: deterministic knowledge compiler, linter, and retrieval system"
-readme = "PRD.md"
+readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [
