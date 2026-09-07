@@ -61,10 +61,15 @@ The Omniscient Trash Heap is an offline, deterministic, plain-text knowledge com
 
 ### 2.5 `/query <prompt>` — Evidence-Based Query Synthesis
 - **Command:** `trashheap query "<prompt>"` (or `python3 -m trashheap.cli query "<prompt>"`)
-- **Flags:** `--scope {personal|engineering}`, `--max-results <int>`, `--min-confidence <float>`, `--min-relevance <float>`, `--json`
-- **Behavior:** Executes hybrid RRF retrieval across lexical index and structural graph, synthesizing answers with verified note citation links (`[[note-slug]]`).
+- **Flags:** `--corpus-root <path>`, `--include-drafts`, `--include-body`, `--vector`, `--graph-enhanced`, `--scope {personal|engineering}`, `--max-results <int>`, `--min-confidence <float>`, `--min-relevance <float>`, `--json`
+- **Behavior:** Executes hybrid RRF retrieval across lexical index, structural graph, and dense vector embeddings, synthesizing answers with verified note citation links (`[[note-slug]]`). Returns bounded `body_excerpt` (<= 250 chars) and file `path`.
 
-### 2.6 `/rebuild` — Disposable Index Reconstruction
+### 2.6 `/show <target>` — Full Knowledge Object Display
+- **Command:** `trashheap show <node_id|file_path>` (or `python3 -m trashheap.cli show <target>`)
+- **Flags:** `--corpus-root <path>`
+- **Behavior:** Reads and displays the complete Markdown text and frontmatter of a Knowledge Object without truncation.
+
+### 2.7 `/rebuild` — Disposable Index Reconstruction
 - **Command:** `trashheap rebuild` (or `python3 -m trashheap.cli rebuild`)
 - **Flags:** `--output-dir <path>`, `--json`
 - **Behavior:** Wipes and idempotently reconstructs ephemeral SQLite metadata, inverted full-text index, and graph caches directly from Markdown notes.

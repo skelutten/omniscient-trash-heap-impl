@@ -307,6 +307,13 @@ When `CONTRADICTS` relations are detected:
 }
 ```
 
+### 9.5.1 Full-Content Access, Body Excerpts & Draft Visibility
+
+1. **Body Excerpt Boundedness:** In Evidence Bundles, `body_excerpt` is strictly bounded ($\le 250$ characters) to preserve LLM context budget during multi-node synthesis.
+2. **Direct Filesystem Path:** Each bundle node entry SHALL contain a `"path"` field with the relative or absolute filesystem location of the Knowledge Object.
+3. **Full Text Retrieval:** Complete object markdown text MUST be accessible via the non-truncating CLI command `trashheap show <node_id|file_path>` or through the `--include-body` flag on `trashheap query`.
+4. **Draft Status Invariant:** Canonical retrieval filters `status: draft` objects by default. When querying unpromoted or migrated legacy articles, callers MUST explicitly supply `--include-drafts`.
+
 ---
 
 ## Retrieval Invariants

@@ -65,9 +65,15 @@ The generated skill MUST specify the following 6 core operations:
 
 ### 3.5 `/query <prompt>` — Evidence-Based Query Synthesis
 - **Command:** `python3 -m trashheap.cli query "<prompt>"`
-- **Behavior:** Executes hybrid RRF retrieval across lexical index and structural graph, synthesizing answers with verified note citation links (`[[note-slug]]`).
+- **Flags:** `--corpus-root <path>`, `--include-drafts`, `--include-body`, `--vector`, `--graph-enhanced`, `--scope {personal|engineering}`, `--json`
+- **Behavior:** Executes hybrid RRF retrieval across lexical index, structural graph, and dense vector embeddings, synthesizing answers with verified note citation links (`[[note-slug]]`). Returns bounded `body_excerpt` ($\le 250$ chars) and file `path`.
 
-### 3.6 `/rebuild` — Disposable Index Reconstruction
+### 3.6 `/show <target>` — Full Knowledge Object Display
+- **Command:** `python3 -m trashheap.cli show <node_id|file_path>`
+- **Flags:** `--corpus-root <path>`
+- **Behavior:** Reads and displays the complete Markdown text and frontmatter of a Knowledge Object without truncation.
+
+### 3.7 `/rebuild` — Disposable Index Reconstruction
 - **Command:** `python3 -m trashheap.cli rebuild`
 - **Behavior:** Wipes and idempotently reconstructs ephemeral SQLite metadata, inverted full-text index, and graph caches directly from Markdown notes.
 

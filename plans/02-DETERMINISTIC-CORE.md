@@ -19,7 +19,7 @@ Implement the canonical Knowledge Object path: parse one object, validate it det
 7. Canonical authoring and body regeneration with `OWN-001..003`, `BODY-003..004` and `W014`.
 8. Baseline lexical/RRF retrieval and evidence bundle shape (incorporating D93 graph fusion condition: graph contributes to RRF only when depth > 0 reached, with depth 0 reported as absent; and D94 per-parameter config precedence: CLI flag > `retrieval:` config block > defaults with `parameters_origin` reporting).
 9. Agent Skills generation (`scripts/generate_agent_skills.py`) emitting `.agents/skills/trashheap/SKILL.md` compliant with `agentskills.io` / `dot-agents.com` (`specs/AGENT-SKILLS.md`).
-10. Non-interactive, scriptable CLI commands for lint, validate, stage-lint, ingest, query (stateless execution with zero disk context accumulation), rebuild, generate-skills, and generated-artifact drift checks (`E050`), with machine-readable `--json` output, deterministic exit codes, and documented schema for rebuildable projections.
+10. Non-interactive, scriptable CLI commands for lint, validate, show (display complete Knowledge Object text without truncation), stage-lint, ingest, query (stateless hybrid RRF with `--include-drafts`, `--include-body`, and configurable `--corpus-root`), rebuild, generate-skills, and generated-artifact drift checks (`E050`), with machine-readable `--json` output, deterministic exit codes, and documented schema for rebuildable projections.
 11. Conformance fixtures for positive objects, Agent Skill compliance, and important error codes.
 
 ## Stop point

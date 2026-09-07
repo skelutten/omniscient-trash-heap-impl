@@ -23,6 +23,9 @@ ambiguity/error counts. Ambiguous mappings are quarantined or reported, never
 silently guessed. The migrated corpus passes the core lint gate only after
 review-gated provisional/lossy mappings are resolved or explicitly accepted.
 
+### Post-Migration Retrieval Semantics
+Because legacy articles are imported with `status: draft` (Rule 10), operators and agents querying or inspecting the migrated corpus must supply `--corpus-root <target-dir>` and `--include-drafts` (e.g. `trashheap query "poker" --corpus-root /path/to/wiki --include-drafts`), or use `trashheap show <node_id> --corpus-root <target-dir>` to read individual articles.
+
 ## Source material
 
 - `../specs/DATA_MODEL.md`, `EPISTEMOLOGY.md`, `ARCHITECTURE.md`

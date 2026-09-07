@@ -18,6 +18,7 @@ Create the smallest installable and testable repository boundary before implemen
 6. Validate `spec_ownership.yaml`, `threshold_policy.yaml`, source taxonomy paths and unique registry keys.
 7. Add golden registry fixtures and stable error output.
 8. Add `trashheap --version` and `trashheap check-registries` smoke tests.
+9. Provide root `README.md` user documentation covering quickstart via `uv`, data layout, storage boundaries (`fixtures/canonical/` vs external production wikis), and CLI command workflows.
 
 The registry slice MUST include the current actor, epistemic, facet, source,
 ownership and threshold registries, not only the original object/relation/
