@@ -178,14 +178,23 @@ def test_ttl_reaper_lifecycle_and_invariants(tmp_path: Path):
         state="pending",
         source_revision="sha256:" + "a" * 64,
         target_path="engineering/old.md",
-        proposed_frontmatter={"id": "KO-OLD", "title": "Old Pending", "object_type": "pattern", "scope": "engineering", "domain": "software_engineering", "taxonomy_path": "01. Engineering"},
+        proposed_frontmatter={
+            "id": "KO-OLD",
+            "title": "Old Pending",
+            "object_type": "pattern",
+            "scope": "engineering",
+            "domain": "software_engineering",
+            "taxonomy_path": "01. Engineering",
+        },
         proposed_body="# Old",
         proposed_content="---\nid: KO-OLD\n---\n# Old",
         proposal_hash="sha256:" + "b" * 64,
         source_refs=["SRC-001"],
         representation_refs=["REP-001"],
     )
-    (props_dir / "CAN-PENDING-001.yaml").write_text(yaml.dump(c_pending.model_dump()), encoding="utf-8")
+    (props_dir / "CAN-PENDING-001.yaml").write_text(
+        yaml.dump(c_pending.model_dump()), encoding="utf-8"
+    )
 
     # 2. Approved candidate older than TTL (MUST NEVER EXPIRE per §7.3.1 invariant)
     c_approved = CandidateProposal(
@@ -195,14 +204,23 @@ def test_ttl_reaper_lifecycle_and_invariants(tmp_path: Path):
         state="approved",
         source_revision="sha256:" + "c" * 64,
         target_path="engineering/approved.md",
-        proposed_frontmatter={"id": "KO-APP", "title": "Approved Doc", "object_type": "pattern", "scope": "engineering", "domain": "software_engineering", "taxonomy_path": "01. Engineering"},
+        proposed_frontmatter={
+            "id": "KO-APP",
+            "title": "Approved Doc",
+            "object_type": "pattern",
+            "scope": "engineering",
+            "domain": "software_engineering",
+            "taxonomy_path": "01. Engineering",
+        },
         proposed_body="# Approved",
         proposed_content="---\nid: KO-APP\n---\n# Approved",
         proposal_hash="sha256:" + "d" * 64,
         source_refs=["SRC-002"],
         representation_refs=["REP-002"],
     )
-    (props_dir / "CAN-APPROVED-002.yaml").write_text(yaml.dump(c_approved.model_dump()), encoding="utf-8")
+    (props_dir / "CAN-APPROVED-002.yaml").write_text(
+        yaml.dump(c_approved.model_dump()), encoding="utf-8"
+    )
 
     # 3. Already expired candidate older than TTL + grace_days (should be purged)
     c_expired = CandidateProposal(
@@ -212,14 +230,23 @@ def test_ttl_reaper_lifecycle_and_invariants(tmp_path: Path):
         state="expired",
         source_revision="sha256:" + "e" * 64,
         target_path="engineering/dead.md",
-        proposed_frontmatter={"id": "KO-DEAD", "title": "Dead Doc", "object_type": "pattern", "scope": "engineering", "domain": "software_engineering", "taxonomy_path": "01. Engineering"},
+        proposed_frontmatter={
+            "id": "KO-DEAD",
+            "title": "Dead Doc",
+            "object_type": "pattern",
+            "scope": "engineering",
+            "domain": "software_engineering",
+            "taxonomy_path": "01. Engineering",
+        },
         proposed_body="# Dead",
         proposed_content="---\nid: KO-DEAD\n---\n# Dead",
         proposal_hash="sha256:" + "f" * 64,
         source_refs=["SRC-003"],
         representation_refs=["REP-003"],
     )
-    (props_dir / "CAN-EXPIRED-003.yaml").write_text(yaml.dump(c_expired.model_dump()), encoding="utf-8")
+    (props_dir / "CAN-EXPIRED-003.yaml").write_text(
+        yaml.dump(c_expired.model_dump()), encoding="utf-8"
+    )
 
     reaper = TTLReaper(workspace_root=tmp_path, ttl_days=180, grace_days=7)
     results = reaper.run_reap_cycle(now=now)
@@ -228,11 +255,15 @@ def test_ttl_reaper_lifecycle_and_invariants(tmp_path: Path):
     assert results["purged_count"] == 1
 
     # Verify pending was expired
-    c_pending_loaded = yaml.safe_load((props_dir / "CAN-PENDING-001.yaml").read_text(encoding="utf-8"))
+    c_pending_loaded = yaml.safe_load(
+        (props_dir / "CAN-PENDING-001.yaml").read_text(encoding="utf-8")
+    )
     assert c_pending_loaded["state"] == "expired"
 
     # Verify approved was NOT expired
-    c_approved_loaded = yaml.safe_load((props_dir / "CAN-APPROVED-002.yaml").read_text(encoding="utf-8"))
+    c_approved_loaded = yaml.safe_load(
+        (props_dir / "CAN-APPROVED-002.yaml").read_text(encoding="utf-8")
+    )
     assert c_approved_loaded["state"] == "approved"
 
     # Verify tombstoned file was purged
@@ -241,7 +272,9 @@ def test_ttl_reaper_lifecycle_and_invariants(tmp_path: Path):
     # Verify audit log exists
     audit_file = tmp_path / "staging" / "transactions" / "reaper_audit.jsonl"
     assert audit_file.exists()
-    lines = [json.loads(line) for line in audit_file.read_text(encoding="utf-8").splitlines() if line]
+    lines = [
+        json.loads(line) for line in audit_file.read_text(encoding="utf-8").splitlines() if line
+    ]
     assert len(lines) == 2
 
 
@@ -263,7 +296,14 @@ def test_calculate_knowledge_debt(tmp_path: Path):
         state="pending",
         source_revision="sha256:" + "1" * 64,
         target_path="p1.md",
-        proposed_frontmatter={"id": "KO-1", "title": "P1", "object_type": "pattern", "scope": "engineering", "domain": "software_engineering", "taxonomy_path": "01. Engineering"},
+        proposed_frontmatter={
+            "id": "KO-1",
+            "title": "P1",
+            "object_type": "pattern",
+            "scope": "engineering",
+            "domain": "software_engineering",
+            "taxonomy_path": "01. Engineering",
+        },
         proposed_body="# 1",
         proposed_content="---\nid: KO-1\n---\n# 1",
         proposal_hash="sha256:" + "2" * 64,
@@ -304,7 +344,9 @@ def test_detect_spec_drift_clean_checkout():
     """Test that active repository passes SPEC_STATUS.md drift check with zero errors."""
     root = Path(__file__).resolve().parent.parent
     drift = detect_spec_drift(root)
-    assert drift.passed is True, f"Drift errors found: {[f.message for f in drift.findings if f.level == 'ERROR']}"
+    assert drift.passed is True, (
+        f"Drift errors found: {[f.message for f in drift.findings if f.level == 'ERROR']}"
+    )
 
 
 # ============================================================================

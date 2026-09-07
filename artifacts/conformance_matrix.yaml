@@ -1,6 +1,6 @@
 schema_version: 1.0.0
 matrix_id: conformance_matrix
-generated_at: '2026-09-07T08:30:19.970915+00:00'
+generated_at: '2026-09-07T12:33:18.609915+00:00'
 evidence_type: generated_projection
 note: "Generated evidence per VALIDATION.md \xA710.5 and CONFORM-001. Not a normative\
   \ specification."
@@ -366,8 +366,8 @@ families:
 - family_id: RET
   owner: specs/RETRIEVAL.md
   invariant_id: RET-001..RET-005
-  implementation: trashheap/retrieval.py
-  test: tests/test_retrieval.py
+  implementation: trashheap/retrieval.py, trashheap/vector/
+  test: tests/test_retrieval.py, tests/test_vector_retrieval.py
   verification: tools/check.sh
   status: CONFORMANCE_TESTED
   invariants:

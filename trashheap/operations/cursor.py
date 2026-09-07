@@ -52,7 +52,9 @@ class CursorStore:
 
     def get_cursor(self, source_path: str) -> Optional[CursorState]:
         with self._get_conn() as conn:
-            cur = conn.execute("SELECT * FROM ingestion_cursors WHERE source_path = ?;", (source_path,))
+            cur = conn.execute(
+                "SELECT * FROM ingestion_cursors WHERE source_path = ?;", (source_path,)
+            )
             row = cur.fetchone()
             if not row:
                 return None

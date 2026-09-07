@@ -20,6 +20,8 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from trashheap.corpus import Corpus
 from trashheap.models import KnowledgeObject
 from trashheap.registry.loader import LoadedRegistries
+from trashheap.vector.protocol import Embedder
+from trashheap.vector.store import VectorHit, VectorIndex
 
 RETRIEVAL_VERSION = "1.0.0"
 RANKING_POLICY_VERSION = "1.0.0"
@@ -40,6 +42,7 @@ DEFAULT_RETRIEVAL_PARAMS: Dict[str, Any] = {
     "include_deprecated": False,
     "facet_match_mode": "any",
     "conflict_strategy": "epistemic_then_confidence",
+    "enable_vector": False,
 }
 
 CATEGORY_PRIORITY: Dict[str, int] = {
@@ -210,9 +213,17 @@ def epistemic_conflict_key(ko: KnowledgeObject) -> Tuple[Any, ...]:
 class HybridRetriever:
     """Hybrid RRF retriever for Knowledge Objects."""
 
-    def __init__(self, corpus: Corpus, registries: LoadedRegistries):
+    def __init__(
+        self,
+        corpus: Corpus,
+        registries: LoadedRegistries,
+        vector_index: Optional[VectorIndex] = None,
+        embedder: Optional[Embedder] = None,
+    ):
         self.corpus = corpus
         self.registries = registries
+        self.vector_index = vector_index
+        self.embedder = embedder
         self.bm25_index = BM25Index(k1=1.5, b=0.75)
         self.bm25_index.index(self.corpus.objects)
 
@@ -235,10 +246,14 @@ class HybridRetriever:
         query: str,
         cli_params: Optional[Dict[str, Any]] = None,
         config_params: Optional[Dict[str, Any]] = None,
+        vector_index: Optional[VectorIndex] = None,
+        embedder: Optional[Embedder] = None,
     ) -> Dict[str, Any]:
         """Execute hybrid search pipeline with D94 per-parameter precedence."""
         cli_params = cli_params or {}
         config_params = config_params or {}
+        v_index = vector_index if vector_index is not None else self.vector_index
+        v_embedder = embedder if embedder is not None else self.embedder
 
         # 1. Parameter Resolution & Origin Tracking (D94)
         parameters_used: Dict[str, Any] = {}
@@ -259,6 +274,14 @@ class HybridRetriever:
             elif key in DEFAULT_RETRIEVAL_PARAMS:
                 parameters_used[key] = DEFAULT_RETRIEVAL_PARAMS[key]
                 parameters_origin[key] = "default"
+
+        # If vector_index and embedder are explicitly provided and enable_vector not in CLI/config, default to True
+        if v_index is not None and v_embedder is not None:
+            if "enable_vector" not in cli_params and "enable_vector" not in config_params:
+                parameters_used["enable_vector"] = True
+                parameters_origin["enable_vector"] = "default"
+
+        enable_vector = bool(parameters_used.get("enable_vector", False))
 
         scope_filter = parameters_used.get("scope")
         object_type_filter = parameters_used.get("object_type")
@@ -354,7 +377,13 @@ class HybridRetriever:
 
             eligible_objects[ko.id] = ko
 
-        # 3. Initial Seed Retrieval (BM25 + direct ID lookup)
+        # Modality check: Honest Modality Rule (D79) and Degraded Fallback (D84)
+        vector_active = False
+        if enable_vector and v_index is not None and v_embedder is not None:
+            if not v_embedder.identity.is_double:
+                vector_active = True
+
+        # 3. Initial Seed Retrieval (BM25 + direct ID lookup + Vector)
         raw_bm25_scores = self.bm25_index.score(query)
         # Filter to eligible objects
         bm25_scores = {
@@ -370,6 +399,30 @@ class HybridRetriever:
         # Sort candidate seeds deterministically: score DESC, node_id ASC
         sorted_seeds = sorted(norm_bm25_scores.keys(), key=lambda x: (-norm_bm25_scores[x], x))
         seed_nodes = sorted_seeds[:seed_top_k]
+
+        vector_hits_dict: Dict[str, VectorHit] = {}
+        if vector_active and v_index is not None and v_embedder is not None:
+            # Score eligible objects (Governance pre-filter D81)
+            raw_v_hits = v_index.score_query(
+                query=query,
+                embedder=v_embedder,
+                candidate_ids=set(eligible_objects.keys()),
+                top_k=None,
+            )
+            for h in raw_v_hits:
+                if h.score > 0.0:  # 0.0 sign-convention floor (D81)
+                    vector_hits_dict[h.node_id] = h
+
+            sorted_v_seeds = [
+                h.node_id
+                for h in sorted(vector_hits_dict.values(), key=lambda x: (-x.score, x.node_id))
+            ][:seed_top_k]
+
+            combined_seeds = list(seed_nodes)
+            for vs in sorted_v_seeds:
+                if vs not in combined_seeds:
+                    combined_seeds.append(vs)
+            seed_nodes = combined_seeds
 
         # 4. Graph Expansion (BFS §9.2)
         visited_depth: Dict[str, int] = {}
@@ -425,11 +478,17 @@ class HybridRetriever:
             modalities_absent.append("graph")
         else:
             modalities_available.append("graph")
-        modalities_absent.append("vector")
+
+        if vector_active:
+            modalities_available.append("vector")
+        else:
+            modalities_absent.append("vector")
 
         # 6. Hybrid RRF Fusion (§9.1)
-        # Candidates set = seeds + bm25 hits + graph expansion
+        # Candidates set = seeds + bm25 hits + vector hits + graph expansion
         all_candidate_ids: Set[str] = set(seed_nodes) | set(norm_bm25_scores.keys())
+        if vector_active:
+            all_candidate_ids.update(vector_hits_dict.keys())
         if graph_reached:
             all_candidate_ids.update(visited_depth.keys())
 
@@ -445,6 +504,19 @@ class HybridRetriever:
         )
         bm25_ranks = {nid: idx + 1 for idx, nid in enumerate(sorted_bm25)}
 
+        # Vector rank (1-indexed) — only if vector_active (D81)
+        vector_ranks: Dict[str, int] = {}
+        if vector_active and vector_hits_dict:
+            sorted_vector = sorted(
+                [
+                    nid
+                    for nid in all_candidate_ids
+                    if nid in vector_hits_dict and vector_hits_dict[nid].score > 0
+                ],
+                key=lambda x: (-vector_hits_dict[x].score, x),
+            )
+            vector_ranks = {nid: idx + 1 for idx, nid in enumerate(sorted_vector)}
+
         # Graph rank (1-indexed) — only participates if graph_reached is True (D93)
         graph_ranks: Dict[str, int] = {}
         if graph_reached:
@@ -457,6 +529,7 @@ class HybridRetriever:
         # Weights and parameters
         k_rrf = 60
         w_bm25 = 0.4
+        w_vector = 0.4
         w_graph = 0.2
 
         rrf_scores: Dict[str, float] = {}
@@ -478,6 +551,20 @@ class HybridRetriever:
                     "raw_score": norm_bm25_scores[nid],
                     "rank": rank,
                     "rrf_contribution": contrib,
+                }
+
+            # Vector modality (D81, D82)
+            if vector_active and nid in vector_ranks:
+                rank = vector_ranks[nid]
+                v_hit = vector_hits_dict[nid]
+                contrib = round(w_vector / (k_rrf + rank), 7)
+                score_rrf += contrib
+                matched.append("vector")
+                signals["vector"] = {
+                    "raw_score": round(v_hit.score, 6),
+                    "rank": rank,
+                    "rrf_contribution": contrib,
+                    "chunk_index": v_hit.chunk_index,
                 }
 
             # Graph modality (only if graph_reached per D93)
@@ -631,7 +718,11 @@ class HybridRetriever:
 
             score_components = {
                 "bm25_raw": norm_bm25_scores.get(nid, 0.0),
-                "vector_raw": None,  # D82: absent modalities report null, never 0.0
+                "vector_raw": round(vector_hits_dict[nid].score, 6)
+                if vector_active and nid in vector_hits_dict
+                else (
+                    0.0 if vector_active else None
+                ),  # D82: absent modalities report null, never 0.0
                 "graph_raw": norm_graph_scores.get(nid)
                 if graph_reached and nid in visited_depth
                 else (None if not graph_reached else 0.0),
@@ -677,6 +768,14 @@ class HybridRetriever:
             if conf_info.get("detected"):
                 node_entry["conflicting_relation_type"] = conf_info.get("conflicting_relation_type")
                 node_entry["conflict_resolution"] = conf_info.get("conflict_resolution")
+
+            if vector_active and nid in vector_hits_dict:
+                node_entry["passage_attribution"] = {
+                    "chunk_index": vector_hits_dict[nid].chunk_index,
+                    "passage_text": vector_hits_dict[nid].passage_text[:200]
+                    if vector_hits_dict[nid].passage_text
+                    else "",
+                }
 
             evidence_bundle_nodes.append(node_entry)
 

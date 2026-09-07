@@ -164,7 +164,9 @@ def intake_source(
             # Enforce path sandboxing against workspace root (FR-13, AC-6)
             resolved_target = sandbox_path(candidate_path, ws_root)
             if not resolved_target.exists():
-                raise FileNotFoundError(f"Source file '{candidate_path}' not found at '{resolved_target}'")
+                raise FileNotFoundError(
+                    f"Source file '{candidate_path}' not found at '{resolved_target}'"
+                )
             raw_bytes = resolved_target.read_bytes()
             try:
                 resource_name = str(resolved_target.relative_to(ws_root))
@@ -377,7 +379,9 @@ def stage_lint(staging_dir: Union[str, Path]) -> StageLintReport:
                 continue
 
             fenced_content = data.get("fenced_content") or ""
-            injections = data.get("injections_detected") or detect_prompt_injection_indicators(fenced_content)
+            injections = data.get("injections_detected") or detect_prompt_injection_indicators(
+                fenced_content
+            )
             if injections:
                 injections_count += len(injections)
 

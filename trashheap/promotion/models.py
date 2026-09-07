@@ -120,4 +120,3 @@ class CandidateProposal(BaseModel):
     history: List[StateTransitionRecord] = Field(default_factory=list)
     review_decision: Optional[ReviewDecision] = None
     supersedes: Optional[str] = None
-

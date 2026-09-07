@@ -30,7 +30,12 @@ def temp_workspace():
         (ws / "staging" / "proposals").mkdir(parents=True)
         (ws / "staging" / "transactions" / "locks").mkdir(parents=True)
         (ws / "engineering" / "01_domain_system_architecture").mkdir(parents=True)
-        (ws / "personal" / "07_computer_science_ai_it_security" / "07_04_ai_assisted_software_engineering").mkdir(parents=True)
+        (
+            ws
+            / "personal"
+            / "07_computer_science_ai_it_security"
+            / "07_04_ai_assisted_software_engineering"
+        ).mkdir(parents=True)
         yield ws
 
 
@@ -112,6 +117,7 @@ def test_approval_binding_and_validation(temp_workspace):
     # 4. Tampering: alter proposal_hash to simulate divergence after approval (REVIEW-002)
     approved.proposal_hash = "sha256:" + "f" * 64
     from trashheap.promotion.engine import save_candidate
+
     save_candidate(approved, temp_workspace)
 
     with pytest.raises(ApprovalBindingError) as exc_tamper:
@@ -227,9 +233,9 @@ def test_dpcp_crash_recovery_and_orphan_sweep(temp_workspace):
         candidate_id="CAND-CRASH-001",
         proposal_revision=1,
         target_paths=["engineering/fake.md"],
-        expected_hashes={"engineering/fake.md": "sha256:" + "0"*64},
+        expected_hashes={"engineering/fake.md": "sha256:" + "0" * 64},
         temporary_paths=[str(fake_tmp_dir)],
-        idempotency_key="sha256:" + "1"*64,
+        idempotency_key="sha256:" + "1" * 64,
     )
     journal.transition_state("OP-CRASH-001", "TEMPORARY_OUTPUT_WRITTEN")
 
@@ -259,25 +265,38 @@ def test_cli_review_and_promote(temp_workspace):
     assert code_list == ExitCode.SUCCESS
 
     # 2. review show
-    code_show = cli_main(["review", "show", "CAND-CLI-001", "--workspace-root", str(temp_workspace), "--json"])
+    code_show = cli_main(
+        ["review", "show", "CAND-CLI-001", "--workspace-root", str(temp_workspace), "--json"]
+    )
     assert code_show == ExitCode.SUCCESS
 
     # 3. review approve
-    code_approve = cli_main([
-        "review", "approve", "CAND-CLI-001",
-        "--reviewer", "human:cli_admin",
-        "--reason", "CLI verification approval",
-        "--workspace-root", str(temp_workspace),
-        "--json",
-    ])
+    code_approve = cli_main(
+        [
+            "review",
+            "approve",
+            "CAND-CLI-001",
+            "--reviewer",
+            "human:cli_admin",
+            "--reason",
+            "CLI verification approval",
+            "--workspace-root",
+            str(temp_workspace),
+            "--json",
+        ]
+    )
     assert code_approve == ExitCode.SUCCESS
 
     # 4. review promote (or promote)
-    code_promote = cli_main([
-        "promote", "CAND-CLI-001",
-        "--workspace-root", str(temp_workspace),
-        "--json",
-    ])
+    code_promote = cli_main(
+        [
+            "promote",
+            "CAND-CLI-001",
+            "--workspace-root",
+            str(temp_workspace),
+            "--json",
+        ]
+    )
     assert code_promote == ExitCode.SUCCESS
 
     # Verify target file exists
@@ -285,5 +304,7 @@ def test_cli_review_and_promote(temp_workspace):
     assert target_path.exists()
 
     # 5. review recover
-    code_recover = cli_main(["review", "recover", "--workspace-root", str(temp_workspace), "--json"])
+    code_recover = cli_main(
+        ["review", "recover", "--workspace-root", str(temp_workspace), "--json"]
+    )
     assert code_recover == ExitCode.SUCCESS

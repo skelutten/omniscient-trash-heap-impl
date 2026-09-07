@@ -23,4 +23,3 @@ class LockTimeoutError(PromotionError):
 
 class ValidationRollbackError(PromotionError):
     """Raised when in-memory/temporary Layer 1–5 validation fails during DPCP step 3 (§9)."""
-

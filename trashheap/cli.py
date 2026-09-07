@@ -173,6 +173,12 @@ def build_parser() -> argparse.ArgumentParser:
     query_parser.add_argument(
         "--json", action="store_true", default=True, help="Emit machine-readable JSON output"
     )
+    query_parser.add_argument(
+        "--vector",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Enable opt-in vector retrieval (Plan 90)",
+    )
 
     # 6. rebuild
     rebuild_parser = subparsers.add_parser(
@@ -187,6 +193,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     rebuild_parser.add_argument(
         "--registry-dir", type=str, default=None, help="Custom path to schemas/registry"
+    )
+    rebuild_parser.add_argument(
+        "--vector", action="store_true", help="Also rebuild offline vector index (Plan 90)"
     )
     rebuild_parser.add_argument(
         "--json", action="store_true", help="Emit machine-readable JSON output"
@@ -261,9 +270,15 @@ def build_parser() -> argparse.ArgumentParser:
     # review approve
     r_approve = review_subs.add_parser("approve", help="Approve candidate proposal (REVIEW-002)")
     r_approve.add_argument("candidate_id", type=str, help="Candidate proposal ID")
-    r_approve.add_argument("--reviewer", type=str, required=True, help="Reviewer actor (e.g. human:alice)")
-    r_approve.add_argument("--reason", type=str, default="Approved via review", help="Approval rationale")
-    r_approve.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    r_approve.add_argument(
+        "--reviewer", type=str, required=True, help="Reviewer actor (e.g. human:alice)"
+    )
+    r_approve.add_argument(
+        "--reason", type=str, default="Approved via review", help="Approval rationale"
+    )
+    r_approve.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
     r_approve.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
 
     # review reject
@@ -271,18 +286,26 @@ def build_parser() -> argparse.ArgumentParser:
     r_reject.add_argument("candidate_id", type=str, help="Candidate proposal ID")
     r_reject.add_argument("--reviewer", type=str, required=True, help="Reviewer actor")
     r_reject.add_argument("--reason", type=str, required=True, help="Rejection rationale")
-    r_reject.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    r_reject.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
     r_reject.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
 
     # review promote
     r_promote = review_subs.add_parser("promote", help="Promote approved candidate via DPCP (§9)")
     r_promote.add_argument("candidate_id", type=str, help="Candidate proposal ID")
-    r_promote.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    r_promote.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
     r_promote.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
 
     # review recover
-    r_recover = review_subs.add_parser("recover", help="Crash recovery for interrupted DPCP promotions (§9.2)")
-    r_recover.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    r_recover = review_subs.add_parser(
+        "recover", help="Crash recovery for interrupted DPCP promotions (§9.2)"
+    )
+    r_recover.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
     r_recover.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
 
     # 11. promote (top-level alias for review promote)
@@ -291,46 +314,84 @@ def build_parser() -> argparse.ArgumentParser:
         help="Promote approved candidate via DPCP (§9, PROMO-001..PROMO-010)",
     )
     promote_parser.add_argument("candidate_id", type=str, help="Candidate proposal ID")
-    promote_parser.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
-    promote_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    promote_parser.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
+    promote_parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
+    )
 
     # 12. status
     status_parser = subparsers.add_parser(
         "status",
         help="Display environment durability, dependency availability, and knowledge debt metrics",
     )
-    status_parser.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
-    status_parser.add_argument("--ttl-days", type=int, default=180, help="Retention TTL in days (default: 180)")
-    status_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    status_parser.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
+    status_parser.add_argument(
+        "--ttl-days", type=int, default=180, help="Retention TTL in days (default: 180)"
+    )
+    status_parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
+    )
 
     # 13. reap
     reap_parser = subparsers.add_parser(
         "reap",
         help="Execute deterministic staging retention reaper pass (INGEST-CORE-022, §7.3)",
     )
-    reap_parser.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
-    reap_parser.add_argument("--ttl-days", type=int, default=180, help="Retention TTL in days (default: 180)")
-    reap_parser.add_argument("--grace-days", type=int, default=7, help="Grace period before tombstone purging (default: 7)")
-    reap_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    reap_parser.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
+    reap_parser.add_argument(
+        "--ttl-days", type=int, default=180, help="Retention TTL in days (default: 180)"
+    )
+    reap_parser.add_argument(
+        "--grace-days",
+        type=int,
+        default=7,
+        help="Grace period before tombstone purging (default: 7)",
+    )
+    reap_parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
+    )
 
     # 14. conformance
     conformance_parser = subparsers.add_parser(
         "conformance",
         help="Generate conformance projection or detect status dashboard drift (D90, CONFORM-001)",
     )
-    conformance_parser.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
-    conformance_parser.add_argument("--output", type=str, default="artifacts/conformance_matrix.yaml", help="Output path for matrix")
-    conformance_parser.add_argument("--check", action="store_true", help="Run drift detector validating SPEC_STATUS.md")
-    conformance_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    conformance_parser.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
+    conformance_parser.add_argument(
+        "--output",
+        type=str,
+        default="artifacts/conformance_matrix.yaml",
+        help="Output path for matrix",
+    )
+    conformance_parser.add_argument(
+        "--check", action="store_true", help="Run drift detector validating SPEC_STATUS.md"
+    )
+    conformance_parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
+    )
 
     # 15. benchmark
     bench_parser = subparsers.add_parser(
         "benchmark",
         help="Measure performance baseline and evaluate scale transition criteria (SCALE-001)",
     )
-    bench_parser.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
-    bench_parser.add_argument("--fixtures-dir", type=str, default=None, help="Directory containing canonical fixtures")
-    bench_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    bench_parser.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
+    bench_parser.add_argument(
+        "--fixtures-dir", type=str, default=None, help="Directory containing canonical fixtures"
+    )
+    bench_parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
+    )
 
     return parser
 
@@ -598,7 +659,21 @@ def handle_query(args: argparse.Namespace) -> int:
     registries = load_registries(reg_dir)
     corpus = load_corpus(corpus_root)
 
-    retriever = HybridRetriever(corpus=corpus, registries=registries)
+    vector_index = None
+    embedder = None
+    if getattr(args, "vector", False):
+        from trashheap.vector import LocalOfflineProvider, VectorIndex
+
+        embedder = LocalOfflineProvider()
+        vector_index = VectorIndex()
+        vector_index.build(corpus, embedder)
+
+    retriever = HybridRetriever(
+        corpus=corpus,
+        registries=registries,
+        vector_index=vector_index,
+        embedder=embedder,
+    )
     cli_params = {
         "scope": args.scope,
         "seed_top_k": args.seed_top_k,
@@ -606,6 +681,7 @@ def handle_query(args: argparse.Namespace) -> int:
         "max_results": args.max_results,
         "min_confidence": args.min_confidence,
         "min_relevance": args.min_relevance,
+        "enable_vector": getattr(args, "vector", False),
     }
 
     bundle = retriever.retrieve(query=args.prompt, cli_params=cli_params)
@@ -623,7 +699,12 @@ def handle_rebuild(args: argparse.Namespace) -> int:
     registries = load_registries(reg_dir)
     out_dir = Path(args.output_dir) if args.output_dir else None
 
-    res = rebuild_indexes(corpus_root, registries, output_dir=out_dir)
+    res = rebuild_indexes(
+        corpus_root,
+        registries,
+        output_dir=out_dir,
+        rebuild_vector=getattr(args, "vector", False),
+    )
     if args.json:
         print(json.dumps(res, indent=2))
     else:
@@ -677,9 +758,19 @@ def handle_stage_lint(args: argparse.Namespace) -> int:
         if report.injections_count > 0:
             print(f"  ⚠ {report.injections_count} prompt injection indicator(s) detected.")
         for item in report.items:
-            rel_str = f" candidate relations: {item.candidate_relations}" if item.candidate_relations else ""
-            inj_str = f" [INJECTIONS: {len(item.injections_detected)}]" if item.injections_detected else ""
-            print(f"  - {item.evidence_unit_ref} (suggested: {item.suggested_object_type}){rel_str}{inj_str}")
+            rel_str = (
+                f" candidate relations: {item.candidate_relations}"
+                if item.candidate_relations
+                else ""
+            )
+            inj_str = (
+                f" [INJECTIONS: {len(item.injections_detected)}]"
+                if item.injections_detected
+                else ""
+            )
+            print(
+                f"  - {item.evidence_unit_ref} (suggested: {item.suggested_object_type}){rel_str}{inj_str}"
+            )
     return ExitCode.SUCCESS
 
 
@@ -707,7 +798,9 @@ def handle_ingest(args: argparse.Namespace) -> int:
             print(
                 f"✓ Ingested '{file_arg}' -> {res.source_id}/{res.representation_id}{noop_str}{injections_str}"
             )
-            print(f"  Staged Evidence Unit: {res.evidence_unit.evidence_unit_ref} at {res.evidence_unit_path}")
+            print(
+                f"  Staged Evidence Unit: {res.evidence_unit.evidence_unit_ref} at {res.evidence_unit_path}"
+            )
         return ExitCode.SUCCESS
     except FileNotFoundError as e:
         if args.json:
@@ -756,19 +849,33 @@ def _execute_promote(candidate_id: str, ws_root: Path, as_json: bool) -> int:
         return ExitCode.SUCCESS
     except ApprovalBindingError as e:
         if as_json:
-            print(json.dumps({"status": "error", "error_type": "ApprovalBindingError", "message": str(e)}, indent=2))
+            print(
+                json.dumps(
+                    {"status": "error", "error_type": "ApprovalBindingError", "message": str(e)},
+                    indent=2,
+                )
+            )
         else:
             print(f"Approval Binding Error: {e}", file=sys.stderr)
         return ExitCode.VALIDATION_ERROR
     except ValidationRollbackError as e:
         if as_json:
-            print(json.dumps({"status": "error", "error_type": "ValidationRollbackError", "message": str(e)}, indent=2))
+            print(
+                json.dumps(
+                    {"status": "error", "error_type": "ValidationRollbackError", "message": str(e)},
+                    indent=2,
+                )
+            )
         else:
             print(f"Validation Rollback: {e}", file=sys.stderr)
         return ExitCode.VALIDATION_ERROR
     except ConflictError as e:
         if as_json:
-            print(json.dumps({"status": "error", "error_type": "ConflictError", "message": str(e)}, indent=2))
+            print(
+                json.dumps(
+                    {"status": "error", "error_type": "ConflictError", "message": str(e)}, indent=2
+                )
+            )
         else:
             print(f"Conflict Error: {e}", file=sys.stderr)
         return ExitCode.VALIDATION_ERROR
@@ -780,7 +887,11 @@ def _execute_promote(candidate_id: str, ws_root: Path, as_json: bool) -> int:
         return ExitCode.NOT_FOUND
     except Exception as e:
         if as_json:
-            print(json.dumps({"status": "error", "error_type": type(e).__name__, "message": str(e)}, indent=2))
+            print(
+                json.dumps(
+                    {"status": "error", "error_type": type(e).__name__, "message": str(e)}, indent=2
+                )
+            )
         else:
             print(f"Promotion Error: {e}", file=sys.stderr)
         return ExitCode.VALIDATION_ERROR
@@ -794,13 +905,17 @@ def handle_review(args: argparse.Namespace) -> int:
     if action == "list":
         candidates = list_candidates(ws_root, state_filter=args.status)
         if args.scope:
-            candidates = [c for c in candidates if c.proposed_frontmatter.get("scope") == args.scope]
+            candidates = [
+                c for c in candidates if c.proposed_frontmatter.get("scope") == args.scope
+            ]
         if args.json:
             print(json.dumps([c.model_dump() for c in candidates], indent=2))
         else:
             print(f"Candidates ({len(candidates)}):")
             for c in candidates:
-                print(f"  - {c.candidate_id} [{c.state}] rev:{c.proposal_revision} -> {c.target_path}")
+                print(
+                    f"  - {c.candidate_id} [{c.state}] rev:{c.proposal_revision} -> {c.target_path}"
+                )
         return ExitCode.SUCCESS
 
     elif action == "show":
@@ -814,7 +929,9 @@ def handle_review(args: argparse.Namespace) -> int:
                 print(f"  Target: {c.target_path}")
                 print(f"  Hash: {c.proposal_hash}")
                 if c.review_decision:
-                    print(f"  Decision: {c.review_decision.decision} by {c.review_decision.reviewer}")
+                    print(
+                        f"  Decision: {c.review_decision.decision} by {c.review_decision.reviewer}"
+                    )
             return ExitCode.SUCCESS
         except FileNotFoundError as e:
             if args.json:
@@ -834,11 +951,22 @@ def handle_review(args: argparse.Namespace) -> int:
             if args.json:
                 print(json.dumps({"status": "approved", "candidate": c.model_dump()}, indent=2))
             else:
-                print(f"✓ Approved candidate '{c.candidate_id}' (rev {c.proposal_revision}) by {args.reviewer}")
+                print(
+                    f"✓ Approved candidate '{c.candidate_id}' (rev {c.proposal_revision}) by {args.reviewer}"
+                )
             return ExitCode.SUCCESS
         except ApprovalBindingError as e:
             if args.json:
-                print(json.dumps({"status": "error", "error_type": "ApprovalBindingError", "message": str(e)}, indent=2))
+                print(
+                    json.dumps(
+                        {
+                            "status": "error",
+                            "error_type": "ApprovalBindingError",
+                            "message": str(e),
+                        },
+                        indent=2,
+                    )
+                )
             else:
                 print(f"Approval Error: {e}", file=sys.stderr)
             return ExitCode.VALIDATION_ERROR
@@ -939,7 +1067,9 @@ def handle_reap(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps({"status": "reaped", "results": result}, indent=2))
     else:
-        print(f"✓ Retention reap pass complete: {result['expired_count']} expired, {result['purged_count']} purged.")
+        print(
+            f"✓ Retention reap pass complete: {result['expired_count']} expired, {result['purged_count']} purged."
+        )
 
     return ExitCode.SUCCESS
 
@@ -955,7 +1085,16 @@ def handle_conformance(args: argparse.Namespace) -> int:
     if getattr(args, "check", False):
         drift = detect_spec_drift(ws_root)
         if args.json:
-            print(json.dumps({"status": "checked", "matrix_summary": matrix.summary, "drift": drift.to_dict()}, indent=2))
+            print(
+                json.dumps(
+                    {
+                        "status": "checked",
+                        "matrix_summary": matrix.summary,
+                        "drift": drift.to_dict(),
+                    },
+                    indent=2,
+                )
+            )
         else:
             print("=== Conformance & Drift Check (D90) ===")
             print(f"Matrix summary: {matrix.summary}")
@@ -968,7 +1107,9 @@ def handle_conformance(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps({"status": "projected", "matrix": matrix.to_dict()}, indent=2))
     else:
-        print(f"✓ Projected conformance matrix to {out_path.relative_to(ws_root) if out_path.is_relative_to(ws_root) else out_path}")
+        print(
+            f"✓ Projected conformance matrix to {out_path.relative_to(ws_root) if out_path.is_relative_to(ws_root) else out_path}"
+        )
         print(f"  Total invariant families: {matrix.summary['total_families']}")
         print(f"  Conformance tested: {matrix.summary['conformance_tested']}")
         print(f"  Implemented: {matrix.summary['implemented']}")
@@ -988,9 +1129,15 @@ def handle_benchmark(args: argparse.Namespace) -> int:
         print(json.dumps({"status": "ok", "benchmark": report.to_dict()}, indent=2))
     else:
         print("=== Performance Baseline Benchmark (SCALE-001) ===")
-        print(f"Corpus: {report.corpus_document_count} docs, {report.total_bytes} bytes, {report.total_lines} lines")
-        print(f"Parsing: {report.parse_ms_per_doc:.2f} ms/doc ({report.parse_docs_per_sec:.1f} docs/sec)")
-        print(f"Linting: {report.lint_ms_per_doc:.2f} ms/doc (findings: {report.lint_finding_count})")
+        print(
+            f"Corpus: {report.corpus_document_count} docs, {report.total_bytes} bytes, {report.total_lines} lines"
+        )
+        print(
+            f"Parsing: {report.parse_ms_per_doc:.2f} ms/doc ({report.parse_docs_per_sec:.1f} docs/sec)"
+        )
+        print(
+            f"Linting: {report.lint_ms_per_doc:.2f} ms/doc (findings: {report.lint_finding_count})"
+        )
         print(f"Retrieval Indexing: {report.retrieval_index_sec:.4f} sec")
         print(
             f"Retrieval Query Latency: mean={report.retrieval_mean_query_ms:.2f} ms "

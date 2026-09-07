@@ -105,7 +105,9 @@ class DPCPJournal:
                 ),
             )
 
-    def transition_state(self, operation_id: str, new_state: str, error_message: Optional[str] = None) -> None:
+    def transition_state(
+        self, operation_id: str, new_state: str, error_message: Optional[str] = None
+    ) -> None:
         now = current_iso_timestamp()
         with self._get_conn() as conn:
             conn.execute(
@@ -148,7 +150,9 @@ class DPCPJournal:
 
     def get_idempotency_entry(self, idempotency_key: str) -> Optional[Dict[str, Any]]:
         with self._get_conn() as conn:
-            cur = conn.execute("SELECT * FROM dpcp_idempotency WHERE idempotency_key = ?;", (idempotency_key,))
+            cur = conn.execute(
+                "SELECT * FROM dpcp_idempotency WHERE idempotency_key = ?;", (idempotency_key,)
+            )
             row = cur.fetchone()
             if not row:
                 return None
@@ -164,7 +168,9 @@ class DPCPJournal:
 
     def get_journal_entry(self, operation_id: str) -> Optional[JournalRecord]:
         with self._get_conn() as conn:
-            cur = conn.execute("SELECT * FROM dpcp_journal WHERE operation_id = ?;", (operation_id,))
+            cur = conn.execute(
+                "SELECT * FROM dpcp_journal WHERE operation_id = ?;", (operation_id,)
+            )
             row = cur.fetchone()
             if not row:
                 return None
@@ -225,11 +231,13 @@ class DPCPJournal:
                     "FAILED",
                     error_message="Recovered from pre-commit crash; aborted and cleaned temporary files",
                 )
-                recovery_log.append({
-                    "operation_id": j.operation_id,
-                    "action": "rolled_back",
-                    "reason": "crash_pre_commit",
-                })
+                recovery_log.append(
+                    {
+                        "operation_id": j.operation_id,
+                        "action": "rolled_back",
+                        "reason": "crash_pre_commit",
+                    }
+                )
             elif j.current_state == "CANONICAL_COMMITTED":
                 # Files were atomically committed before crash: complete promotion
                 self.transition_state(
@@ -237,21 +245,24 @@ class DPCPJournal:
                     "COMPLETED",
                     error_message="Recovered from post-commit crash; canonical files confirmed",
                 )
-                recovery_log.append({
-                    "operation_id": j.operation_id,
-                    "action": "completed",
-                    "reason": "crash_post_commit",
-                })
+                recovery_log.append(
+                    {
+                        "operation_id": j.operation_id,
+                        "action": "completed",
+                        "reason": "crash_post_commit",
+                    }
+                )
 
         # Sweep orphan .tmp_promo_* folders in staging/transactions
         transactions_dir = workspace_root / "staging" / "transactions"
         if transactions_dir.exists():
             for orphan in transactions_dir.glob(".tmp_promo_*"):
                 shutil.rmtree(orphan, ignore_errors=True)
-                recovery_log.append({
-                    "orphan_dir": str(orphan),
-                    "action": "purged_orphan_directory",
-                })
+                recovery_log.append(
+                    {
+                        "orphan_dir": str(orphan),
+                        "action": "purged_orphan_directory",
+                    }
+                )
 
         return recovery_log
-

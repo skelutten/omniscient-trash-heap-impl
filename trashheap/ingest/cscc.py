@@ -170,6 +170,7 @@ def commit_raw_capture(
         if tmp_rep_dir.exists():
             try:
                 import shutil
+
                 shutil.rmtree(tmp_rep_dir)
             except Exception:
                 pass

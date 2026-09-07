@@ -44,7 +44,9 @@ class TTLReaper:
         self.workspace_root = workspace_root
         self.ttl_days = ttl_days
         self.grace_days = grace_days
-        self.audit_log_path = self.workspace_root / "staging" / "transactions" / "reaper_audit.jsonl"
+        self.audit_log_path = (
+            self.workspace_root / "staging" / "transactions" / "reaper_audit.jsonl"
+        )
         self.audit_log_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _log_audit(self, entry: Dict[str, Any]) -> None:
@@ -93,12 +95,14 @@ class TTLReaper:
                 c.state = "expired"
                 c.history.append(trans)
                 save_candidate(c, self.workspace_root)
-                self._log_audit({
-                    "action": "status_transition",
-                    "candidate_id": c.candidate_id,
-                    "new_state": "expired",
-                    "age_days": age_days,
-                })
+                self._log_audit(
+                    {
+                        "action": "status_transition",
+                        "candidate_id": c.candidate_id,
+                        "new_state": "expired",
+                        "age_days": age_days,
+                    }
+                )
                 expired_count += 1
 
             # Step 2: Purge proposals that have been expired past the grace period
@@ -106,13 +110,15 @@ class TTLReaper:
                 p_file = self.workspace_root / "staging" / "proposals" / f"{c.candidate_id}.yaml"
                 if p_file.exists():
                     p_file.unlink(missing_ok=True)
-                self._log_audit({
-                    "action": "tombstone_purge",
-                    "candidate_id": c.candidate_id,
-                    "proposal_revision": c.proposal_revision,
-                    "source_refs": c.source_refs,
-                    "age_days": age_days,
-                })
+                self._log_audit(
+                    {
+                        "action": "tombstone_purge",
+                        "candidate_id": c.candidate_id,
+                        "proposal_revision": c.proposal_revision,
+                        "source_refs": c.source_refs,
+                        "age_days": age_days,
+                    }
+                )
                 purged_count += 1
 
         return {

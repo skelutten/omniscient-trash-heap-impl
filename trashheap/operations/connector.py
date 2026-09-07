@@ -110,7 +110,10 @@ class DocumentAdapter(BaseAdapter):
             source_type="document",
             workspace_root=workspace_root,
             identity={"resource": payload.source_path, "representation_hash": payload.content_hash},
-            provenance={"resource": payload.source_path, "representation_hash": payload.content_hash},
+            provenance={
+                "resource": payload.source_path,
+                "representation_hash": payload.content_hash,
+            },
         )
 
 

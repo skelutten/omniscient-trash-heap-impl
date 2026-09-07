@@ -1,6 +1,6 @@
 # Plan 90 — Opt-in vector retrieval
 
-> **Status:** opt-in, deferred
+> **Status:** completed, verified (D108)
 > **Prerequisite:** `02-DETERMINISTIC-CORE.md` green
 > **Dependency:** embedding model and vector index must be explicitly selected. Cross-encoder reranking remains excluded (D83).
 

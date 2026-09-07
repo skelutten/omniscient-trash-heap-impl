@@ -61,7 +61,10 @@ def test_fence_untrusted_content_and_delimiter_neutralization():
     assert fenced.startswith("<untrusted_source>\n")
     assert fenced.endswith("\n</untrusted_source>")
     # The internal closing tag must be escaped to &lt;/untrusted_source&gt;
-    assert "</untrusted_source>" not in fenced[len("<untrusted_source>\n"):-len("\n</untrusted_source>")]
+    assert (
+        "</untrusted_source>"
+        not in fenced[len("<untrusted_source>\n") : -len("\n</untrusted_source>")]
+    )
     assert "&lt;/untrusted_source&gt;" in fenced
 
 
@@ -168,7 +171,11 @@ def test_intake_source_profiles(temp_workspace):
         source_type="code_repository",
         workspace_root=temp_workspace,
         identity={"repository_uri": "https://github.com/test/repo", "revision_or_commit": "main"},
-        provenance={"repository_uri": "https://github.com/test/repo", "revision_or_commit": "main", "representation_hash": compute_sha256(b"print('hello world')")},
+        provenance={
+            "repository_uri": "https://github.com/test/repo",
+            "revision_or_commit": "main",
+            "representation_hash": compute_sha256(b"print('hello world')"),
+        },
     )
     assert code_res.envelope.category == "Artifact"
     assert code_res.envelope.source_type == "code_repository"
@@ -180,8 +187,17 @@ def test_intake_source_profiles(temp_workspace):
         source_input=traj_bytes,
         source_type="agent_trajectory",
         workspace_root=temp_workspace,
-        identity={"source_system": "kiro", "external_id": "session-123", "representation_hash": traj_h},
-        provenance={"source_system": "kiro", "external_id": "session-123", "representation_hash": traj_h, "occurred_at": "2026-09-07T10:00:00Z"},
+        identity={
+            "source_system": "kiro",
+            "external_id": "session-123",
+            "representation_hash": traj_h,
+        },
+        provenance={
+            "source_system": "kiro",
+            "external_id": "session-123",
+            "representation_hash": traj_h,
+            "occurred_at": "2026-09-07T10:00:00Z",
+        },
     )
     assert traj_res.envelope.category == "Event"
     assert traj_res.envelope.source_type == "agent_trajectory"
@@ -201,7 +217,10 @@ def test_intake_source_profiles(temp_workspace):
         source_input="Meeting notes with team.",
         source_type="meeting",
         workspace_root=temp_workspace,
-        identity={"occurred_at": "2026-09-07T14:00:00Z", "participant_refs": ["human:alice", "human:bob"]},
+        identity={
+            "occurred_at": "2026-09-07T14:00:00Z",
+            "participant_refs": ["human:alice", "human:bob"],
+        },
         provenance={"occurred_at": "2026-09-07T14:00:00Z"},
     )
     assert meeting_res.envelope.category == "Event"
@@ -221,7 +240,11 @@ def test_intake_source_profile_validation_errors(temp_workspace):
             b"trajectory data",
             source_type="agent_trajectory",
             workspace_root=temp_workspace,
-            identity={"source_system": "kiro", "external_id": "s1", "representation_hash": compute_sha256(b"trajectory data")},
+            identity={
+                "source_system": "kiro",
+                "external_id": "s1",
+                "representation_hash": compute_sha256(b"trajectory data"),
+            },
             provenance={},  # missing occurred_at etc.
         )
     assert "[E133]" in str(exc2.value)
@@ -263,7 +286,11 @@ def test_adversarial_fixtures_intake_and_staging_triage(temp_workspace):
     assert report.injections_count > 0
 
     # Verify candidate relations extraction
-    clean_item = next(it for it in report.items if it.evidence_unit_ref == res_clean.evidence_unit.evidence_unit_ref)
+    clean_item = next(
+        it
+        for it in report.items
+        if it.evidence_unit_ref == res_clean.evidence_unit.evidence_unit_ref
+    )
     assert "ENG-CMP-PARSER-0001" in clean_item.candidate_relations
     assert "ENG-FET-LINTER-0001" in clean_item.candidate_relations
 
@@ -274,34 +301,47 @@ def test_cli_ingest_and_stage_lint(temp_workspace):
     src_file.write_text("Discussion on [[PERS-ART-AGENTS-0001]] architecture.", encoding="utf-8")
 
     # Ingest via CLI
-    code_ingest = cli_main([
-        "ingest",
-        str(src_file),
-        "--source-type", "document",
-        "--workspace-root", str(temp_workspace),
-    ])
+    code_ingest = cli_main(
+        [
+            "ingest",
+            str(src_file),
+            "--source-type",
+            "document",
+            "--workspace-root",
+            str(temp_workspace),
+        ]
+    )
     assert code_ingest == ExitCode.SUCCESS
 
     # Ingest non-existent file
-    code_not_found = cli_main([
-        "ingest",
-        str(temp_workspace / "does_not_exist.txt"),
-        "--workspace-root", str(temp_workspace),
-    ])
+    code_not_found = cli_main(
+        [
+            "ingest",
+            str(temp_workspace / "does_not_exist.txt"),
+            "--workspace-root",
+            str(temp_workspace),
+        ]
+    )
     assert code_not_found == ExitCode.NOT_FOUND
 
     # Ingest path traversal attempt
-    code_traversal = cli_main([
-        "ingest",
-        "../../etc/passwd",
-        "--workspace-root", str(temp_workspace),
-    ])
+    code_traversal = cli_main(
+        [
+            "ingest",
+            "../../etc/passwd",
+            "--workspace-root",
+            str(temp_workspace),
+        ]
+    )
     assert code_traversal == ExitCode.VALIDATION_ERROR
 
     # Run stage-lint via CLI
-    code_stage = cli_main([
-        "stage-lint",
-        "--staging-dir", str(temp_workspace / "staging"),
-        "--json",
-    ])
+    code_stage = cli_main(
+        [
+            "stage-lint",
+            "--staging-dir",
+            str(temp_workspace / "staging"),
+            "--json",
+        ]
+    )
     assert code_stage == ExitCode.SUCCESS

@@ -93,7 +93,9 @@ def load_candidate(candidate_id: str, workspace_root: Path) -> CandidateProposal
     return CandidateProposal.model_validate(data)
 
 
-def list_candidates(workspace_root: Path, state_filter: Optional[str] = None) -> List[CandidateProposal]:
+def list_candidates(
+    workspace_root: Path, state_filter: Optional[str] = None
+) -> List[CandidateProposal]:
     """List all candidate proposals in staging/proposals/."""
     p_dir = get_proposals_dir(workspace_root)
     candidates = []
@@ -134,10 +136,16 @@ def create_candidate_proposal(
 
     cid = candidate_id or f"CAND-{uuid.uuid4().hex[:12].upper()}"
     src_refs = source_refs or (evidence_unit.source_refs if evidence_unit else ["SRC-DIRECT"])
-    rep_refs = representation_refs or (evidence_unit.representation_refs if evidence_unit else ["REP-DIRECT"])
-    src_rev = source_revision or (evidence_unit.representation_refs[0] if evidence_unit and evidence_unit.representation_refs else "sha256:" + "0"*64)
+    rep_refs = representation_refs or (
+        evidence_unit.representation_refs if evidence_unit else ["REP-DIRECT"]
+    )
+    src_rev = source_revision or (
+        evidence_unit.representation_refs[0]
+        if evidence_unit and evidence_unit.representation_refs
+        else "sha256:" + "0" * 64
+    )
     if not src_rev.startswith("sha256:"):
-        src_rev = "sha256:" + "0"*64
+        src_rev = "sha256:" + "0" * 64
 
     # Resolve defaults from registry
     if scope == "engineering":
@@ -149,11 +157,16 @@ def create_candidate_proposal(
         rel_dir = "engineering/01_domain_system_architecture"
     else:
         chosen_domain = domain or "computer_science"
-        chosen_tax_path = taxonomy_path or "07. Computer Science, AI & Information Technology / 07.04. AI-Assisted Software Engineering"
+        chosen_tax_path = (
+            taxonomy_path
+            or "07. Computer Science, AI & Information Technology / 07.04. AI-Assisted Software Engineering"
+        )
         chosen_tax_id = taxonomy_id or "TX-PERS-07-04"
         chosen_type = object_type if object_type in registries.object_types else "Observation"
         canonical_id = f"PERS-OBS-{uuid.uuid4().hex[:4].upper()}-0001"
-        rel_dir = "personal/07_computer_science_ai_it_security/07_04_ai_assisted_software_engineering"
+        rel_dir = (
+            "personal/07_computer_science_ai_it_security/07_04_ai_assisted_software_engineering"
+        )
 
     t_path = target_path or f"{rel_dir}/{canonical_id}.md"
     doc_title = title or f"Candidate Knowledge for {cid}"
@@ -257,7 +270,9 @@ def approve_candidate(
 ) -> CandidateProposal:
     """Approve a candidate proposal, binding decision to exact revision and hashes (REVIEW-002..REVIEW-004)."""
     if not ACTOR_REGEX.match(reviewer):
-        raise ApprovalBindingError(f"Reviewer actor '{reviewer}' is invalid per ACTOR_PATTERN [REVIEW-004]")
+        raise ApprovalBindingError(
+            f"Reviewer actor '{reviewer}' is invalid per ACTOR_PATTERN [REVIEW-004]"
+        )
 
     proposal = load_candidate(candidate_id, workspace_root)
 
@@ -413,22 +428,31 @@ def promote_candidate(
     # Approval binding verification (REVIEW-002)
     rd = proposal.review_decision
     if rd.candidate_id != proposal.candidate_id:
-        raise ApprovalBindingError("Candidate ID mismatch between approval and proposal [REVIEW-002]")
+        raise ApprovalBindingError(
+            "Candidate ID mismatch between approval and proposal [REVIEW-002]"
+        )
     if rd.proposal_revision != proposal.proposal_revision:
-        raise ApprovalBindingError("Proposal revision mismatch between approval and proposal [REVIEW-002]")
+        raise ApprovalBindingError(
+            "Proposal revision mismatch between approval and proposal [REVIEW-002]"
+        )
     if rd.proposal_hash != proposal.proposal_hash:
-        raise ApprovalBindingError("Proposal hash mismatch between approval and proposal [REVIEW-002]")
+        raise ApprovalBindingError(
+            "Proposal hash mismatch between approval and proposal [REVIEW-002]"
+        )
     if rd.source_revision != proposal.source_revision:
-        raise ApprovalBindingError("Source revision mismatch between approval and proposal [REVIEW-002]")
+        raise ApprovalBindingError(
+            "Source revision mismatch between approval and proposal [REVIEW-002]"
+        )
 
     # Verify scope admissibility (§9.5)
     scope = proposal.proposed_frontmatter.get("scope")
     if scope not in {"personal", "engineering"}:
-        raise PromotionError(f"Inadmissible candidate scope '{scope}'. Must be personal or engineering [E104]")
+        raise PromotionError(
+            f"Inadmissible candidate scope '{scope}'. Must be personal or engineering [E104]"
+        )
 
     # 3. Acquire lock & run DPCP
     with canonical_promotion_lock(lock_file, timeout_seconds=10.0):
-
         # Conflict check (PROMO-006)
         if target_file.exists():
             current_target_hash = compute_content_sha256(target_file.read_text(encoding="utf-8"))
@@ -438,7 +462,12 @@ def promote_candidate(
                 )
 
         # Step 1: PREPARED
-        tmp_promo_dir = ws / "staging" / "transactions" / f".tmp_promo_{proposal.candidate_id}_{proposal.proposal_revision}"
+        tmp_promo_dir = (
+            ws
+            / "staging"
+            / "transactions"
+            / f".tmp_promo_{proposal.candidate_id}_{proposal.proposal_revision}"
+        )
         tmp_promo_dir.mkdir(parents=True, exist_ok=True)
         tmp_target_file = tmp_promo_dir / target_file.name
 
@@ -555,5 +584,5 @@ def promote_candidate(
             # Clean temporary promotion folder
             if tmp_promo_dir.exists():
                 import shutil
-                shutil.rmtree(tmp_promo_dir, ignore_errors=True)
 
+                shutil.rmtree(tmp_promo_dir, ignore_errors=True)

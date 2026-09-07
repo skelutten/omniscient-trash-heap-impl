@@ -52,6 +52,7 @@ def inspect_environment(workspace_root: Path) -> EnvironmentReport:
     # Inspect optional dependencies
     try:
         import duckdb  # noqa: F401
+
         duckdb_ok = True
     except ImportError:
         duckdb_ok = False

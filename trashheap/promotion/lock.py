@@ -45,4 +45,3 @@ def canonical_promotion_lock(
             os.close(fd)
         except OSError:
             pass
-

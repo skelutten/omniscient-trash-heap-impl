@@ -20,7 +20,14 @@ def current_iso_timestamp() -> str:
 INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     "CANON": {
         "owner": "specs/ARCHITECTURE.md",
-        "invariants": ["CANON-001", "CANON-002", "CANON-003", "CANON-004", "CANON-005", "CANON-006"],
+        "invariants": [
+            "CANON-001",
+            "CANON-002",
+            "CANON-003",
+            "CANON-004",
+            "CANON-005",
+            "CANON-006",
+        ],
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
@@ -60,7 +67,16 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "REL": {
         "owner": "specs/ONTOLOGY.md",
-        "invariants": ["REL-001", "REL-002", "REL-003", "REL-004", "REL-005", "REL-006", "REL-007", "REL-008"],
+        "invariants": [
+            "REL-001",
+            "REL-002",
+            "REL-003",
+            "REL-004",
+            "REL-005",
+            "REL-006",
+            "REL-007",
+            "REL-008",
+        ],
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
@@ -68,7 +84,16 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "EPI": {
         "owner": "specs/EPISTEMOLOGY.md",
-        "invariants": ["EPI-001", "EPI-002", "EPI-003", "EPI-004", "EPI-005", "EPI-006", "EPI-007", "EPI-008"],
+        "invariants": [
+            "EPI-001",
+            "EPI-002",
+            "EPI-003",
+            "EPI-004",
+            "EPI-005",
+            "EPI-006",
+            "EPI-007",
+            "EPI-008",
+        ],
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
@@ -92,7 +117,16 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "SOURCE": {
         "owner": "specs/UNIVERSAL-SOURCE-EXTENSION.md",
-        "invariants": ["SOURCE-001", "SOURCE-002", "SOURCE-007", "SOURCE-008", "SOURCE-010", "SOURCE-015", "SOURCE-016", "SOURCE-017"],
+        "invariants": [
+            "SOURCE-001",
+            "SOURCE-002",
+            "SOURCE-007",
+            "SOURCE-008",
+            "SOURCE-010",
+            "SOURCE-015",
+            "SOURCE-016",
+            "SOURCE-017",
+        ],
         "implementation": "trashheap/ingest/pipeline.py",
         "test": "tests/test_ingest_safety.py",
         "verification": "tools/check.sh",
@@ -100,7 +134,18 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "RAW": {
         "owner": "specs/INGEST-STAGING.md",
-        "invariants": ["RAW-001", "RAW-002", "RAW-003", "RAW-004", "RAW-005", "RAW-006", "RAW-007", "RAW-008", "RAW-009", "RAW-010"],
+        "invariants": [
+            "RAW-001",
+            "RAW-002",
+            "RAW-003",
+            "RAW-004",
+            "RAW-005",
+            "RAW-006",
+            "RAW-007",
+            "RAW-008",
+            "RAW-009",
+            "RAW-010",
+        ],
         "implementation": "trashheap/ingest/cscc.py",
         "test": "tests/test_ingest_safety.py",
         "verification": "tools/check.sh",
@@ -132,7 +177,18 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "DPCP": {
         "owner": "specs/INGEST-STAGING.md",
-        "invariants": ["DPCP-001", "DPCP-002", "DPCP-003", "DPCP-004", "DPCP-005", "DPCP-006", "DPCP-007", "DPCP-008", "DPCP-009", "DPCP-010"],
+        "invariants": [
+            "DPCP-001",
+            "DPCP-002",
+            "DPCP-003",
+            "DPCP-004",
+            "DPCP-005",
+            "DPCP-006",
+            "DPCP-007",
+            "DPCP-008",
+            "DPCP-009",
+            "DPCP-010",
+        ],
         "implementation": "trashheap/promotion/engine.py",
         "test": "tests/test_proposal_promotion.py",
         "verification": "tools/check.sh",
@@ -253,8 +309,8 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     "RET": {
         "owner": "specs/RETRIEVAL.md",
         "invariants": ["RET-001", "RET-002", "RET-003", "RET-004", "RET-005"],
-        "implementation": "trashheap/retrieval.py",
-        "test": "tests/test_retrieval.py",
+        "implementation": "trashheap/retrieval.py, trashheap/vector/",
+        "test": "tests/test_retrieval.py, tests/test_vector_retrieval.py",
         "verification": "tools/check.sh",
         "status": "CONFORMANCE_TESTED",
     },
@@ -449,21 +505,31 @@ def generate_conformance_matrix(
 
         mapped = INVARIANT_FAMILY_MAP.get(fid, {})
         invariants = mapped.get("invariants", [f"{fid}-*"])
-        inv_id_summary = f"{invariants[0]}..{invariants[-1]}" if len(invariants) > 1 else invariants[0]
+        inv_id_summary = (
+            f"{invariants[0]}..{invariants[-1]}" if len(invariants) > 1 else invariants[0]
+        )
 
         impl = mapped.get("implementation", "UNIMPLEMENTED")
         test = mapped.get("test", "planned")
-        verif = mapped.get("verification", "tools/check.sh" if impl != "UNIMPLEMENTED" else "planned")
+        verif = mapped.get(
+            "verification", "tools/check.sh" if impl != "UNIMPLEMENTED" else "planned"
+        )
         status = mapped.get("status", "UNIMPLEMENTED")
 
         # Verify physical presence in repository
-        impl_path = workspace_root / impl if impl != "UNIMPLEMENTED" else None
-        test_path = workspace_root / test if test != "planned" else None
+        impl_ok = (
+            impl != "UNIMPLEMENTED"
+            and all((workspace_root / p.strip()).exists() for p in impl.split(","))
+        )
+        test_ok = (
+            test != "planned"
+            and all((workspace_root / p.strip()).exists() for p in test.split(","))
+        )
 
-        if impl_path and impl_path.exists() and test_path and test_path.exists():
+        if impl_ok and test_ok:
             status = "CONFORMANCE_TESTED"
             tested_count += 1
-        elif impl_path and impl_path.exists():
+        elif impl_ok:
             status = "IMPLEMENTED"
             implemented_count += 1
         else:
@@ -636,17 +702,25 @@ def detect_spec_drift(workspace_root: Path) -> DriftReport:
         # Implementation reality check
         # If dashboard claims CONFORMANCE_TESTED or IMPLEMENTED, check that actual files exist
         if declared_impl_status in {"IMPLEMENTED", "CONFORMANCE_TESTED"}:
-            owned_fams = [item.get("family_id") for item in families if item.get("owner") == doc_rel]
+            owned_fams = [
+                item.get("family_id") for item in families if item.get("owner") == doc_rel
+            ]
             missing_evidence = False
             for of in owned_fams:
                 info = INVARIANT_FAMILY_MAP.get(of, {})
                 impl = info.get("implementation", "UNIMPLEMENTED")
                 test = info.get("test", "planned")
-                if impl == "UNIMPLEMENTED" or not (workspace_root / impl).exists():
+                impl_ok = impl != "UNIMPLEMENTED" and all(
+                    (workspace_root / p.strip()).exists() for p in impl.split(",")
+                )
+                if not impl_ok:
                     missing_evidence = True
                     break
                 if declared_impl_status == "CONFORMANCE_TESTED":
-                    if test == "planned" or not (workspace_root / test).exists():
+                    test_ok = test != "planned" and all(
+                        (workspace_root / p.strip()).exists() for p in test.split(",")
+                    )
+                    if not test_ok:
                         missing_evidence = True
                         break
             if missing_evidence:
@@ -662,16 +736,21 @@ def detect_spec_drift(workspace_root: Path) -> DriftReport:
                 )
 
         elif declared_impl_status == "UNIMPLEMENTED":
-            owned_fams = [item.get("family_id") for item in families if item.get("owner") == doc_rel]
+            owned_fams = [
+                item.get("family_id") for item in families if item.get("owner") == doc_rel
+            ]
             all_tested = bool(owned_fams)
             for of in owned_fams:
                 info = INVARIANT_FAMILY_MAP.get(of, {})
                 impl = info.get("implementation", "UNIMPLEMENTED")
                 test = info.get("test", "planned")
-                if impl == "UNIMPLEMENTED" or not (workspace_root / impl).exists():
-                    all_tested = False
-                    break
-                if test == "planned" or not (workspace_root / test).exists():
+                impl_ok = impl != "UNIMPLEMENTED" and all(
+                    (workspace_root / p.strip()).exists() for p in impl.split(",")
+                )
+                test_ok = test != "planned" and all(
+                    (workspace_root / p.strip()).exists() for p in test.split(",")
+                )
+                if not impl_ok or not test_ok:
                     all_tested = False
                     break
             if all_tested and owned_fams:

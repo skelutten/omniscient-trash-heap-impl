@@ -12,6 +12,7 @@ def rebuild_indexes(
     corpus_root: Path,
     registries: LoadedRegistries,
     output_dir: Optional[Path] = None,
+    rebuild_vector: bool = False,
 ) -> Dict[str, Any]:
     """Rebuild ephemeral metadata, graph projections, and term index directly from Markdown notes.
 
@@ -87,9 +88,22 @@ def rebuild_indexes(
     with open(catalog_file, "w", encoding="utf-8") as f:
         json.dump(catalog_payload, f, indent=2, sort_keys=True)
 
+    artifacts = [str(graph_file), str(catalog_file)]
+
+    if rebuild_vector:
+        from trashheap.vector import LocalOfflineProvider, VectorIndex
+
+        v_embedder = LocalOfflineProvider()
+        v_index = VectorIndex()
+        v_index.build(corpus, v_embedder)
+        v_file = out_path / "vector_index.json"
+        with open(v_file, "w", encoding="utf-8") as f:
+            json.dump(v_index.to_dict(), f, indent=2, sort_keys=True)
+        artifacts.append(str(v_file))
+
     return {
         "status": "ok",
         "rebuilt_objects": len(corpus.objects),
         "output_dir": str(out_path),
-        "artifacts": [str(graph_file), str(catalog_file)],
+        "artifacts": artifacts,
     }
