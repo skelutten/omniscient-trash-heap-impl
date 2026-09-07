@@ -13,6 +13,14 @@ from typing import Any, Dict, List, Optional
 
 from trashheap.constants import VERSION, ExitCode
 from trashheap.corpus import load_corpus
+from trashheap.ingest import (
+    AccessDeniedError,
+    IntegrityConflictError,
+    QuarantineError,
+    SourceValidationError,
+    intake_source,
+    stage_lint,
+)
 from trashheap.linter import Finding, Linter
 from trashheap.rebuild import rebuild_indexes
 from trashheap.registry.loader import RegistryLoadError, load_registries
@@ -199,7 +207,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ingest_parser.add_argument("file", type=str, help="Path to source file to ingest")
     ingest_parser.add_argument(
-        "--source-type", type=str, default="note", help="Source type classification"
+        "--source-type", type=str, default="document", help="Source type classification"
+    )
+    ingest_parser.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
     )
     ingest_parser.add_argument(
         "--staging-dir", type=str, default="staging", help="Target staging directory"
@@ -543,45 +554,82 @@ def handle_generate_skills(args: argparse.Namespace) -> int:
 
 
 def handle_stage_lint(args: argparse.Namespace) -> int:
-    """Handle stage-lint triage command (Plan 03 stub)."""
+    """Handle stage-lint triage command."""
     staging_dir = Path(args.staging_dir)
-    items = list(staging_dir.glob("*")) if staging_dir.exists() else []
+    report = stage_lint(staging_dir)
     if args.json:
-        print(
-            json.dumps(
-                {"status": "passed", "staged_count": len(items), "items": [str(p) for p in items]},
-                indent=2,
-            )
-        )
+        print(json.dumps({"status": "passed", "report": report.to_dict()}, indent=2))
     else:
-        print(f"Staging area '{staging_dir}': {len(items)} file(s) found.")
+        print(f"Staging triage for '{staging_dir}': {report.total_count} Evidence Unit(s) staged.")
+        if report.injections_count > 0:
+            print(f"  ⚠ {report.injections_count} prompt injection indicator(s) detected.")
+        for item in report.items:
+            rel_str = f" candidate relations: {item.candidate_relations}" if item.candidate_relations else ""
+            inj_str = f" [INJECTIONS: {len(item.injections_detected)}]" if item.injections_detected else ""
+            print(f"  - {item.evidence_unit_ref} (suggested: {item.suggested_object_type}){rel_str}{inj_str}")
     return ExitCode.SUCCESS
 
 
 def handle_ingest(args: argparse.Namespace) -> int:
-    """Handle ingest source intake command (Plan 03 stub)."""
-    file_path = Path(args.file)
-    if not file_path.exists():
+    """Handle ingest source intake command."""
+    file_arg = args.file
+    source_type = args.source_type
+    ws_root = getattr(args, "workspace_root", None) or "."
+
+    try:
+        res = intake_source(
+            source_input=file_arg,
+            source_type=source_type,
+            workspace_root=ws_root,
+        )
+        if args.json:
+            print(json.dumps({"status": "staged", "result": res.to_dict()}, indent=2))
+        else:
+            noop_str = " (no-op: duplicate content)" if res.is_noop else ""
+            injections_str = (
+                f" [WARNING: {len(res.injections_detected)} prompt injection indicators detected]"
+                if res.injections_detected
+                else ""
+            )
+            print(
+                f"✓ Ingested '{file_arg}' -> {res.source_id}/{res.representation_id}{noop_str}{injections_str}"
+            )
+            print(f"  Staged Evidence Unit: {res.evidence_unit.evidence_unit_ref} at {res.evidence_unit_path}")
+        return ExitCode.SUCCESS
+    except FileNotFoundError as e:
+        if args.json:
+            print(json.dumps({"status": "error", "message": str(e)}, indent=2))
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        return ExitCode.NOT_FOUND
+    except AccessDeniedError as e:
         if args.json:
             print(
                 json.dumps(
-                    {"status": "error", "message": f"File '{file_path}' not found"}, indent=2
+                    {"status": "error", "error_type": "AccessDeniedError", "message": str(e)},
+                    indent=2,
                 )
             )
         else:
-            print(f"Error: File '{file_path}' not found", file=sys.stderr)
-        return ExitCode.NOT_FOUND
-
-    if args.json:
-        print(
-            json.dumps(
-                {"status": "staged", "file": str(file_path), "source_type": args.source_type},
-                indent=2,
+            print(f"Security Error: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
+    except (SourceValidationError, QuarantineError, IntegrityConflictError) as e:
+        if args.json:
+            print(
+                json.dumps(
+                    {"status": "error", "error_type": type(e).__name__, "message": str(e)},
+                    indent=2,
+                )
             )
-        )
-    else:
-        print(f"✓ Source '{file_path}' registered for staging triage.")
-    return ExitCode.SUCCESS
+        else:
+            print(f"Ingestion Error: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
+    except Exception as e:
+        if args.json:
+            print(json.dumps({"status": "error", "message": str(e)}, indent=2))
+        else:
+            print(f"Unexpected Ingestion Error: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
 
 
 def main(argv: Optional[List[str]] = None) -> int:

@@ -1,0 +1,4 @@
+# Architecture Overview for The Omniscient Trash Heap
+
+This document describes the core data model and pipeline for [[ENG-CMP-PARSER-0001]] and [[ENG-FET-LINTER-0001]].
+The system maintains strict invariant bounds across all ingest modalities.

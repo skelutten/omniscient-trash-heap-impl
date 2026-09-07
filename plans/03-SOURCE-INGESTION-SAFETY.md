@@ -1,6 +1,6 @@
 # Plan 03 — Source ingestion safety & Sandboxing
 
-> **Status:** proposed, not started
+> **Status:** complete
 > **Prerequisite:** `02-DETERMINISTIC-CORE.md` green
 > **Next:** `04-PROPOSAL-PROMOTION-RECOVERY.md`
 
