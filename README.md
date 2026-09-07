@@ -68,7 +68,7 @@ ln -sfn $(pwd)/.agents/skills/trashheap ~/.agents/skills/trashheap
 Systemet separerar strikt mellan kod/motor, kanoniska referensfixturer och externa wikikorpusar:
 
 1. **Projektkällkod och motor:**
-   - Plats: `/home/daniel6651/omniscient-trash-heap-agy` (detta repository)
+   - Plats: `/home/daniel6651/omniscient-trash-heap-impl` (detta repository)
    - CLI-paket: `trashheap/`
    - Formella specifikationer: `specs/`
    - Scheman och register: `schemas/registry/`
@@ -151,8 +151,8 @@ Lägg till `--include-body` vid anrop till `trashheap query` för att få hela b
 För att slippa skriva `--corpus-root /home/daniel6651/wiki --include-drafts` varje gång kan du lägga till ett alias i din `~/.bashrc`:
 
 ```bash
-alias mywiki='uv run --directory /home/daniel6651/omniscient-trash-heap-agy trashheap query --corpus-root /home/daniel6651/wiki --include-drafts'
-alias mywikishow='uv run --directory /home/daniel6651/omniscient-trash-heap-agy trashheap show --corpus-root /home/daniel6651/wiki'
+alias mywiki='uv run --directory /home/daniel6651/omniscient-trash-heap-impl trashheap query --corpus-root /home/daniel6651/wiki --include-drafts'
+alias mywikishow='uv run --directory /home/daniel6651/omniscient-trash-heap-impl trashheap show --corpus-root /home/daniel6651/wiki'
 ```
 
 Sedan kan du enkelt köra:
