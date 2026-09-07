@@ -192,6 +192,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Enable opt-in vector retrieval (Plan 90)",
     )
     query_parser.add_argument(
+        "--include-drafts",
+        action="store_true",
+        default=False,
+        help="Include draft objects in query results",
+    )
+    query_parser.add_argument(
+        "--include-deprecated",
+        action="store_true",
+        default=False,
+        help="Include deprecated objects in query results",
+    )
+    query_parser.add_argument(
         "--graph-enhanced",
         action="store_true",
         default=False,
@@ -869,6 +881,8 @@ def handle_query(args: argparse.Namespace) -> int:
         "max_results": args.max_results,
         "min_confidence": args.min_confidence,
         "min_relevance": args.min_relevance,
+        "include_drafts": getattr(args, "include_drafts", False),
+        "include_deprecated": getattr(args, "include_deprecated", False),
         "enable_vector": getattr(args, "vector", False),
         "retrieval_mode": "graph_enhanced" if getattr(args, "graph_enhanced", False) else "canonical",
     }
