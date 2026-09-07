@@ -46,15 +46,15 @@ Phase 5 (Resilience):  Rebuild Invariance & Crash/Recovery Verification
 
 These tracks are strictly additive and opt-in. They MUST NOT block or complicate the execution of the core proving slice (Plans 01–05).
 
-| Plan | Classification | Relation to Core Proving Slice |
-|---|---|---|
-| `60-OLD-WIKI-MIGRATION.md` | Corpus Migration | Separate corpus track; requires Plan 02, not an ingestion blocker. |
-| `61-BUNDLES-OKF-INTEROP.md` | Standards Interop | Google OKF v0.2 export/import; requires Plan 02, does not block 03. |
-| `90-OPT-IN-VECTOR-RETRIEVAL.md` | Opt-in Retrieval | Dense embeddings; requires stable baseline lexical retrieval from Plan 05. |
-| `91-OPT-IN-GRAPH-INTELLIGENCE.md` | Opt-in Intelligence | Multi-hop community graph synthesis; requires Plan 02 + separate gate. |
-| `92-OPT-IN-STRUCTURAL-GRAPH.md` | Opt-in Code Graph | Tree-sitter / AST graph intelligence for code repositories. |
-| `93-OPT-IN-PARQUET-STAGING.md` | Opt-in Analytics | DuckDB / Parquet analytical staging; requires Plan 03. |
-| `99-FUTURE-SCOPE.md` | Deferred Ideas | Unscheduled concepts; not active work. |
+| Plan | Classification | Status | Relation to Core Proving Slice |
+|---|---|---|---|
+| `60-OLD-WIKI-MIGRATION.md` | Corpus Migration | deferred | Separate corpus track; requires Plan 02, not an ingestion blocker. |
+| `61-BUNDLES-OKF-INTEROP.md` | Standards Interop | deferred | Google OKF v0.2 export/import; requires Plan 02, does not block 03. |
+| `90-OPT-IN-VECTOR-RETRIEVAL.md` | Opt-in Retrieval | complete (D108) | Dense embeddings; offline provider, multi-chunk max-aggregation, 3-way RRF. |
+| `91-OPT-IN-GRAPH-INTELLIGENCE.md` | Opt-in Intelligence | deferred | Multi-hop community graph synthesis; requires Plan 02 + separate gate. |
+| `92-OPT-IN-STRUCTURAL-GRAPH.md` | Opt-in Code Graph | deferred | Tree-sitter / AST graph intelligence for code repositories. |
+| `93-OPT-IN-PARQUET-STAGING.md` | Opt-in Analytics | deferred | DuckDB / Parquet analytical staging; requires Plan 03. |
+| `99-FUTURE-SCOPE.md` | Deferred Ideas | deferred | Unscheduled concepts; not active work. |
 
 ---
 
