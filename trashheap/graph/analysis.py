@@ -268,6 +268,18 @@ class GraphAnalyzer:
         chunk_hits_by_node: Dict[str, Set[int]] = {nid: set() for nid in node_ids}
         global_chunk_idx = 0
 
+        # Precompute normalized aliases and token sets for all nodes
+        node_aliases: Dict[str, List[Tuple[str, Set[str]]]] = {}
+        for nid in node_ids:
+            target_ko = self.objects_by_id[nid]
+            norm_id = nid.lower()
+            aliases = [norm_id]
+            if target_ko.frontmatter:
+                aliases.extend(
+                    [normalize_chunk_text(a) for a in target_ko.frontmatter.aliases if a]
+                )
+            node_aliases[nid] = [(a, set(a.split())) for a in aliases if a]
+
         for ko in self.corpus.objects:
             if not ko.id:
                 continue
@@ -275,21 +287,8 @@ class GraphAnalyzer:
             for ch in chunks:
                 ch_tokens = set(ch.split())
                 for nid in node_ids:
-                    target_ko = self.objects_by_id[nid]
-                    # Check if nid appears in chunk
-                    norm_id = nid.lower()
-                    aliases = [norm_id]
-                    if target_ko.frontmatter:
-                        aliases.extend(
-                            [normalize_chunk_text(a) for a in target_ko.frontmatter.aliases if a]
-                        )
-
                     found = False
-                    for alias in aliases:
-                        if not alias:
-                            continue
-                        alias_toks = alias.split()
-                        # All tokens must be in chunk tokens (fast check)
+                    for alias, alias_toks in node_aliases[nid]:
                         if all(at in ch_tokens for at in alias_toks) and alias in ch:
                             found = True
                             break

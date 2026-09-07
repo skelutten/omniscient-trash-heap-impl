@@ -21,7 +21,9 @@ def compute_file_sha256(path: Path) -> str:
     return f"sha256:{h.hexdigest()}"
 
 
-def scan_canonical_inputs(workspace_root: Path) -> List[Tuple[str, Path, str]]:
+def scan_canonical_inputs(
+    workspace_root: Path, corpus_dir: Path | None = None
+) -> List[Tuple[str, Path, str]]:
     """Scan canonical knowledge objects and normative registries, returning sorted entries.
 
     Returns:
@@ -30,11 +32,14 @@ def scan_canonical_inputs(workspace_root: Path) -> List[Tuple[str, Path, str]]:
     entries: List[Tuple[str, Path, str]] = []
 
     # 1. Canonical Markdown objects
-    canon_dir = workspace_root / "fixtures" / "canonical"
+    canon_dir = corpus_dir if corpus_dir is not None else (workspace_root / "fixtures" / "canonical")
     if canon_dir.exists():
         for p in sorted(canon_dir.glob("**/*.md")):
             if p.is_file():
-                rel = str(p.relative_to(workspace_root)).replace("\\", "/")
+                try:
+                    rel = str(p.relative_to(workspace_root)).replace("\\", "/")
+                except ValueError:
+                    rel = str(p.relative_to(canon_dir)).replace("\\", "/")
                 entries.append((rel, p, compute_file_sha256(p)))
 
     # 2. Normative registries
@@ -42,7 +47,10 @@ def scan_canonical_inputs(workspace_root: Path) -> List[Tuple[str, Path, str]]:
     if reg_dir.exists():
         for p in sorted(reg_dir.glob("*.yaml")):
             if p.is_file():
-                rel = str(p.relative_to(workspace_root)).replace("\\", "/")
+                try:
+                    rel = str(p.relative_to(workspace_root)).replace("\\", "/")
+                except ValueError:
+                    rel = str(p.name)
                 entries.append((rel, p, compute_file_sha256(p)))
 
     # Sort strictly by Unicode code point
@@ -68,6 +76,7 @@ def build_and_publish_manifest(
     output_dir: Path,
     records_count: Dict[str, int] | None = None,
     observability: Dict[str, Any] | None = None,
+    corpus_dir: Path | None = None,
 ) -> Tuple[GraphManifest, Path]:
     """Scan canonical inputs, compute hashes, verify immutability, and publish manifest atomically.
 
@@ -75,7 +84,7 @@ def build_and_publish_manifest(
         RuntimeError: If canonical input hashes mutated during generation (DELTA-CORE-001 / E201).
     """
     # 1. Pre-scan
-    pre_scan = scan_canonical_inputs(workspace_root)
+    pre_scan = scan_canonical_inputs(workspace_root, corpus_dir=corpus_dir)
     corpus_hash = compute_aggregate_corpus_hash(pre_scan)
 
     if records_count is None:
@@ -99,7 +108,7 @@ def build_and_publish_manifest(
     )
 
     # 2. Immutability verification pass (E201)
-    post_scan = scan_canonical_inputs(workspace_root)
+    post_scan = scan_canonical_inputs(workspace_root, corpus_dir=corpus_dir)
     post_corpus_hash = compute_aggregate_corpus_hash(post_scan)
 
     if corpus_hash != post_corpus_hash:

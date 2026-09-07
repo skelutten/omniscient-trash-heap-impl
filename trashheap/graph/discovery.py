@@ -55,6 +55,16 @@ class DiscoveryEngine:
             ko.id: ko for ko in corpus.objects if ko.id
         }
         self.analyzer = GraphAnalyzer(corpus, workspace_root, self.embedder)
+        self._embeddings: Optional[Dict[str, List[float]]] = None
+
+    def _get_embeddings(self) -> Dict[str, List[float]]:
+        """Get or lazily compute embeddings for all objects."""
+        if self._embeddings is None:
+            self._embeddings = {
+                nid: self.embedder.embed_query(f"{ko.title or ''}\n{ko.raw_body}")
+                for nid, ko in self.objects_by_id.items()
+            }
+        return self._embeddings
 
     def scan_all_candidates(
         self, corpus_hash: str
@@ -73,10 +83,7 @@ class DiscoveryEngine:
     ) -> List[RelationDiscoveryCandidate]:
         """Scan for duplicate pair candidates within same scope (DISC-002, DISCOVERY.md §10.1)."""
         node_ids = sorted(self.objects_by_id.keys())
-        embeddings: Dict[str, List[float]] = {
-            nid: self.embedder.embed_query(f"{ko.title or ''}\n{ko.raw_body}")
-            for nid, ko in self.objects_by_id.items()
-        }
+        embeddings = self._get_embeddings()
 
         duplicates: List[RelationDiscoveryCandidate] = []
         created_at = current_iso_timestamp()
@@ -155,31 +162,33 @@ class DiscoveryEngine:
                 node_to_community[mnid] = cid
 
         # 3. Embeddings for semantic similarity
-        embeddings: Dict[str, List[float]] = {
-            nid: self.embedder.embed_query(f"{ko.title or ''}\n{ko.raw_body}")
-            for nid, ko in self.objects_by_id.items()
-        }
+        embeddings = self._get_embeddings()
 
         # 4. Chunks for cooccurrence
         chunk_hits: Dict[str, Set[int]] = {nid: set() for nid in node_ids}
         global_chunk_idx = 0
+
+        # Precompute normalized aliases and token sets for all nodes
+        node_aliases: Dict[str, List[Tuple[str, Set[str]]]] = {}
+        for nid in node_ids:
+            target_ko = self.objects_by_id[nid]
+            norm_id = nid.lower()
+            aliases = [norm_id]
+            if target_ko.frontmatter:
+                aliases.extend(
+                    [normalize_chunk_text(a) for a in target_ko.frontmatter.aliases if a]
+                )
+            node_aliases[nid] = [(a, set(a.split())) for a in aliases if a]
+
         for ko in self.corpus.objects:
             if not ko.id:
                 continue
             for ch in chunk_text_deterministic(ko.raw_body):
                 ch_tokens = set(ch.split())
                 for nid in node_ids:
-                    target_ko = self.objects_by_id[nid]
-                    aliases = [nid.lower()]
-                    if target_ko.frontmatter:
-                        aliases.extend(
-                            [normalize_chunk_text(a) for a in target_ko.frontmatter.aliases if a]
-                        )
                     found = False
-                    for alias in aliases:
-                        if not alias:
-                            continue
-                        if all(at in ch_tokens for at in alias.split()) and alias in ch:
+                    for alias, alias_toks in node_aliases[nid]:
+                        if all(at in ch_tokens for at in alias_toks) and alias in ch:
                             found = True
                             break
                     if found:

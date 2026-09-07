@@ -208,6 +208,7 @@ User Query
 
 - **Lexical BM25 Okapi:** Exact terminology and code token matching ($k_1=1.5, b=0.75$) with $[0.0, 1.0]$ normalization.
 - **BFS Graph Topology Expansion:** Explores neighborhood subgraphs starting from seed nodes. Graph traversal prioritizes structural (`PART_OF`), dependency (`DEPENDS_ON`), and engineering (`IMPLEMENTS`) links over generic associations.
+- **Graph-Enhanced Scoring (`--graph-enhanced`):** Opt-in Layer 7 profile replacing simple depth decay with a versioned 6-dimensional graph feature vector ($\phi_1..\phi_6$: structural edge weight, semantic similarity, chunk co-occurrence, provenance proximity, hubness centrality, and community alignment) for superior subgraph ranking.
 - **Offline Dense Vectors:** Opt-in 384-dimensional dense vectors scored via *max-over-chunks aggregation* (empirically settling the *SCALE-001* hypothesis by ensuring focused paragraphs inside longer notes are properly scored).
 - **Evidence Bundles:** Queries generate self-contained, auditable JSON payloads (`evidence_bundle.json`) with character-bounded excerpts ($\le 250$ chars), node hashes, and relation lineages for verified grounding.
 
@@ -222,6 +223,17 @@ The Graph Intelligence engine operates strictly on read-only projections of the 
 - **Dialectical Tension & Contradiction Discovery:** Surfaces conflicting assertions across documents (e.g. conflicting specifications or divergent definitions) by analyzing `CONTRADICTS`, `EXTENDS`, and `SUPERSEDES` relation edges.
 - **Integrity & Cycle Auditing:** Enforces Directed Acyclic Graph (DAG) invariants on hierarchical relations (`PART_OF`, `INSTANCE_OF`) to eliminate circular logic (**GRAPH-001** / **E010**), while flagging orphaned notes that lack inbound or outbound connections.
 - **Knowledge Gap Analysis:** Surfaces missing documentation links, unverified empirical claims (`evidence: unverified`), or dead ends in dependency chains.
+
+```bash
+# Generate canonical input manifest with bitwise immutability verification
+uv run trashheap graph manifest --corpus-root /home/$USER/wiki/personal --output-dir derived
+
+# Analyze topology, node metrics, and derive semantic edges
+uv run trashheap graph analyze --corpus-root /home/$USER/wiki/personal --output-dir derived/graph
+
+# Scan for duplicate candidates, topological bottlenecks, and ontological gaps
+uv run trashheap discover scan --corpus-root /home/$USER/wiki/personal --discovery-dir discovery
+```
 
 ---
 
@@ -377,15 +389,33 @@ uv run trashheap query "poker" --corpus-root /home/$USER/wiki --include-drafts
 
 ### Advanced Search Flags
 ```bash
+# Enable opt-in graph-enhanced hybrid retrieval (Plan 91 / GRAPH-RETRIEVAL.md)
+# Replaces simple depth decay with versioned 6-dimensional graph feature scoring (φ1..φ6)
+uv run trashheap query "game theory decision making" --corpus-root /home/$USER/wiki/personal --include-drafts --graph-enhanced
+
 # Enable opt-in offline 384-dimensional dense vector embeddings
-uv run trashheap query "game theory decision making" --corpus-root /home/$USER/wiki --include-drafts --vector
+uv run trashheap query "game theory decision making" --corpus-root /home/$USER/wiki/personal --include-drafts --vector
+
+# Combine both graph-enhanced scoring and dense vector retrieval
+uv run trashheap query "poker strategy" --corpus-root /home/$USER/wiki/personal --include-drafts --graph-enhanced --vector
 
 # Filter by scope
 uv run trashheap query "architecture" --scope engineering
 
 # Include full article body in the JSON payload
-uv run trashheap query "poker" --corpus-root /home/$USER/wiki --include-drafts --include-body
+uv run trashheap query "poker" --corpus-root /home/$USER/wiki/personal --include-drafts --include-body
 ```
+
+#### How `--graph-enhanced` Works
+When `--graph-enhanced` is passed, the retrieval engine calculates a versioned 6-dimensional feature vector $\vec{\phi} = (\phi_1, \phi_2, \phi_3, \phi_4, \phi_5, \phi_6)$ for every node discovered during graph expansion:
+- $\phi_1$ **Structural Ontology Weight:** Prioritizes typed relations (`PART_OF`, `DEPENDS_ON`, `IMPLEMENTS`) over loose associations.
+- $\phi_2$ **Semantic Proximity:** Cosine similarity of dense embeddings between candidate and seed nodes.
+- $\phi_3$ **Chunk Co-Occurrence:** Frequency of shared co-occurrence across 500-char text windows.
+- $\phi_4$ **Provenance Proximity:** Overlap in source references (`source_refs`).
+- $\phi_5$ **Hubness / In-Degree Centrality:** Subgraph-normalized structural importance.
+- $\phi_6$ **Community Alignment:** Scored boost for notes sharing the same epistemic scope/community.
+
+The resulting score is normalized into $[0.0, 1.0]$ and fused alongside lexical BM25 and dense vector rankings via Reciprocal Rank Fusion ($k=60$).
 
 ---
 
@@ -428,15 +458,15 @@ mywikishow PERS-DOC-MIG_DOYLE_BRUNSON_SUPER_SYSTEM_1_2CC294-0001
 | Command | Description | Example |
 |---|---|---|
 | `init` | Scaffold a new self-contained wiki instance | `uv run trashheap init /home/$USER/my-wiki --name "My Vault"` |
-| `query` | Hybrid RRF search (BM25 + graph + vector) | `uv run trashheap query "architecture"` |
+| `query` | Hybrid RRF search (BM25 + graph + vector) | `uv run trashheap query "poker" --corpus-root ~/wiki/personal --include-drafts --graph-enhanced` |
 | `show` | Display full content of a Knowledge Object | `uv run trashheap show <node-id> --corpus-root ~/wiki` |
 | `lint` | 5-layer validation of Markdown files (`E001`–`E099`) | `uv run trashheap lint fixtures/canonical` |
 | `validate` | Validate a single note within corpus context | `uv run trashheap validate <path/to/note.md>` |
 | `check-registries` | Validate all 11 YAML schemas and registries | `uv run trashheap check-registries` |
 | `staging` | Parquet/DuckDB staging status and equivalence | `uv run trashheap staging status` |
 | `structural` | AST code graph indexing and blast radius impact | `uv run trashheap structural impact --symbol HybridRetriever` |
-| `graph` | Analyze graph topology, centrality, and gaps | `uv run trashheap graph analyze` |
-| `discover` | Discover duplicates, ontological/topological gaps | `uv run trashheap discover scan` |
+| `graph` | Analyze graph topology, metrics, and derived edges | `uv run trashheap graph analyze --corpus-root ~/wiki/personal` |
+| `discover` | Discover duplicates, ontological/topological gaps | `uv run trashheap discover scan --corpus-root ~/wiki/personal` |
 | `ingest` | Safe source ingestion with path-sandboxing | `uv run trashheap ingest <source-path> --profile document` |
 | `stage-lint` | Inspect and validate staging candidate proposals | `uv run trashheap stage-lint` |
 | `review` | Review candidate proposals before promotion | `uv run trashheap review list` |

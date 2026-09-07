@@ -520,11 +520,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     g_manifest = graph_subs.add_parser("manifest", help="Generate canonical input manifest atomically")
     g_manifest.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    g_manifest.add_argument("--corpus-root", type=str, default=None, help="Corpus root directory")
     g_manifest.add_argument("--output-dir", type=str, default="derived", help="Output directory")
     g_manifest.add_argument("--json", action="store_true", help="Emit JSON output")
 
     g_analyze = graph_subs.add_parser("analyze", help="Calculate graph metrics and derived edges")
     g_analyze.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    g_analyze.add_argument("--corpus-root", type=str, default=None, help="Corpus root directory")
     g_analyze.add_argument("--output-dir", type=str, default="derived/graph", help="Output directory")
     g_analyze.add_argument("--json", action="store_true", help="Emit JSON output")
 
@@ -537,6 +539,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     d_scan = discover_subs.add_parser("scan", help="Run discovery scans across canonical corpus")
     d_scan.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    d_scan.add_argument("--corpus-root", type=str, default=None, help="Corpus root directory")
     d_scan.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
     d_scan.add_argument("--json", action="store_true", help="Emit JSON output")
 
@@ -562,6 +565,7 @@ def build_parser() -> argparse.ArgumentParser:
     d_promote = discover_subs.add_parser("promote", help="Validate and promote an approved candidate")
     d_promote.add_argument("candidate_id", type=str, help="Candidate ID")
     d_promote.add_argument("--actor", type=str, default="operator", help="Promoting actor identity")
+    d_promote.add_argument("--corpus-root", type=str, default=None, help="Corpus root directory")
     d_promote.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
     d_promote.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
     d_promote.add_argument("--json", action="store_true", help="Emit JSON output")
@@ -1547,9 +1551,14 @@ def handle_graph(args: argparse.Namespace) -> int:
     """Handle graph commands (manifest, analyze)."""
     action = args.graph_action
     ws_root = Path(args.workspace_root)
+    corpus_root = (
+        Path(args.corpus_root)
+        if getattr(args, "corpus_root", None)
+        else (ws_root / "fixtures" / "canonical")
+    )
     if action == "manifest":
         out_dir = Path(args.output_dir)
-        manifest, m_path = build_and_publish_manifest(ws_root, out_dir)
+        manifest, m_path = build_and_publish_manifest(ws_root, out_dir, corpus_dir=corpus_root)
         if args.json:
             print(json.dumps(manifest.to_dict(), indent=2))
         else:
@@ -1558,10 +1567,12 @@ def handle_graph(args: argparse.Namespace) -> int:
         return ExitCode.SUCCESS
     elif action == "analyze":
         out_dir = Path(args.output_dir)
-        corpus = load_corpus(ws_root / "fixtures" / "canonical")
+        corpus = load_corpus(corpus_root)
         analyzer = GraphAnalyzer(corpus, ws_root)
         metrics = analyzer.compute_node_metrics()
-        derived_manifest, _ = build_and_publish_manifest(ws_root, out_dir.parent)
+        derived_manifest, _ = build_and_publish_manifest(
+            ws_root, out_dir.parent, corpus_dir=corpus_root
+        )
         edges = analyzer.compute_derived_edges(derived_manifest.corpus_hash)
 
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -1591,13 +1602,20 @@ def handle_discover(args: argparse.Namespace) -> int:
     action = args.discover_action
     disc_dir = Path(args.discovery_dir)
     ws_root = Path(getattr(args, "workspace_root", "."))
+    corpus_root = (
+        Path(args.corpus_root)
+        if getattr(args, "corpus_root", None)
+        else (ws_root / "fixtures" / "canonical")
+    )
     mgr = DiscoveryLifecycleManager(disc_dir, ws_root)
 
     if action == "scan":
-        corpus = load_corpus(ws_root / "fixtures" / "canonical")
+        corpus = load_corpus(corpus_root)
         registries = load_registries(ws_root / "schemas" / "registry")
         engine = DiscoveryEngine(corpus, registries, ws_root)
-        manifest, _ = build_and_publish_manifest(ws_root, disc_dir.parent / "derived")
+        manifest, _ = build_and_publish_manifest(
+            ws_root, disc_dir.parent / "derived", corpus_dir=corpus_root
+        )
         candidates = engine.scan_all_candidates(manifest.corpus_hash)
         added = mgr.add_candidates(candidates)
         if args.json:
@@ -1644,7 +1662,7 @@ def handle_discover(args: argparse.Namespace) -> int:
 
     elif action == "promote":
         try:
-            corpus = load_corpus(ws_root / "fixtures" / "canonical")
+            corpus = load_corpus(corpus_root)
             registries = load_registries(ws_root / "schemas" / "registry")
             cand = mgr.validate_and_promote(
                 candidate_id=args.candidate_id,
