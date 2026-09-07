@@ -549,9 +549,37 @@ def build_parser() -> argparse.ArgumentParser:
     m_exec.add_argument("--target-dir", type=str, required=True, help="Target canonical corpus directory")
     m_exec.add_argument("--derived-frontmatter", action="store_true", help="Opt-in derived frontmatter mode (Rule 11, D95)")
     m_exec.add_argument("--target-scope", type=str, default=None, choices=["engineering", "personal"], help="Verified target scope")
-    m_exec.add_argument("--force", action="store_true", help="Force overwrite even if source changed")
     m_exec.add_argument("--registry-dir", type=str, default="schemas/registry", help="Registry directory")
+    m_exec.add_argument("--force", action="store_true", help="Force overwrite even if source changed")
     m_exec.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    # Staging commands (plans/93-OPT-IN-PARQUET-STAGING.md)
+    staging_parser = subparsers.add_parser(
+        "staging", help="Opt-in Parquet/DuckDB discovery staging and backend seam (Plan 93)"
+    )
+    staging_subs = staging_parser.add_subparsers(dest="staging_action", required=True)
+
+    st_status = staging_subs.add_parser("status", help="Inspect staging backend status and dependencies")
+    st_status.add_argument("--backend", type=str, default="parquet", choices=["baseline", "parquet"], help="Target backend to inspect")
+    st_status.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
+    st_status.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    st_sync = staging_subs.add_parser("sync", help="Sync proposals from baseline staging to Parquet staging")
+    st_sync.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
+    st_sync.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    st_equiv = staging_subs.add_parser("verify-equivalence", help="Verify equivalence between baseline and Parquet staging")
+    st_equiv.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
+    st_equiv.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    st_manifest = staging_subs.add_parser("manifest", help="Emit and inspect atomic staging manifest")
+    st_manifest.add_argument("--backend", type=str, default="parquet", choices=["baseline", "parquet"], help="Target backend")
+    st_manifest.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
+    st_manifest.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    st_recover = staging_subs.add_parser("recover", help="Recover pending DSCP staging transactions and sweep orphans")
+    st_recover.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
+    st_recover.add_argument("--json", action="store_true", help="Emit JSON output")
 
     return parser
 
@@ -1664,7 +1692,8 @@ def handle_migrate(args: argparse.Namespace) -> int:
         target_scope=getattr(args, "target_scope", None),
     )
 
-    registries = load_registries(args.registry_dir)
+    registry_dir = getattr(args, "registry_dir", "schemas/registry")
+    registries = load_registries(registry_dir)
     engine = MigrationEngine(migration_map=migration_map, registries=registries)
 
     try:
@@ -1705,6 +1734,112 @@ def handle_migrate(args: argparse.Namespace) -> int:
         return ExitCode.VALIDATION_ERROR
 
 
+def handle_staging(args: argparse.Namespace) -> int:
+    """Handle opt-in staging operations (Plan 93)."""
+    from trashheap.staging import (
+        BackendType,
+        check_parquet_dependencies,
+        get_staging_backend,
+        sync_baseline_to_parquet,
+        verify_backend_equivalence,
+    )
+
+    ws_root = Path(args.workspace_root) if getattr(args, "workspace_root", None) else Path.cwd()
+
+    if args.staging_action == "status":
+        b_type = getattr(args, "backend", "parquet")
+        if b_type == "parquet":
+            avail = check_parquet_dependencies()
+            if args.json:
+                print(json.dumps(avail.model_dump(), indent=2))
+            else:
+                if avail.available:
+                    print(f"✓ Parquet/DuckDB staging backend: {avail.status.value.upper()}")
+                    print(f"  DuckDB: {avail.duckdb_version}, PyArrow: {avail.pyarrow_version}")
+                else:
+                    print(f"⚠️ Parquet/DuckDB staging backend: {avail.status.value.upper()}")
+                    print(f"  Detail: {avail.error_detail}")
+            return ExitCode.SUCCESS
+        else:
+            backend = get_staging_backend(BackendType.BASELINE, workspace_root=ws_root)
+            status = backend.get_status()
+            if args.json:
+                print(json.dumps(status.model_dump(), indent=2))
+            else:
+                print(f"✓ Baseline staging backend: {status.status.value.upper()}")
+            return ExitCode.SUCCESS
+
+    elif args.staging_action == "sync":
+        try:
+            baseline = get_staging_backend(BackendType.BASELINE, workspace_root=ws_root)
+            parquet = get_staging_backend(BackendType.PARQUET, workspace_root=ws_root)
+            synced_count = sync_baseline_to_parquet(baseline, parquet)
+            if args.json:
+                print(json.dumps({"status": "synced", "synced_proposals": synced_count}, indent=2))
+            else:
+                print(f"✓ Synchronized {synced_count} proposal(s) from baseline to Parquet staging")
+            return ExitCode.SUCCESS
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return ExitCode.VALIDATION_ERROR
+
+    elif args.staging_action == "verify-equivalence":
+        try:
+            baseline = get_staging_backend(BackendType.BASELINE, workspace_root=ws_root)
+            parquet = get_staging_backend(BackendType.PARQUET, workspace_root=ws_root)
+            report = verify_backend_equivalence(baseline, parquet)
+            if args.json:
+                print(json.dumps(report.model_dump(), indent=2))
+            else:
+                if report.is_equivalent:
+                    print(f"✓ Staging backends equivalent ({report.baseline_count} baseline vs {report.parquet_count} parquet)")
+                else:
+                    print(f"❌ Staging backends not equivalent ({report.baseline_count} baseline vs {report.parquet_count} parquet)")
+                    if report.missing_in_parquet:
+                        print(f"  Missing in Parquet: {report.missing_in_parquet}")
+                    if report.missing_in_baseline:
+                        print(f"  Missing in Baseline: {report.missing_in_baseline}")
+                    if report.diffs:
+                        print(f"  Differences: {len(report.diffs)}")
+            return ExitCode.SUCCESS if report.is_equivalent else ExitCode.VALIDATION_ERROR
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return ExitCode.VALIDATION_ERROR
+
+    elif args.staging_action == "manifest":
+        try:
+            b_type = getattr(args, "backend", "parquet")
+            backend = get_staging_backend(b_type, workspace_root=ws_root)
+            manifest = backend.emit_manifest()
+            if args.json:
+                print(json.dumps(manifest.model_dump(), indent=2))
+            else:
+                print(f"✓ Staging manifest emitted for backend '{manifest.backend}'")
+                print(f"  Total proposals: {manifest.total_proposals}")
+                for t_name, info in manifest.tables.items():
+                    print(f"  - {t_name}: {info.row_count} row(s), {info.size_bytes} byte(s)")
+            return ExitCode.SUCCESS
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return ExitCode.VALIDATION_ERROR
+
+    elif args.staging_action == "recover":
+        try:
+            backend = get_staging_backend(BackendType.PARQUET, workspace_root=ws_root)
+            res = backend.recover_transactions()
+            if args.json:
+                print(json.dumps(res, indent=2))
+            else:
+                print("✓ Staging transaction recovery executed")
+                print(f"  Committed: {res.get('committed', 0)}, Failed: {res.get('failed', 0)}")
+            return ExitCode.SUCCESS
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return ExitCode.VALIDATION_ERROR
+
+    return ExitCode.CONFIG_OR_ARG_ERROR
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point returning integer exit code."""
     parser = build_parser()
@@ -1741,6 +1876,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "discover": handle_discover,
         "structural": handle_structural,
         "migrate": handle_migrate,
+        "staging": handle_staging,
     }
 
     handler = handlers.get(args.command)

@@ -53,7 +53,7 @@ These tracks are strictly additive and opt-in. They MUST NOT block or complicate
 | `90-OPT-IN-VECTOR-RETRIEVAL.md` | Opt-in Retrieval | complete (D108) | Dense embeddings; offline provider, multi-chunk max-aggregation, 3-way RRF. |
 | `91-OPT-IN-GRAPH-INTELLIGENCE.md` | Opt-in Intelligence | complete (D110) | Multi-hop community graph synthesis; requires Plan 02 + separate gate. |
 | `92-OPT-IN-STRUCTURAL-GRAPH.md` | Opt-in Code Graph | complete (D111) | Tree-sitter / AST graph intelligence for code repositories. |
-| `93-OPT-IN-PARQUET-STAGING.md` | Opt-in Analytics | deferred | DuckDB / Parquet analytical staging; requires Plan 03. |
+| `93-OPT-IN-PARQUET-STAGING.md` | Opt-in Analytics | complete (D113) | DuckDB / Parquet analytical staging; requires Plan 03. |
 | `99-FUTURE-SCOPE.md` | Deferred Ideas | deferred | Unscheduled concepts; not active work. |
 
 ---
