@@ -13,7 +13,7 @@ compatibility:
   python: ">=3.11"
   pydantic: ">=2.0"
 metadata:
-  repository: "https://github.com/daniel6651/llm-wiki-oe"
+  repository: "https://github.com/skelutten/omniscient-trash-heap-spec"
   specification: "LLM-WIKI-AGENT-SKILLS-001"
 ---
 
