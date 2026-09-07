@@ -80,6 +80,48 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command", help="Subcommands")
 
+    # 0. init / new
+    init_parser = subparsers.add_parser(
+        "init",
+        aliases=["new"],
+        help="Initialize and scaffold a new Knowledge Library wiki instance",
+    )
+    init_parser.add_argument(
+        "target_dir",
+        nargs="?",
+        default=".",
+        help="Target directory to initialize wiki in (default: current directory)",
+    )
+    init_parser.add_argument(
+        "--name",
+        type=str,
+        default=None,
+        help="Human-readable name of the knowledge library",
+    )
+    init_parser.add_argument(
+        "--scope",
+        type=str,
+        default="all",
+        choices=["personal", "engineering", "all"],
+        help="Scopes to scaffold (default: all)",
+    )
+    init_parser.add_argument(
+        "--author",
+        type=str,
+        default="human:owner",
+        help="Default author/reviewer actor identifier (default: human:owner)",
+    )
+    init_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite or initialize even if directory is not empty",
+    )
+    init_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON output",
+    )
+
     # 1. check-registries
     check_reg_parser = subparsers.add_parser(
         "check-registries",
@@ -1918,7 +1960,36 @@ def handle_staging(args: argparse.Namespace) -> int:
             print(f"Error: {e}", file=sys.stderr)
             return ExitCode.VALIDATION_ERROR
 
-    return ExitCode.CONFIG_OR_ARG_ERROR
+def handle_init(args: argparse.Namespace) -> int:
+    """Handle init / new subcommand."""
+    from trashheap.init import init_wiki
+
+    try:
+        res = init_wiki(
+            target_dir=args.target_dir,
+            name=args.name,
+            scope=args.scope,
+            author=args.author,
+            force=args.force,
+        )
+        if getattr(args, "json", False):
+            print(json.dumps(res, indent=2))
+        else:
+            print(f"✓ Initialized new Knowledge Library '{res['name']}' at {res['path']}")
+            print(
+                f"  Created {len(res['created_files'])} file(s) and {len(res['created_directories'])} directory/ies"
+            )
+            print("\nNext steps:")
+            print(f"  cd {args.target_dir}")
+            print("  trashheap lint .")
+            print('  trashheap query "welcome" --corpus-root .')
+        return ExitCode.SUCCESS
+    except Exception as e:
+        if getattr(args, "json", False):
+            print(json.dumps({"status": "error", "message": str(e)}, indent=2), file=sys.stderr)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        return ExitCode.CONFIG_OR_ARG_ERROR
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -1937,6 +2008,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return int(e.code) if isinstance(e.code, int) else ExitCode.CONFIG_OR_ARG_ERROR
 
     handlers = {
+        "init": handle_init,
+        "new": handle_init,
         "check-registries": handle_check_registries,
         "lint": handle_lint,
         "validate": handle_validate,

@@ -68,9 +68,15 @@ The Omniscient Trash Heap is an offline, deterministic, plain-text knowledge com
 - **Flags:** `--output-dir <path>`, `--json`
 - **Behavior:** Wipes and idempotently reconstructs ephemeral SQLite metadata, inverted full-text index, and graph caches directly from Markdown notes.
 
+### 2.8 `/init` — Knowledge Library Scaffolding
+- **Command:** `trashheap init [path]` (or `trashheap new [path]`)
+- **Flags:** `--name <str>`, `--scope {personal|engineering|all}`, `--author <id>`, `--force`, `--json`
+- **Behavior:** Scaffolds a complete, self-contained Knowledge Library wiki instance with all 10 YAML registries, taxonomy trees, Agent Skills, .gitignore, and a certified starter note that passes multi-layer linting with 0 errors.
+
 ## 3. Exit Codes & JSON Schema Contract
 
 All commands support `--json` output producing standardized JSON payloads:
+- `init`: `{"status": "ok", "path": "...", "name": "...", "created_files": [...], "created_directories": [...]}`
 - `lint`: `{"status": "ok"|"error", "findings": [...]}`
 - `validate`: `{"file": "...", "status": "ok"|"error", "findings": [...]}`
 - `query`: Evidence bundle JSON adhering to `examples/evidence_bundle.json`

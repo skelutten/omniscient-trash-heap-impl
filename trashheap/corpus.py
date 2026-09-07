@@ -127,6 +127,14 @@ def load_corpus(
             first_part = rel.parts[0] if rel.parts else ""
             if first_part in exclude_dirs:
                 continue
+            if len(rel.parts) == 1 and rel.name in {
+                "README.md",
+                "CONTRIBUTING.md",
+                "LICENSE.md",
+                "CHANGELOG.md",
+                "SECURITY.md",
+            }:
+                continue
             if scope and not any(part == scope for part in rel.parts):
                 continue
             candidate_paths.append(p)

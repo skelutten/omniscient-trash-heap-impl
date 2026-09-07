@@ -168,9 +168,15 @@ class Linter:
             repo_root = corpus.root.resolve()
             current = repo_root
             while current != current.parent:
-                if (current / "pyproject.toml").exists() or (current / ".git").exists():
+                if (
+                    (current / "pyproject.toml").exists()
+                    or (current / ".git").exists()
+                    or (current / ".agents" / "skills").exists()
+                ):
                     break
                 current = current.parent
+            else:
+                current = repo_root
             if not check_agent_skills(current):
                 findings.append(
                     Finding(

@@ -159,6 +159,29 @@ uv tool install .
 
 ---
 
+## 🏗️ Initialize a New Wiki (`trashheap init`)
+
+To scaffold a brand-new, self-contained Knowledge Library instance anywhere on your system:
+
+```bash
+# Initialize in a new directory
+trashheap init /home/$USER/my-wiki --name "My Personal Vault"
+
+# Or initialize inside the current directory
+cd /home/$USER/my-wiki
+trashheap init
+```
+
+This creates:
+- `schemas/registry/`: Full copies of all 10 canonical declarative YAML registries.
+- `personal/` & `engineering/`: Structured taxonomic folder hierarchies.
+- `staging/`: Intake (`raw/`) and candidate proposal (`discovery/`) staging buffers.
+- `.agents/skills/trashheap/`: Open Agent Skills definition for autonomous coding agents.
+- `PERS-DOC-WELCOME-0001.md`: A certified seed note that passes `trashheap lint` with 0 errors.
+- `.gitignore` & `README.md`.
+
+---
+
 ## 🤖 Agent Skills Integration (`.agents/skills/trashheap`)
 
 The project implements the open **Agent Skills** specification (`agentskills.io` / `dot-agents.com`). AI coding agents (Antigravity, Claude Code, Cursor, Copilot) automatically discover and execute slash-commands (`/lint`, `/validate`, `/query`, `/show`, `/stage-lint`, `/ingest`, `/rebuild`).
@@ -273,6 +296,7 @@ mywikishow PERS-DOC-MIG_DOYLE_BRUNSON_SUPER_SYSTEM_1_2CC294-0001
 
 | Command | Description | Example |
 |---|---|---|
+| `init` | Scaffold a new self-contained wiki instance | `uv run trashheap init /home/$USER/my-wiki --name "My Vault"` |
 | `query` | Hybrid RRF search (BM25 + graph + vector) | `uv run trashheap query "architecture"` |
 | `show` | Display full content of a Knowledge Object | `uv run trashheap show <node-id> --corpus-root ~/wiki` |
 | `lint` | 5-layer validation of Markdown files (`E001`–`E099`) | `uv run trashheap lint fixtures/canonical` |

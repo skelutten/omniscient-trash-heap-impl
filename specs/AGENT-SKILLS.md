@@ -77,6 +77,11 @@ The generated skill MUST specify the following 6 core operations:
 - **Command:** `python3 -m trashheap.cli rebuild`
 - **Behavior:** Wipes and idempotently reconstructs ephemeral SQLite metadata, inverted full-text index, and graph caches directly from Markdown notes.
 
+### 3.8 `/init [path]` — Knowledge Library Scaffolding
+- **Command:** `python3 -m trashheap.cli init [path]` (or `trashheap new [path]`)
+- **Flags:** `--name <str>`, `--scope {personal|engineering|all}`, `--author <id>`, `--force`, `--json`
+- **Behavior:** Scaffolds a complete, self-contained Knowledge Library wiki instance with all 10 YAML registries, taxonomy trees, Agent Skills, .gitignore, and a certified starter note that passes multi-layer linting with 0 errors.
+
 ---
 
 ## 4. Code Generation & Conformance Verification

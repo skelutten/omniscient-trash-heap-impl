@@ -89,6 +89,7 @@ def load_registries(registry_dir: Optional[Union[str, Path]] = None) -> LoadedRe
         # Default to schemas/registry relative to repository root or cwd
         candidates = [
             Path("schemas/registry"),
+            Path(__file__).resolve().parent.parent / "schemas" / "registry",
             Path(__file__).resolve().parent.parent.parent / "schemas" / "registry",
         ]
         chosen = None
