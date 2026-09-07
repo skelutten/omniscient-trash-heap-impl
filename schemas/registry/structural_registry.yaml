@@ -1,0 +1,79 @@
+# structural_registry.yaml
+# Canonical source of truth for the Structural Knowledge Graph (SG-001–SG-003).
+#
+# SG-001: SKG is a separate graph from the semantic knowledge graph and has its own registry.
+# SG-002: Structural node types MUST NOT be mixed with ObjectTypeEnum.
+# SG-003: Structural edge types declare source_types, target_types, dag, and symmetric contracts.
+
+schema_version: "0.1.0"
+registry_id: "structural_registry"
+status: "normative"
+
+node_types:
+  FILE:
+    identity: [repo, path]
+    description: "Source code or configuration file"
+  MODULE:
+    identity: [repo, module_path]
+    description: "Importable code module or package"
+  CLASS:
+    identity: [repo, path, qualified_name]
+    description: "Class declaration"
+  FUNCTION:
+    identity: [repo, path, qualified_name, arity]
+    description: "Standalone function declaration"
+  METHOD:
+    identity: [repo, path, qualified_name, arity]
+    description: "Class member method declaration"
+  SYMBOL:
+    identity: [repo, path, qualified_name]
+    description: "Top-level or exported variable, constant, or type alias"
+  ROUTE:
+    identity: [repo, method, pattern]
+    description: "HTTP endpoint or route handler binding"
+  TEST:
+    identity: [repo, path, qualified_name]
+    description: "Automated test function, method, or case"
+
+edge_types:
+  DEFINES:
+    source_types: [FILE, CLASS, MODULE]
+    target_types: [CLASS, FUNCTION, METHOD, SYMBOL]
+    dag: true
+    symmetric: false
+    description: "Container defines child symbol or declaration"
+  CALLS:
+    source_types: [FUNCTION, METHOD]
+    target_types: [FUNCTION, METHOD]
+    dag: false
+    symmetric: false
+    description: "Function or method invocation"
+  IMPORTS:
+    source_types: [FILE, MODULE]
+    target_types: [FILE, MODULE]
+    dag: false
+    symmetric: false
+    description: "File or module imports another module or file"
+  INHERITS:
+    source_types: [CLASS]
+    target_types: [CLASS]
+    dag: true
+    symmetric: false
+    description: "Class inheritance relationship"
+  ROUTES_TO:
+    source_types: [ROUTE]
+    target_types: [FUNCTION, METHOD]
+    dag: false
+    symmetric: false
+    description: "HTTP route dispatches to handler"
+  TESTS_SYMBOL:
+    source_types: [TEST]
+    target_types: [FUNCTION, METHOD, CLASS]
+    dag: false
+    symmetric: false
+    description: "Test verifies targeted code symbol"
+
+error_range:
+  min: "E301"
+  max: "E399"
+  description: "Reserved error codes for structural knowledge graph pipeline"

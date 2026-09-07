@@ -151,6 +151,10 @@ class KnowledgeObject:
             return [r for r in raw if isinstance(r, dict)]
         return []
 
+    @property
+    def body(self) -> str:
+        return self.raw_body
+
     def parse_sections(self) -> Dict[str, str]:
         """Extract Markdown H2 sections from the body."""
         sections: Dict[str, str] = {}

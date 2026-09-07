@@ -54,6 +54,11 @@ from trashheap.registry.validator import RegistryFinding, validate_cross_registr
 from trashheap.rename import rename_entity
 from trashheap.retrieval import HybridRetriever
 from trashheap.skills import check_agent_skills, write_agent_skills
+from trashheap.structural import (
+    BridgeEngine,
+    StructuralGraphAnalyzer,
+    StructuralGraphIndexer,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -489,6 +494,41 @@ def build_parser() -> argparse.ArgumentParser:
     d_sweep.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
     d_sweep.add_argument("--current-date", type=str, default=None, help="Optional simulated ISO UTC date")
     d_sweep.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    # Structural commands (specs/STRUCTURAL-GRAPH.md, SG-001..SG-020)
+    structural_parser = subparsers.add_parser(
+        "structural", help="Structural Knowledge Graph commands (SG-001..SG-020)"
+    )
+    struct_subs = structural_parser.add_subparsers(dest="structural_action", required=True)
+
+    s_index = struct_subs.add_parser("index", help="Index codebase AST into structural graph")
+    s_index.add_argument("--repo-root", type=str, default=".", help="Repository root path")
+    s_index.add_argument("--revision", type=str, default="HEAD", help="Source revision (git SHA or ref)")
+    s_index.add_argument("--incremental", action="store_true", help="Perform incremental indexing")
+    s_index.add_argument("--cache-dir", type=str, default=None, help="Cache directory")
+    s_index.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    s_inspect = struct_subs.add_parser("inspect", help="Inspect a structural node by ID")
+    s_inspect.add_argument("node_id", type=str, help="Structural node ID")
+    s_inspect.add_argument("--repo-root", type=str, default=".", help="Repository root path")
+    s_inspect.add_argument("--cache-dir", type=str, default=None, help="Cache directory")
+    s_inspect.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    s_impact = struct_subs.add_parser("impact", help="Calculate blast radius impact for a structural node")
+    s_impact.add_argument("node_id", type=str, help="Target structural node ID")
+    s_impact.add_argument("--max-depth", type=int, default=3, help="Max traversal depth")
+    s_impact.add_argument("--node-ceiling", type=int, default=50, help="Max node ceiling")
+    s_impact.add_argument("--repo-root", type=str, default=".", help="Repository root path")
+    s_impact.add_argument("--cache-dir", type=str, default=None, help="Cache directory")
+    s_impact.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    s_bridge = struct_subs.add_parser("bridge", help="Bridge Knowledge Objects to structural nodes")
+    s_bridge.add_argument("bridge_action", choices=["scan", "list", "review"], help="Bridge action")
+    s_bridge.add_argument("--workspace-root", type=str, default=".", help="Workspace root")
+    s_bridge.add_argument("--cache-dir", type=str, default=None, help="Cache directory")
+    s_bridge.add_argument("--bridge-id", type=str, default=None, help="Bridge ID for review")
+    s_bridge.add_argument("--status", type=str, default=None, help="Status for review or filter")
+    s_bridge.add_argument("--json", action="store_true", help="Emit JSON output")
 
     return parser
 
@@ -1461,6 +1501,123 @@ def handle_discover(args: argparse.Namespace) -> int:
     return ExitCode.CONFIG_OR_ARG_ERROR
 
 
+def handle_structural(args: argparse.Namespace) -> int:
+    """Handle structural graph commands (index, inspect, impact, bridge)."""
+    action = args.structural_action
+    repo_root = Path(getattr(args, "repo_root", "."))
+    cache_dir = Path(args.cache_dir) if getattr(args, "cache_dir", None) else None
+
+    if action == "index":
+        indexer = StructuralGraphIndexer(repo_root=repo_root, cache_dir=cache_dir)
+        manifest, coverage = indexer.index(
+            source_revision=args.revision,
+            incremental=args.incremental,
+        )
+        if args.json:
+            print(
+                json.dumps(
+                    {
+                        "manifest": manifest.model_dump(),
+                        "coverage": coverage.model_dump(),
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            print(
+                f"✓ Indexed {coverage.indexed_files} files ({manifest.node_count} nodes, {manifest.edge_count} edges)"
+            )
+            print(f"  Revision: {manifest.revision}, aggregate hash: {manifest.aggregate_hash}")
+        return ExitCode.SUCCESS
+
+    elif action == "inspect":
+        indexer = StructuralGraphIndexer(repo_root=repo_root, cache_dir=cache_dir)
+        if not indexer.load_existing_index():
+            print("Error: Structural index not found. Run 'trashheap structural index' first.", file=sys.stderr)
+            return ExitCode.NOT_FOUND
+
+        node = indexer.nodes.get(args.node_id)
+        if not node:
+            print(f"Error: Node '{args.node_id}' not found", file=sys.stderr)
+            return ExitCode.NOT_FOUND
+
+        if args.json:
+            print(json.dumps(node.model_dump(), indent=2))
+        else:
+            print(f"Node: {node.node_id} ({node.node_type.value})")
+            print(f"  Path: {node.path}, lines: {node.line_start}-{node.line_end}")
+            print(f"  Revision: {node.source_revision}, hash: {node.content_hash}")
+        return ExitCode.SUCCESS
+
+    elif action == "impact":
+        indexer = StructuralGraphIndexer(repo_root=repo_root, cache_dir=cache_dir)
+        if not indexer.load_existing_index():
+            print("Error: Structural index not found. Run 'trashheap structural index' first.", file=sys.stderr)
+            return ExitCode.NOT_FOUND
+
+        analyzer = StructuralGraphAnalyzer(indexer.nodes, indexer.edges)
+        report = analyzer.compute_blast_radius(
+            target_node_id=args.node_id,
+            max_depth=args.max_depth,
+            node_ceiling=args.node_ceiling,
+        )
+        if args.json:
+            print(json.dumps(report.model_dump(), indent=2))
+        else:
+            print(f"Blast radius for '{report.target_node_id}':")
+            print(f"  Affected nodes ({len(report.affected_nodes)}): {report.affected_nodes}")
+            print(f"  Depth reached: {report.depth_reached} (max: {report.max_depth})")
+            print(f"  Context budget: {report.context_budget_tokens} tokens")
+        return ExitCode.SUCCESS
+
+    elif action == "bridge":
+        ws_root = Path(args.workspace_root)
+        b_action = args.bridge_action
+        engine = BridgeEngine(workspace_root=ws_root, cache_dir=cache_dir)
+        engine.load_bridges()
+
+        if b_action == "scan":
+            indexer = StructuralGraphIndexer(repo_root=ws_root, cache_dir=cache_dir)
+            indexer.load_existing_index()
+            corpus = load_corpus(ws_root / "fixtures" / "canonical")
+            bridges = engine.discover_bridges(corpus, indexer.nodes)
+            if args.json:
+                print(json.dumps([b.model_dump() for b in bridges], indent=2))
+            else:
+                print(f"✓ Discovered {len(bridges)} candidate bridge relations")
+            return ExitCode.SUCCESS
+
+        elif b_action == "list":
+            bridges = list(engine.bridges.values())
+            if args.status:
+                bridges = [b for b in bridges if b.status == args.status]
+            if args.json:
+                print(json.dumps([b.model_dump() for b in bridges], indent=2))
+            else:
+                print(f"Bridge relations ({len(bridges)}):")
+                for b in bridges:
+                    print(
+                        f"  [{b.status.upper()}] {b.knowledge_object_id} -> {b.structural_node_id} ({b.bridge_type})"
+                    )
+            return ExitCode.SUCCESS
+
+        elif b_action == "review":
+            if not args.bridge_id or not args.status:
+                print("Error: --bridge-id and --status required for review", file=sys.stderr)
+                return ExitCode.CONFIG_OR_ARG_ERROR
+            updated = engine.review_bridge(args.bridge_id, args.status)
+            if not updated:
+                print(f"Error: Bridge '{args.bridge_id}' not found", file=sys.stderr)
+                return ExitCode.NOT_FOUND
+            if args.json:
+                print(json.dumps(updated.model_dump(), indent=2))
+            else:
+                print(f"✓ Bridge '{updated.bridge_id}' updated to '{updated.status}'")
+            return ExitCode.SUCCESS
+
+    return ExitCode.CONFIG_OR_ARG_ERROR
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point returning integer exit code."""
     parser = build_parser()
@@ -1495,6 +1652,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "bundle": handle_bundle,
         "graph": handle_graph,
         "discover": handle_discover,
+        "structural": handle_structural,
     }
 
     handler = handlers.get(args.command)

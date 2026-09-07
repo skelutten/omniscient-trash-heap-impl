@@ -79,10 +79,9 @@ production linter/conformance implementation for the complete architecture.
 > engine, operational lifecycle manager, and reproducible validation gates are fully implemented
 > and verified by 57+ automated tests in `tests/` and `tools/check.sh`.
 > Conformance status is projected deterministically into `artifacts/conformance_matrix.yaml`.
-> Non-goal tracks (`STRUCTURAL-GRAPH.md`) remain `UNIMPLEMENTED` pending optional future plans.
-> Knowledge Bundles and Google OKF v0.2 interop (`OKF-INTEROP.md`) and Graph Intelligence / Discovery
-> (`GRAPH-INTELLIGENCE.md`, `GRAPH-RETRIEVAL.md`, `DISCOVERY.md`) are fully implemented and
-> conformance-tested (`trashheap/bundle/`, `trashheap/graph/`).
+> Structural Knowledge Graph (`STRUCTURAL-GRAPH.md`), Knowledge Bundles and Google OKF v0.2 interop (`OKF-INTEROP.md`),
+> and Graph Intelligence / Discovery (`GRAPH-INTELLIGENCE.md`, `GRAPH-RETRIEVAL.md`, `DISCOVERY.md`) are fully implemented
+> and conformance-tested (`trashheap/structural/`, `trashheap/bundle/`, `trashheap/graph/`).
 
 | Area | Specification maturity | Implementation status | Evidence in repository |
 |---|---|---|---|
@@ -93,7 +92,7 @@ production linter/conformance implementation for the complete architecture.
 | Ingestion engine | `DRAFT` | `CONFORMANCE_TESTED` | Universal Source intake, 5 profiles, sandboxing, delimiting (`trashheap/ingest/`); verified by `tests/test_ingest_safety.py`. |
 | Universal Source model | `PROPOSED` | `CONFORMANCE_TESTED` | Source categories, identity/provenance contracts (`trashheap/ingest/models.py`); verified by `tests/test_ingest_safety.py`. |
 | Raw Source Storage and staging | `DRAFT` | `CONFORMANCE_TESTED` | CSCC raw layout, DSCP/DPCP promotion, TTL reaper; verified by `tests/test_ingest_safety.py`, `tests/test_proposal_promotion.py`. |
-| Structural Knowledge Graph | `PROPOSED` | `UNIMPLEMENTED` | Specification exists; optional extension (Plan 93 non-goal). |
+| Structural Knowledge Graph | `PROPOSED` | `CONFORMANCE_TESTED` | Machine-built AST structural graph, revision binding, blast radius analysis (`trashheap/structural/`, `tests/test_structural_graph.py`). |
 | OKF interoperability | `PROPOSED` | `CONFORMANCE_TESTED` | Knowledge Bundles and Google OKF v0.2 interop (`trashheap/bundle/`, `tests/test_bundles_and_okf.py`). |
 | Tool integration | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan. |
 
@@ -131,7 +130,7 @@ Conformance maturity:  verified by automated test suite, check.sh gate, and conf
 | `GRAPH-INTELLIGENCE.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Graph intelligence delta; error range `E201–E299` (`trashheap/graph/`, `tests/test_graph_intelligence.py`) |
 | `GRAPH-RETRIEVAL.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Opt-in graph-enhanced retrieval (`trashheap/graph/retrieval.py`, `tests/test_graph_intelligence.py`) |
 | `DISCOVERY.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Candidate discovery, clustering and promotion boundary (`trashheap/graph/discovery.py`, `tests/test_graph_intelligence.py`) |
-| `STRUCTURAL-GRAPH.md` | `PROPOSED` | `UNIMPLEMENTED` | Structural graph extension; error range `E301–E399` (Plan 93 non-goal) |
+| `STRUCTURAL-GRAPH.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Structural graph extension; error range `E301–E399` (`trashheap/structural/`, `tests/test_structural_graph.py`) |
 | `OKF-INTEROP.md` | `PROPOSED` | `CONFORMANCE_TESTED` | OKF adapter and bundle contracts; error range `E401–E499` (`trashheap/bundle/`, `tests/test_bundles_and_okf.py`) |
 | `INGEST.md` | `DRAFT` | `CONFORMANCE_TESTED` | Trajectory ingestion specialization; error range `E101–E199` (`trashheap/ingest/`) |
 | `INGEST-ADAPTERS.md` | `DRAFT` | `CONFORMANCE_TESTED` | Connector, adapter, cursor and completion contracts (`trashheap/operations/`) |

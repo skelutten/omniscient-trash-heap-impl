@@ -1,6 +1,6 @@
 # Plan 92 — Opt-in structural graph
 
-> **Status:** opt-in, deferred
+> **Status:** complete, verified (D111)
 > **Prerequisite:** `02-DETERMINISTIC-CORE.md` green
 > **Dependency:** language toolchain decision, Tree-sitter/LSP availability and bounded parsing policy.
 

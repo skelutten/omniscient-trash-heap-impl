@@ -1,14 +1,14 @@
 schema_version: 1.0.0
 matrix_id: conformance_matrix
-generated_at: '2026-09-07T13:08:13.894609+00:00'
+generated_at: '2026-09-07T13:14:20.579815+00:00'
 evidence_type: generated_projection
 note: "Generated evidence per VALIDATION.md \xA710.5 and CONFORM-001. Not a normative\
   \ specification."
 summary:
   total_families: 37
-  conformance_tested: 36
+  conformance_tested: 37
   implemented: 0
-  unimplemented: 1
+  unimplemented: 0
 families:
 - family_id: CANON
   owner: specs/ARCHITECTURE.md
@@ -242,12 +242,31 @@ families:
 - family_id: SG
   owner: specs/STRUCTURAL-GRAPH.md
   invariant_id: SG-001..SG-020
-  implementation: UNIMPLEMENTED
-  test: planned
-  verification: planned
-  status: UNIMPLEMENTED
+  implementation: trashheap/structural/indexer.py, trashheap/structural/extractor.py,
+    trashheap/structural/analysis.py, trashheap/structural/bridge.py
+  test: tests/test_structural_graph.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
   invariants:
   - SG-001
+  - SG-002
+  - SG-003
+  - SG-004
+  - SG-005
+  - SG-006
+  - SG-007
+  - SG-008
+  - SG-009
+  - SG-010
+  - SG-011
+  - SG-012
+  - SG-013
+  - SG-014
+  - SG-015
+  - SG-016
+  - SG-017
+  - SG-018
+  - SG-019
   - SG-020
 - family_id: OKF
   owner: specs/OKF-INTEROP.md
