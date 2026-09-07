@@ -530,6 +530,29 @@ def build_parser() -> argparse.ArgumentParser:
     s_bridge.add_argument("--status", type=str, default=None, help="Status for review or filter")
     s_bridge.add_argument("--json", action="store_true", help="Emit JSON output")
 
+    # Migration commands (plans/60-OLD-WIKI-MIGRATION.md)
+    migrate_parser = subparsers.add_parser(
+        "migrate", help="Legacy wiki corpus migration commands (Plan 60)"
+    )
+    migrate_subs = migrate_parser.add_subparsers(dest="migrate_action", required=True)
+
+    m_plan = migrate_subs.add_parser("plan", help="Dry-run migration analysis and proposal generation")
+    m_plan.add_argument("--source-dir", type=str, required=True, help="Source legacy corpus directory")
+    m_plan.add_argument("--target-dir", type=str, required=True, help="Target canonical corpus directory")
+    m_plan.add_argument("--derived-frontmatter", action="store_true", help="Opt-in derived frontmatter mode (Rule 11, D95)")
+    m_plan.add_argument("--target-scope", type=str, default=None, choices=["engineering", "personal"], help="Verified target scope")
+    m_plan.add_argument("--registry-dir", type=str, default="schemas/registry", help="Registry directory")
+    m_plan.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    m_exec = migrate_subs.add_parser("execute", help="Execute migration with fresh-target checks and idempotency")
+    m_exec.add_argument("--source-dir", type=str, required=True, help="Source legacy corpus directory")
+    m_exec.add_argument("--target-dir", type=str, required=True, help="Target canonical corpus directory")
+    m_exec.add_argument("--derived-frontmatter", action="store_true", help="Opt-in derived frontmatter mode (Rule 11, D95)")
+    m_exec.add_argument("--target-scope", type=str, default=None, choices=["engineering", "personal"], help="Verified target scope")
+    m_exec.add_argument("--force", action="store_true", help="Force overwrite even if source changed")
+    m_exec.add_argument("--registry-dir", type=str, default="schemas/registry", help="Registry directory")
+    m_exec.add_argument("--json", action="store_true", help="Emit JSON output")
+
     return parser
 
 
@@ -1618,6 +1641,70 @@ def handle_structural(args: argparse.Namespace) -> int:
     return ExitCode.CONFIG_OR_ARG_ERROR
 
 
+def handle_migrate(args: argparse.Namespace) -> int:
+    """Handle legacy corpus migration commands (plan, execute)."""
+    from trashheap.migration import (
+        ChangedSourceError,
+        FrontmatterMode,
+        MigrationEngine,
+        MigrationMap,
+        UnmanagedTargetError,
+    )
+
+    source_dir = Path(args.source_dir)
+    target_dir = Path(args.target_dir)
+
+    fm_mode = (
+        FrontmatterMode.DERIVED
+        if getattr(args, "derived_frontmatter", False)
+        else FrontmatterMode.REQUIRED
+    )
+    migration_map = MigrationMap(
+        frontmatter_mode=fm_mode,
+        target_scope=getattr(args, "target_scope", None),
+    )
+
+    registries = load_registries(args.registry_dir)
+    engine = MigrationEngine(migration_map=migration_map, registries=registries)
+
+    try:
+        if args.migrate_action == "plan":
+            manifest = engine.plan(source_dir=source_dir, target_dir=target_dir)
+        elif args.migrate_action == "execute":
+            manifest = engine.execute(
+                source_dir=source_dir,
+                target_dir=target_dir,
+                force=getattr(args, "force", False),
+            )
+        else:
+            return ExitCode.CONFIG_OR_ARG_ERROR
+
+        if args.json:
+            print(json.dumps(manifest.model_dump(), indent=2))
+        else:
+            print(f"✓ Migration {manifest.mode} completed successfully")
+            print(f"  Source hash: {manifest.source_corpus_hash}")
+            print(
+                f"  Eligible files: {manifest.counts['eligible_files']}, Quarantined: {manifest.counts['quarantined_files']}"
+            )
+            if manifest.mode == "execute":
+                print(f"  Target hash: {manifest.target_corpus_hash}")
+        return ExitCode.SUCCESS
+
+    except UnmanagedTargetError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
+    except ChangedSourceError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
+    except FileNotFoundError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return ExitCode.NOT_FOUND
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point returning integer exit code."""
     parser = build_parser()
@@ -1653,6 +1740,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "graph": handle_graph,
         "discover": handle_discover,
         "structural": handle_structural,
+        "migrate": handle_migrate,
     }
 
     handler = handlers.get(args.command)

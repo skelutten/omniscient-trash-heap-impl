@@ -1,6 +1,6 @@
 # Plan 60 — Old wiki migration
 
-> **Status:** separate corpus track, proposed, not started
+> **Status:** complete, verified (D112)
 > **Prerequisite:** `02-DETERMINISTIC-CORE.md` green
 > **Does not block:** plans 03–05
 
