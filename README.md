@@ -60,6 +60,72 @@ Canonical Knowledge Object (`personal/` or `engineering/`)
 
 ---
 
+## 🧭 Epistemic Anatomy: How Taxonomy, Ontology, Facets & Types Fit Together
+
+A fatal flaw of casual digital gardens and personal wikis is **metadata collapse**: flattening topics, file paths, properties, and relationships into a disorganized soup of unstructured `#tags` or arbitrary folders.
+
+The Omniscient Trash Heap strictly enforces **orthogonality across distinct conceptual questions** ([`ARCHITECTURE.md §1.1`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/ARCHITECTURE.md) & [`DATA_MODEL.md §3`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/DATA_MODEL.md)):
+
+| Dimension | Core Question | What It Governs | Canonical Registry | Concrete Example |
+|---|---|---|---|---|
+| **Taxonomy** | *Where in the tree does it live?* | Strict hierarchical directory structure on disk (`taxonomy_path`) | [`taxonomy_registry.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/schemas/registry/taxonomy_registry.yaml) | `02_formella_vetenskaper_matematik/` |
+| **Object Type** | *What kind of knowledge is it?* | Structural archetype (19 types: Article, Concept, Specification, Incident, Workflow...) | [`object_registry.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/schemas/registry/object_registry.yaml) | `object_type: Concept` (`CON`) |
+| **Domain** | *Which field of expertise?* | High-level knowledge domain | [`object_registry.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/schemas/registry/object_registry.yaml) | `domain: mathematics` |
+| **Facets** | *Which orthogonal properties does it have?* | Cross-cutting dimensions (toolchain, language, audience, lifecycle, architecture) | [`facet_registry.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/schemas/registry/facet_registry.yaml) | `toolchain: [pytest]`, `audience: expert` |
+| **Ontology** | *How does it connect to others?* | Directed, typed semantic graph edges with strict source/target constraints | [`relation_registry.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/schemas/registry/relation_registry.yaml) | `PART_OF`, `DEPENDS_ON`, `EXTENDS` |
+| **Epistemology** | *How much can we trust it?* | Evidential foundation, verification status, and authority level | [`epistemic_registry.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/schemas/registry/epistemic_registry.yaml) | `evidence: empirical`, `verification: peer_verified` |
+
+### How It Renders in a Canonical Knowledge Object
+
+Every Markdown document isolates these dimensions within its strict YAML frontmatter:
+
+```yaml
+---
+# 1. IDENTITY & TAXONOMY (Where does it live?)
+id: PERS-CON-BAYESIAN_INFERENCE-0001
+title: "Bayesian Inference"
+scope: personal
+taxonomy_path: "02_formella_vetenskaper_matematik"  # Resolves disk directory chain deterministically
+
+# 2. CLASSIFICATION & DOMAIN (What is it?)
+object_type: Concept                               # Registered in object_registry.yaml
+domain: mathematics                                # Registered domain
+
+# 3. FACETS (Orthogonal properties across domains)
+language: [en, sv]
+audience: advanced
+lifecycle: stable
+
+# 4. EPISTEMOLOGY & PROVENANCE (How do we know it's true?)
+evidence: theoretical
+verification: peer_verified
+confidence: 0.95
+source_type: book
+source_refs: [SRC-BOOK-JAYNES_PROBABILITY_THEORY_2003]
+
+# 5. ONTOLOGY (The directed semantic graph)
+relations:
+  PART_OF:
+    - PERS-CON-PROBABILITY_THEORY-0001
+  APPLIES_TO:
+    - PERS-CON-DECISION_THEORY-0001
+  EXTENDS:
+    - PERS-CON-CONDITIONAL_PROBABILITY-0001
+---
+
+# Bayesian Inference
+
+Bayesian inference is a method of statistical inference in which Bayes' theorem is used to update the probability for a hypothesis as more evidence or information becomes available...
+```
+
+### Why This Separation Prevents Chaos
+1. **Taxonomy is a Tree, Not a Graph:** A file can only reside in one folder on disk. Taxonomy solves deterministic file placement and human filesystem browsability (`TAX-007`).
+2. **Ontology is a Graph, Not a Folder:** A concept can relate to, implement, or contradict 15 other notes across engineering and personal domains without duplicating files or creating symlink jungles (`REL-001`–`REL-009`).
+3. **Facets Slice Orthogonally:** You can query all objects where `toolchain: bazel` and `lifecycle: deprecated` across every directory in the repository without polluting your taxonomy with folders like `bazel_deprecated_things/`.
+4. **Epistemology Protects Truth:** A speculative thought experiment (`evidence: anecdotal`) cannot masquerade as an audited production architecture standard (`evidence: formal_proof`), regardless of where it lives.
+
+---
+
 ## 📜 Specifications & Contracts
 
 This repository is the **executable reference implementation** (`trashheap`). The authoritative, normative specifications, 11 declarative YAML registries, and full architectural decision records live in:
