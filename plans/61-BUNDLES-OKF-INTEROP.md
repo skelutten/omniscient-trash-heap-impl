@@ -1,6 +1,6 @@
 # Plan 61 — Bundles and OKF interoperability
-
-> **Status:** separate track, proposed, not started
+ 
+> **Status:** complete, verified (D109)
 > **Prerequisite:** `02-DETERMINISTIC-CORE.md` green
 > **Does not block:** source ingestion plans 03–05
 

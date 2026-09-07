@@ -1,14 +1,14 @@
 schema_version: 1.0.0
 matrix_id: conformance_matrix
-generated_at: '2026-09-07T12:33:18.609915+00:00'
+generated_at: '2026-09-07T12:57:17.199419+00:00'
 evidence_type: generated_projection
 note: "Generated evidence per VALIDATION.md \xA710.5 and CONFORM-001. Not a normative\
   \ specification."
 summary:
   total_families: 37
-  conformance_tested: 33
+  conformance_tested: 35
   implemented: 0
-  unimplemented: 4
+  unimplemented: 2
 families:
 - family_id: CANON
   owner: specs/ARCHITECTURE.md
@@ -252,20 +252,20 @@ families:
 - family_id: OKF
   owner: specs/OKF-INTEROP.md
   invariant_id: OKF-001..OKF-012
-  implementation: UNIMPLEMENTED
-  test: planned
-  verification: planned
-  status: UNIMPLEMENTED
+  implementation: trashheap/bundle/export.py, trashheap/bundle/import_okf.py
+  test: tests/test_bundles_and_okf.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
   invariants:
   - OKF-001
   - OKF-012
 - family_id: BUNDLE
   owner: specs/OKF-INTEROP.md
   invariant_id: BUNDLE-001..BUNDLE-009
-  implementation: UNIMPLEMENTED
-  test: planned
-  verification: planned
-  status: UNIMPLEMENTED
+  implementation: trashheap/bundle/export.py, trashheap/bundle/models.py
+  test: tests/test_bundles_and_okf.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
   invariants:
   - BUNDLE-001
   - BUNDLE-009

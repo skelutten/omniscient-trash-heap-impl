@@ -11,6 +11,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from trashheap.bundle import BundleSelector, build_bundle, import_bundle
 from trashheap.constants import VERSION, ExitCode
 from trashheap.corpus import load_corpus
 from trashheap.ingest import (
@@ -392,6 +393,30 @@ def build_parser() -> argparse.ArgumentParser:
     bench_parser.add_argument(
         "--json", action="store_true", help="Emit machine-readable JSON output"
     )
+
+    # 16. bundle
+    bundle_parser = subparsers.add_parser(
+        "bundle",
+        help="Materialize or import Knowledge Bundles and OKF concepts (specs/OKF-INTEROP.md)",
+    )
+    bundle_subs = bundle_parser.add_subparsers(dest="bundle_action", required=True)
+
+    # bundle export
+    b_export = bundle_subs.add_parser("export", help="Materialize a Knowledge Bundle")
+    b_export.add_argument("--selector", type=str, default=None, help="Path to bundle selector YAML")
+    b_export.add_argument("--bundle-id", type=str, default=None, help="Bundle ID")
+    b_export.add_argument("--title", type=str, default=None, help="Bundle Title")
+    b_export.add_argument("--scope", type=str, default=None, help="Scope filter")
+    b_export.add_argument("--output-dir", type=str, required=True, help="Target output directory")
+    b_export.add_argument("--corpus-root", type=str, default="fixtures/canonical", help="Corpus root")
+    b_export.add_argument("--registry-dir", type=str, default=None, help="Custom path to schemas/registry")
+    b_export.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # bundle import
+    b_import = bundle_subs.add_parser("import", help="Permissively import an OKF Knowledge Bundle")
+    b_import.add_argument("bundle_dir", type=str, help="Directory containing OKF bundle")
+    b_import.add_argument("--target-scope", type=str, default="engineering", help="Target scope")
+    b_import.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
 
     return parser
 
@@ -1149,6 +1174,88 @@ def handle_benchmark(args: argparse.Namespace) -> int:
     return ExitCode.SUCCESS
 
 
+def handle_bundle(args: argparse.Namespace) -> int:
+    """Handle bundle export and import operations (specs/OKF-INTEROP.md §16–§17)."""
+    action = getattr(args, "bundle_action", None)
+    if action == "export":
+        reg_dir = getattr(args, "registry_dir", None) or "schemas/registry"
+        registries = load_registries(reg_dir)
+        corpus = load_corpus(Path(args.corpus_root))
+        out_dir = Path(args.output_dir)
+
+        if args.selector:
+            import yaml
+
+            sel_data = yaml.safe_load(Path(args.selector).read_text(encoding="utf-8")) or {}
+            selector = BundleSelector(
+                bundle_id=sel_data.get("bundle_id", "BND-EXPORT"),
+                title=sel_data.get("title", "Export Bundle"),
+                scopes=sel_data.get("scopes", ["engineering"]),
+                taxonomy_ids=sel_data.get("taxonomy_ids"),
+                include_descendants=sel_data.get("include_descendants", True),
+                object_types=sel_data.get("object_types"),
+                domains=sel_data.get("domains"),
+                facets=sel_data.get("facets"),
+                statuses=sel_data.get("statuses"),
+                min_confidence=float(sel_data.get("min_confidence", 0.0)),
+                valid_at=sel_data.get("valid_at"),
+                closure_relations=sel_data.get("closure_relations"),
+                closure_max_depth=int(sel_data.get("closure_max_depth", 0)),
+                allow_personal_scope=bool(sel_data.get("allow_personal_scope", False)),
+                redact_scopes=sel_data.get("redact_scopes"),
+                emit_index=bool(sel_data.get("emit_index", True)),
+            )
+        else:
+            selector = BundleSelector(
+                bundle_id=args.bundle_id or "BND-DEFAULT-001",
+                title=args.title or "Default Knowledge Bundle",
+                scopes=[args.scope] if args.scope else ["engineering"],
+            )
+
+        manifest = build_bundle(
+            corpus=corpus,
+            selector=selector,
+            output_dir=out_dir,
+            registries=registries,
+        )
+
+        if args.json:
+            print(json.dumps(manifest.to_dict(), indent=2))
+        else:
+            print(
+                f"✓ Materialized bundle '{manifest.bundle_id}' with {manifest.total_objects} objects in {out_dir}"
+            )
+            print(f"  Selector Hash: {manifest.selector_hash}")
+            print(f"  Corpus Hash:   {manifest.corpus_hash}")
+            if manifest.unresolved_references:
+                print(f"  Unresolved References: {len(manifest.unresolved_references)}")
+        return ExitCode.SUCCESS
+
+    elif action == "import":
+        bundle_dir = Path(args.bundle_dir)
+        target_scope = getattr(args, "target_scope", "engineering")
+        imported, findings = import_bundle(bundle_dir, target_scope=target_scope)
+
+        if args.json:
+            res = {
+                "status": "ok",
+                "imported_count": len(imported),
+                "findings": findings,
+            }
+            print(json.dumps(res, indent=2))
+        else:
+            print(
+                f"✓ Imported {len(imported)} concepts from {bundle_dir} (target scope: {target_scope})"
+            )
+            if findings:
+                print(f"  Review findings ({len(findings)}):")
+                for f in findings:
+                    print(f"    - [{f['level']}] {f.get('file', '')}: {f['message']}")
+        return ExitCode.SUCCESS
+
+    return ExitCode.CONFIG_OR_ARG_ERROR
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point returning integer exit code."""
     parser = build_parser()
@@ -1180,6 +1287,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "reap": handle_reap,
         "conformance": handle_conformance,
         "benchmark": handle_benchmark,
+        "bundle": handle_bundle,
     }
 
     handler = handlers.get(args.command)

@@ -79,8 +79,9 @@ production linter/conformance implementation for the complete architecture.
 > engine, operational lifecycle manager, and reproducible validation gates are fully implemented
 > and verified by 57+ automated tests in `tests/` and `tools/check.sh`.
 > Conformance status is projected deterministically into `artifacts/conformance_matrix.yaml`.
-> Non-goal tracks (`GRAPH-INTELLIGENCE.md`, `GRAPH-RETRIEVAL.md`, `DISCOVERY.md`, `STRUCTURAL-GRAPH.md`,
-> and `OKF-INTEROP.md`) remain `UNIMPLEMENTED` pending optional future plans.
+> Non-goal tracks (`GRAPH-INTELLIGENCE.md`, `GRAPH-RETRIEVAL.md`, `DISCOVERY.md`, and `STRUCTURAL-GRAPH.md`)
+> remain `UNIMPLEMENTED` pending optional future plans. Knowledge Bundles and Google OKF v0.2 interop (`OKF-INTEROP.md`)
+> are fully implemented and conformance-tested (`trashheap/bundle/`).
 
 | Area | Specification maturity | Implementation status | Evidence in repository |
 |---|---|---|---|
@@ -92,7 +93,7 @@ production linter/conformance implementation for the complete architecture.
 | Universal Source model | `PROPOSED` | `CONFORMANCE_TESTED` | Source categories, identity/provenance contracts (`trashheap/ingest/models.py`); verified by `tests/test_ingest_safety.py`. |
 | Raw Source Storage and staging | `DRAFT` | `CONFORMANCE_TESTED` | CSCC raw layout, DSCP/DPCP promotion, TTL reaper; verified by `tests/test_ingest_safety.py`, `tests/test_proposal_promotion.py`. |
 | Structural Knowledge Graph | `PROPOSED` | `UNIMPLEMENTED` | Specification exists; optional extension (Plan 93 non-goal). |
-| OKF interoperability | `PROPOSED` | `UNIMPLEMENTED` | Pinned specification exists in `external-specs/okf/`; runtime adapter is a Plan 94 non-goal. |
+| OKF interoperability | `PROPOSED` | `CONFORMANCE_TESTED` | Knowledge Bundles and Google OKF v0.2 interop (`trashheap/bundle/`, `tests/test_bundles_and_okf.py`). |
 | Tool integration | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan. |
 
 ### Overall conclusion
@@ -130,7 +131,7 @@ Conformance maturity:  verified by automated test suite, check.sh gate, and conf
 | `GRAPH-RETRIEVAL.md` | `PROPOSED` | `UNIMPLEMENTED` | Opt-in graph-enhanced retrieval (Plan 90 non-goal) |
 | `DISCOVERY.md` | `PROPOSED` | `UNIMPLEMENTED` | Candidate discovery, clustering and promotion boundary (Plan 92 non-goal) |
 | `STRUCTURAL-GRAPH.md` | `PROPOSED` | `UNIMPLEMENTED` | Structural graph extension; error range `E301–E399` (Plan 93 non-goal) |
-| `OKF-INTEROP.md` | `PROPOSED` | `UNIMPLEMENTED` | OKF adapter and bundle contracts; error range `E401–E499` (Plan 94 non-goal) |
+| `OKF-INTEROP.md` | `PROPOSED` | `CONFORMANCE_TESTED` | OKF adapter and bundle contracts; error range `E401–E499` (`trashheap/bundle/`, `tests/test_bundles_and_okf.py`) |
 | `INGEST.md` | `DRAFT` | `CONFORMANCE_TESTED` | Trajectory ingestion specialization; error range `E101–E199` (`trashheap/ingest/`) |
 | `INGEST-ADAPTERS.md` | `DRAFT` | `CONFORMANCE_TESTED` | Connector, adapter, cursor and completion contracts (`trashheap/operations/`) |
 | `INGEST-PIPELINE.md` | `DRAFT` | `CONFORMANCE_TESTED` | Ingestion pipeline and deterministic processing stages (`trashheap/ingest/pipeline.py`) |
