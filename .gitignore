@@ -36,3 +36,5 @@ Thumbs.db
 # Local-only files and review outputs
 review-outputs/
 tools/cat-all.sh
+derived/
+discovery/
