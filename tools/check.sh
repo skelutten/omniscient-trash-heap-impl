@@ -54,6 +54,9 @@ $PYTHON -m trashheap.cli generate-skills --check
 echo "==> Running multi-layered linter across canonical fixtures..."
 $PYTHON -m trashheap.cli lint fixtures/canonical
 
+echo "==> Generating and verifying conformance matrix and status drift (D90, CONFORM-001)..."
+$PYTHON -m trashheap.cli conformance --check
+
 echo "==> Running pytest test suite..."
 $PYTEST -q
 

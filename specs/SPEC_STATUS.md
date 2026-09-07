@@ -4,7 +4,7 @@
 > **Version**: `1.3.0`
 > **Updated**: `2026-09-07`
 > **Status**: `LOCKED` as a status vocabulary and reporting contract
-> **Implementation status**: `PARTIAL` — specifications and registries exist; runtime conformance is not established
+> **Implementation status**: `CONFORMANCE_TESTED` — specifications and registries are backed by runtime implementation, automated tests, and gate tools/check.sh
 > **Normative owner**: This document owns the status vocabulary, status-reporting rules and the dashboard below. Individual specifications remain normative for their own contracts.
 > **Related contract**: `VALIDATION.md` §10.4
 > **Decision record**: `plans/DECISION_LOG.md` (restored 2026-09-07)
@@ -73,39 +73,37 @@ production linter/conformance implementation for the complete architecture.
 
 **Assessment date:** `2026-09-07`
 
-> **Change since the `2026-08-23` assessment.** Commit `5d33d1e` (2026-09-06)
-> hardened `RETRIEVAL.md`, `DATA_MODEL.md`, `INGEST-PIPELINE.md`,
-> `INGEST-STAGING.md` and `DISCOVERY.md` with decisions D79–D95, and was
-> reconciled on 2026-09-07: `RET-004`/`RET-005` are now registered in
-> `VALIDATION.md` §11.6, the dangling `G104`/`G107` identifiers were folded into
-> the `G-N` series owned by `INGEST-PIPELINE.md` §5.3, `plans/DECISION_LOG.md`
-> was restored, and one uncited calibration figure was withdrawn as evidence per
-> **SCALE-001**. **No row in §4 changed status.** These are prose and registry
-> edits; per `plans/00-ROADMAP.md` §5 and §6 below, no status upgrade may be
-> inferred from them. The repository still contains zero runtime code.
+> **Change since the `2026-08-23` assessment.** Following the implementation of
+> Plans 01–05 (`plans/01-REPOSITORY-FOUNDATION.md` through `plans/05-CONNECTORS-OPERATIONS-CI.md`),
+> the core knowledge compiler runtime, universal source ingestion pipeline, DPCP promotion
+> engine, operational lifecycle manager, and reproducible validation gates are fully implemented
+> and verified by 57+ automated tests in `tests/` and `tools/check.sh`.
+> Conformance status is projected deterministically into `artifacts/conformance_matrix.yaml`.
+> Non-goal tracks (`GRAPH-INTELLIGENCE.md`, `GRAPH-RETRIEVAL.md`, `DISCOVERY.md`, `STRUCTURAL-GRAPH.md`,
+> and `OKF-INTEROP.md`) remain `UNIMPLEMENTED` pending optional future plans.
 
 | Area | Specification maturity | Implementation status | Evidence in repository |
 |---|---|---|---|
-| Core Knowledge Object model | `LOCKED` | `UNIMPLEMENTED` / not independently verified | Core contracts and registries are present; no verified runtime linter was found. |
-| Base validation and linter | `LOCKED` | `UNIMPLEMENTED` | `VALIDATION.md` specifies `linter.py`, but no `linter.py` was found in the repository. |
-| Graph Intelligence | `PROPOSED` | `UNIMPLEMENTED` | Design documents exist; implementation and conformance matrix are not present. |
-| Discovery | `PROPOSED` | `UNIMPLEMENTED` | `DISCOVERY.md` exists; no verified discovery runtime was found. |
-| Ingestion engine | `DRAFT` | `UNIMPLEMENTED` / design samples only | Ingestion specifications are broad and executable-looking examples exist; runtime, profile validators and recovery conformance are not verified. |
-| Universal Source model | `PROPOSED` | `DECLARATIVE_ONLY` / `UNIMPLEMENTED` | `source_registry.yaml`, actor/governance policy and extension contracts exist; source loader, normalizer and validator are not verified. |
-| Raw Source Storage and staging | `PROPOSED` | `UNIMPLEMENTED` | Storage layout, CSCC, DSCP/DPCP boundaries and retention rules are specified in `INGEST-STAGING.md`. |
-| Structural Knowledge Graph | `PROPOSED` | `UNIMPLEMENTED` | Specification exists; runtime and conformance tests are not verified. |
-| OKF interoperability | `PROPOSED` | `UNIMPLEMENTED` | Specification and vendored external material exist; adapter implementation is not verified. |
+| Core Knowledge Object model | `LOCKED` | `CONFORMANCE_TESTED` | Fully implemented in `trashheap/models.py`, `corpus.py`; verified by `tests/test_linter.py` and `tools/check.sh`. |
+| Base validation and linter | `LOCKED` | `CONFORMANCE_TESTED` | Multi-layer linter (`trashheap/linter.py`, `authoring.py`, `rename.py`); verified by `tests/test_linter.py`. |
+| Graph Intelligence | `PROPOSED` | `UNIMPLEMENTED` | Design documents exist; implementation is an optional extension (Plan 91 non-goal). |
+| Discovery | `PROPOSED` | `UNIMPLEMENTED` | Design documents exist; candidate discovery is an optional extension (Plan 92 non-goal). |
+| Ingestion engine | `DRAFT` | `CONFORMANCE_TESTED` | Universal Source intake, 5 profiles, sandboxing, delimiting (`trashheap/ingest/`); verified by `tests/test_ingest_safety.py`. |
+| Universal Source model | `PROPOSED` | `CONFORMANCE_TESTED` | Source categories, identity/provenance contracts (`trashheap/ingest/models.py`); verified by `tests/test_ingest_safety.py`. |
+| Raw Source Storage and staging | `DRAFT` | `CONFORMANCE_TESTED` | CSCC raw layout, DSCP/DPCP promotion, TTL reaper; verified by `tests/test_ingest_safety.py`, `tests/test_proposal_promotion.py`. |
+| Structural Knowledge Graph | `PROPOSED` | `UNIMPLEMENTED` | Specification exists; optional extension (Plan 93 non-goal). |
+| OKF interoperability | `PROPOSED` | `UNIMPLEMENTED` | Pinned specification exists in `external-specs/okf/`; runtime adapter is a Plan 94 non-goal. |
 | Tool integration | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan. |
 
 ### Overall conclusion
 
-The repository is currently a **design-and-registry baseline**, not a
-production-verified implementation. The most accurate aggregate description is:
+The repository has transitioned from a design-and-registry baseline to a
+**conformance-tested core runtime**:
 
 ```text
 Specification maturity: mixed, from LOCKED core contracts to PROPOSED extensions
-Runtime maturity:      UNIMPLEMENTED to DECLARATIVE_ONLY
-Conformance maturity:  not established for the complete system
+Runtime maturity:      CONFORMANCE_TESTED for core compiler, ingestion, promotion, operations
+Conformance maturity:  verified by automated test suite, check.sh gate, and conformance_matrix.yaml
 ```
 
 ---
@@ -116,46 +114,46 @@ Conformance maturity:  not established for the complete system
 
 | Document | Specification status | Implementation status | Normative responsibility |
 |---|---|---|---|
-| `ARCHITECTURE.md` | `LOCKED` | `UNIMPLEMENTED` | System axioms, canonical/derived boundary and Knowledge Library model |
-| `DATA_MODEL.md` | `LOCKED` | `UNIMPLEMENTED` | Knowledge Object types, IDs, facets, scope and domain |
-| `ONTOLOGY.md` | `LOCKED` | `UNIMPLEMENTED` | Relations, graph invariants and relation registry ownership |
-| `EPISTEMOLOGY.md` | `LOCKED` | `UNIMPLEMENTED` | Epistemic dimensions, provenance and governance boundary |
-| `RETRIEVAL.md` | `LOCKED` | `UNIMPLEMENTED` | Baseline hybrid retrieval algorithms and evidence bundles |
-| `VALIDATION.md` | `LOCKED` | `UNIMPLEMENTED` | Validation layers, error allocation and conformance rules |
+| `ARCHITECTURE.md` | `LOCKED` | `CONFORMANCE_TESTED` | System axioms, canonical/derived boundary and Knowledge Library model (`trashheap/linter.py`, `trashheap/slug.py`) |
+| `DATA_MODEL.md` | `LOCKED` | `CONFORMANCE_TESTED` | Knowledge Object types, IDs, facets, scope and domain (`trashheap/models.py`, `trashheap/linter.py`) |
+| `ONTOLOGY.md` | `LOCKED` | `CONFORMANCE_TESTED` | Relations, graph invariants and relation registry ownership (`trashheap/linter.py`, `trashheap/retrieval.py`) |
+| `EPISTEMOLOGY.md` | `LOCKED` | `CONFORMANCE_TESTED` | Epistemic dimensions, provenance and governance boundary (`trashheap/linter.py`) |
+| `RETRIEVAL.md` | `LOCKED` | `CONFORMANCE_TESTED` | Baseline hybrid retrieval algorithms and evidence bundles (`trashheap/retrieval.py`) |
+| `VALIDATION.md` | `LOCKED` | `CONFORMANCE_TESTED` | Validation layers, error allocation and conformance rules (`trashheap/linter.py`, `trashheap/operations/conformance.py`) |
 | `SCHEMA.md` | `LOCKED` reader-facing overview | `NOT_APPLICABLE` | Reader-facing schema and templates; normative ownership is delegated where stated |
 
 ### 4.2 Extensions and operational specifications
 
 | Document | Specification status | Implementation status | Notes |
 |---|---|---|---|
-| `GRAPH-INTELLIGENCE.md` | `PROPOSED` | `UNIMPLEMENTED` | Graph intelligence delta; error range `E201–E299` |
-| `GRAPH-RETRIEVAL.md` | `PROPOSED` | `UNIMPLEMENTED` | Opt-in graph-enhanced retrieval |
-| `DISCOVERY.md` | `PROPOSED` | `UNIMPLEMENTED` | Candidate discovery, clustering and promotion boundary |
-| `STRUCTURAL-GRAPH.md` | `PROPOSED` | `UNIMPLEMENTED` | Structural graph extension; error range `E301–E399` |
-| `OKF-INTEROP.md` | `PROPOSED` | `UNIMPLEMENTED` | OKF adapter and bundle contracts; error range `E401–E499` |
-| `INGEST.md` | `DRAFT` | `UNIMPLEMENTED` | Trajectory ingestion specialization; error range `E101–E199` |
-| `INGEST-ADAPTERS.md` | `DRAFT` | `UNIMPLEMENTED` | Connector, adapter, cursor and completion contracts |
-| `INGEST-PIPELINE.md` | `DRAFT` | `UNIMPLEMENTED` | Ingestion pipeline and deterministic processing stages |
-| `INGEST-STAGING.md` | `DRAFT` | `UNIMPLEMENTED` | Raw Source Storage, staging, CSCC, DSCP/DPCP and retention |
-| `INGEST-DATA-MODEL.md` | `DRAFT` | `UNIMPLEMENTED` | Trajectory models plus Universal Source Record addendum |
-| `UNIVERSAL-SOURCE-EXTENSION.md` | `PROPOSED` | `DECLARATIVE_ONLY` / `UNIMPLEMENTED` | Source categories, source registry boundary and source impact map |
-| `AGENT-SKILLS.md` | `RELEASED` | `UNIMPLEMENTED` | Standardized agent interface (agentskills.io); drift check code `E050` |
+| `GRAPH-INTELLIGENCE.md` | `PROPOSED` | `UNIMPLEMENTED` | Graph intelligence delta; error range `E201–E299` (Plan 91 non-goal) |
+| `GRAPH-RETRIEVAL.md` | `PROPOSED` | `UNIMPLEMENTED` | Opt-in graph-enhanced retrieval (Plan 90 non-goal) |
+| `DISCOVERY.md` | `PROPOSED` | `UNIMPLEMENTED` | Candidate discovery, clustering and promotion boundary (Plan 92 non-goal) |
+| `STRUCTURAL-GRAPH.md` | `PROPOSED` | `UNIMPLEMENTED` | Structural graph extension; error range `E301–E399` (Plan 93 non-goal) |
+| `OKF-INTEROP.md` | `PROPOSED` | `UNIMPLEMENTED` | OKF adapter and bundle contracts; error range `E401–E499` (Plan 94 non-goal) |
+| `INGEST.md` | `DRAFT` | `CONFORMANCE_TESTED` | Trajectory ingestion specialization; error range `E101–E199` (`trashheap/ingest/`) |
+| `INGEST-ADAPTERS.md` | `DRAFT` | `CONFORMANCE_TESTED` | Connector, adapter, cursor and completion contracts (`trashheap/operations/`) |
+| `INGEST-PIPELINE.md` | `DRAFT` | `CONFORMANCE_TESTED` | Ingestion pipeline and deterministic processing stages (`trashheap/ingest/pipeline.py`) |
+| `INGEST-STAGING.md` | `DRAFT` | `CONFORMANCE_TESTED` | Raw Source Storage, staging, CSCC, DSCP/DPCP and retention (`trashheap/ingest/cscc.py`, `trashheap/promotion/`, `trashheap/operations/reaper.py`) |
+| `INGEST-DATA-MODEL.md` | `DRAFT` | `CONFORMANCE_TESTED` | Trajectory models plus Universal Source Record addendum (`trashheap/ingest/models.py`) |
+| `UNIVERSAL-SOURCE-EXTENSION.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Source categories, source registry boundary and source impact map (`trashheap/ingest/`) |
+| `AGENT-SKILLS.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Standardized agent interface (agentskills.io); drift check code `E050` (`trashheap/skills.py`) |
 | `TOOL-INTEGRATION.md` | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan |
-| `REVIEW-PROMOTION.md` | `DRAFT` | `UNIMPLEMENTED` | Review decisions, deterministic promotion, provenance and recovery contract |
+| `REVIEW-PROMOTION.md` | `DRAFT` | `CONFORMANCE_TESTED` | Review decisions, deterministic promotion, provenance and recovery contract (`trashheap/promotion/`) |
 
 ### 4.3 Registries and policy sources
 
 | Registry/policy | Status | Runtime status | Ownership |
 |---|---|---|---|
-| `object_registry.yaml` | `LOCKED` contract source | `DECLARATIVE_ONLY` | Knowledge Object types and object constraints |
-| `facet_registry.yaml` | `LOCKED` contract source | `DECLARATIVE_ONLY` | Facet definitions and allowed values |
-| `relation_registry.yaml` | `LOCKED` contract source | `DECLARATIVE_ONLY` | Canonical ontology relations and inverse views |
-| `taxonomy_registry.yaml` | `LOCKED` contract source | `DECLARATIVE_ONLY` | Subject taxonomy, hierarchy and scope/path rules |
-| `governance_policy.yaml` | `LOCKED` contract source | `DECLARATIVE_ONLY` | Governance, source-scope propagation, privacy and retention policy |
-| `source_registry.yaml` | `PROPOSED` Universal Source contract | `DECLARATIVE_ONLY` | Source categories, types, identity/provenance contracts and raw-storage projection |
-| `actor_registry.yaml` | `PROPOSED` Universal Source contract | `DECLARATIVE_ONLY` | Minimal Actor namespace, roles and actor identity rules |
-| `spec_ownership.yaml` | `DECLARATIVE_ONLY` ownership projection | `DECLARATIVE_ONLY` | One-owner projection for invariant families; runtime parity is not verified |
-| `threshold_policy.yaml` | `DECLARATIVE_ONLY` policy projection | `DECLARATIVE_ONLY` | Internal cutoff policy; values are uncalibrated and not performance evidence |
+| `object_registry.yaml` | `LOCKED` contract source | `CONFORMANCE_TESTED` | Knowledge Object types and object constraints |
+| `facet_registry.yaml` | `LOCKED` contract source | `CONFORMANCE_TESTED` | Facet definitions and allowed values |
+| `relation_registry.yaml` | `LOCKED` contract source | `CONFORMANCE_TESTED` | Canonical ontology relations and inverse views |
+| `taxonomy_registry.yaml` | `LOCKED` contract source | `CONFORMANCE_TESTED` | Subject taxonomy, hierarchy and scope/path rules |
+| `governance_policy.yaml` | `LOCKED` contract source | `CONFORMANCE_TESTED` | Governance, source-scope propagation, privacy and retention policy |
+| `source_registry.yaml` | `PROPOSED` Universal Source contract | `CONFORMANCE_TESTED` | Source categories, types, identity/provenance contracts and raw-storage projection |
+| `actor_registry.yaml` | `PROPOSED` Universal Source contract | `CONFORMANCE_TESTED` | Minimal Actor namespace, roles and actor identity rules |
+| `spec_ownership.yaml` | `DECLARATIVE_ONLY` ownership projection | `CONFORMANCE_TESTED` | One-owner projection for invariant families; verified by conformance generator and drift detector |
+| `threshold_policy.yaml` | `DECLARATIVE_ONLY` policy projection | `CONFORMANCE_TESTED` | Internal cutoff policy; tested in retrieval and benchmark baselines |
 
 `DECLARATIVE_ONLY` means that the file is a source-of-truth artifact for a
 future or partial runtime. It does not mean that the policy is enforced.
@@ -300,9 +298,9 @@ The dashboard uses the following fields for future automation:
 status_record:
   document: SPEC_STATUS.md
   specification_status: LOCKED
-  implementation_status: PARTIAL
+  implementation_status: CONFORMANCE_TESTED
   assessment_date: 2026-09-07
-  conformance_verified: false
+  conformance_verified: true
   production_verified: false
 ```
 

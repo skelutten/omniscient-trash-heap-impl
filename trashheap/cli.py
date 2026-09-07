@@ -22,6 +22,14 @@ from trashheap.ingest import (
     stage_lint,
 )
 from trashheap.linter import Finding, Linter
+from trashheap.operations import (
+    TTLReaper,
+    calculate_knowledge_debt,
+    detect_spec_drift,
+    generate_conformance_matrix,
+    inspect_environment,
+    run_benchmark,
+)
 from trashheap.promotion import (
     ApprovalBindingError,
     ConflictError,
@@ -285,6 +293,44 @@ def build_parser() -> argparse.ArgumentParser:
     promote_parser.add_argument("candidate_id", type=str, help="Candidate proposal ID")
     promote_parser.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
     promote_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # 12. status
+    status_parser = subparsers.add_parser(
+        "status",
+        help="Display environment durability, dependency availability, and knowledge debt metrics",
+    )
+    status_parser.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    status_parser.add_argument("--ttl-days", type=int, default=180, help="Retention TTL in days (default: 180)")
+    status_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # 13. reap
+    reap_parser = subparsers.add_parser(
+        "reap",
+        help="Execute deterministic staging retention reaper pass (INGEST-CORE-022, §7.3)",
+    )
+    reap_parser.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    reap_parser.add_argument("--ttl-days", type=int, default=180, help="Retention TTL in days (default: 180)")
+    reap_parser.add_argument("--grace-days", type=int, default=7, help="Grace period before tombstone purging (default: 7)")
+    reap_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # 14. conformance
+    conformance_parser = subparsers.add_parser(
+        "conformance",
+        help="Generate conformance projection or detect status dashboard drift (D90, CONFORM-001)",
+    )
+    conformance_parser.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    conformance_parser.add_argument("--output", type=str, default="artifacts/conformance_matrix.yaml", help="Output path for matrix")
+    conformance_parser.add_argument("--check", action="store_true", help="Run drift detector validating SPEC_STATUS.md")
+    conformance_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # 15. benchmark
+    bench_parser = subparsers.add_parser(
+        "benchmark",
+        help="Measure performance baseline and evaluate scale transition criteria (SCALE-001)",
+    )
+    bench_parser.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    bench_parser.add_argument("--fixtures-dir", type=str, default=None, help="Directory containing canonical fixtures")
+    bench_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
 
     return parser
 
@@ -846,6 +892,116 @@ def handle_promote(args: argparse.Namespace) -> int:
     return _execute_promote(args.candidate_id, ws_root, args.json)
 
 
+def handle_status(args: argparse.Namespace) -> int:
+    """Handle status command displaying environment and knowledge debt."""
+    ws_root = Path(getattr(args, "workspace_root", ".") or ".").resolve()
+    ttl_days = getattr(args, "ttl_days", 180)
+
+    env_report = inspect_environment(ws_root)
+    debt_report = calculate_knowledge_debt(ws_root, ttl_days=ttl_days)
+
+    if args.json:
+        payload = {
+            "status": "ok",
+            "environment": env_report.to_dict(),
+            "knowledge_debt": debt_report.to_dict(),
+        }
+        print(json.dumps(payload, indent=2))
+    else:
+        print("=== Trashheap Operations & Health Status ===")
+        print(f"OS: {env_report.os_system}")
+        print(f"Durability Tier: {env_report.filesystem_tier}")
+        print(f"Atomic Rename: {'✓' if env_report.atomic_rename_supported else '✗'}")
+        print(f"Fsync Durability: {'✓' if env_report.fsync_durability_supported else '✗'}")
+        print(
+            f"Dependencies: SQLite={'✓' if env_report.sqlite_available else '✗'}, "
+            f"DuckDB={'✓' if env_report.duckdb_available else '✗'}, "
+            f"Git-LFS={'✓' if env_report.git_lfs_available else '✗'}"
+        )
+        print("\n--- Staging & Knowledge Debt ---")
+        print(f"Pending Backlog: {debt_report.pending_backlog_count} item(s)")
+        print(f"Oldest Item Age: {debt_report.oldest_item_age_days:.1f} day(s)")
+        print(f"Quarantined Items: {debt_report.quarantined_count}")
+        print(f"Expiry Warning: {'⚠️ YES' if debt_report.expiry_warning else '✓ No'}")
+
+    return ExitCode.SUCCESS
+
+
+def handle_reap(args: argparse.Namespace) -> int:
+    """Handle reap command executing retention pass."""
+    ws_root = Path(getattr(args, "workspace_root", ".") or ".").resolve()
+    ttl_days = getattr(args, "ttl_days", 180)
+    grace_days = getattr(args, "grace_days", 7)
+
+    reaper = TTLReaper(ws_root, ttl_days=ttl_days, grace_days=grace_days)
+    result = reaper.run_reap_cycle()
+
+    if args.json:
+        print(json.dumps({"status": "reaped", "results": result}, indent=2))
+    else:
+        print(f"✓ Retention reap pass complete: {result['expired_count']} expired, {result['purged_count']} purged.")
+
+    return ExitCode.SUCCESS
+
+
+def handle_conformance(args: argparse.Namespace) -> int:
+    """Handle conformance projection and drift check (D90, CONFORM-001)."""
+    ws_root = Path(getattr(args, "workspace_root", ".") or ".").resolve()
+    out_rel = getattr(args, "output", "artifacts/conformance_matrix.yaml")
+    out_path = (ws_root / out_rel).resolve() if not Path(out_rel).is_absolute() else Path(out_rel)
+
+    matrix = generate_conformance_matrix(ws_root, output_path=out_path)
+
+    if getattr(args, "check", False):
+        drift = detect_spec_drift(ws_root)
+        if args.json:
+            print(json.dumps({"status": "checked", "matrix_summary": matrix.summary, "drift": drift.to_dict()}, indent=2))
+        else:
+            print("=== Conformance & Drift Check (D90) ===")
+            print(f"Matrix summary: {matrix.summary}")
+            print(f"Status: {'✓ PASSED' if drift.passed else '❌ FAILED'}")
+            for f in drift.findings:
+                icon = "❌" if f.level == "ERROR" else ("⚠️" if f.level == "WARNING" else "ℹ️")
+                print(f"  {icon} [{f.level}] {f.target}: {f.message}")
+        return ExitCode.SUCCESS if drift.passed else ExitCode.VALIDATION_ERROR
+
+    if args.json:
+        print(json.dumps({"status": "projected", "matrix": matrix.to_dict()}, indent=2))
+    else:
+        print(f"✓ Projected conformance matrix to {out_path.relative_to(ws_root) if out_path.is_relative_to(ws_root) else out_path}")
+        print(f"  Total invariant families: {matrix.summary['total_families']}")
+        print(f"  Conformance tested: {matrix.summary['conformance_tested']}")
+        print(f"  Implemented: {matrix.summary['implemented']}")
+        print(f"  Unimplemented: {matrix.summary['unimplemented']}")
+
+    return ExitCode.SUCCESS
+
+
+def handle_benchmark(args: argparse.Namespace) -> int:
+    """Handle performance baseline benchmark (SCALE-001)."""
+    ws_root = Path(getattr(args, "workspace_root", ".") or ".").resolve()
+    fx_dir = Path(args.fixtures_dir).resolve() if getattr(args, "fixtures_dir", None) else None
+
+    report = run_benchmark(ws_root, fixtures_dir=fx_dir)
+
+    if args.json:
+        print(json.dumps({"status": "ok", "benchmark": report.to_dict()}, indent=2))
+    else:
+        print("=== Performance Baseline Benchmark (SCALE-001) ===")
+        print(f"Corpus: {report.corpus_document_count} docs, {report.total_bytes} bytes, {report.total_lines} lines")
+        print(f"Parsing: {report.parse_ms_per_doc:.2f} ms/doc ({report.parse_docs_per_sec:.1f} docs/sec)")
+        print(f"Linting: {report.lint_ms_per_doc:.2f} ms/doc (findings: {report.lint_finding_count})")
+        print(f"Retrieval Indexing: {report.retrieval_index_sec:.4f} sec")
+        print(
+            f"Retrieval Query Latency: mean={report.retrieval_mean_query_ms:.2f} ms "
+            f"(min={report.retrieval_min_query_ms:.2f}, max={report.retrieval_max_query_ms:.2f})"
+        )
+        print(f"\nScale Transition Assessment: {report.scale_transition_assessment['status']}")
+        print(f"Rationale: {report.scale_transition_assessment['rationale']}")
+
+    return ExitCode.SUCCESS
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point returning integer exit code."""
     parser = build_parser()
@@ -873,6 +1029,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         "ingest": handle_ingest,
         "review": handle_review,
         "promote": handle_promote,
+        "status": handle_status,
+        "reap": handle_reap,
+        "conformance": handle_conformance,
+        "benchmark": handle_benchmark,
     }
 
     handler = handlers.get(args.command)

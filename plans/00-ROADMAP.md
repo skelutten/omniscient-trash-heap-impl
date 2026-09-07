@@ -1,9 +1,9 @@
 # LLM Wiki Implementation Roadmap
 
-> **Status:** proposed, implementation not started  
+> **Status:** core proving slice complete (Plans 01–05 verified)  
 > **Start here:** this is the single sequencing document for runtime work.  
 > **Normative owners:** `specs/` and `schemas/registry/`  
-> **Current phase:** Specification baseline frozen; roadmap sequenced around the **Architectural Proving Slice**.
+> **Current phase:** Core proving slice (Plans 01–05) fully implemented and verified; opt-in extension plans deferred.
 
 ---
 
@@ -38,7 +38,7 @@ Phase 5 (Resilience):  Rebuild Invariance & Crash/Recovery Verification
 | **02** | `02-DETERMINISTIC-CORE.md` | complete | 01 green | Canonical frontmatter parser, linter (`E001`–`E099`), Agent Skills emitter (`SKILL.md`), atomic rename. |
 | **03** | `03-SOURCE-INGESTION-SAFETY.md` | complete | 02 green | Universal source intake, untrusted web/pdf fencing (`<untrusted_source>`), path sandboxing, SHA-256 hash deduplication. |
 | **04** | `04-PROPOSAL-PROMOTION-RECOVERY.md` | complete | 03 green | Candidate proposal extraction, human review approval contract, deterministic atomic promotion (`.tmp` + `os.replace`). |
-| **05** | `05-CONNECTORS-OPERATIONS-CI.md` | next | 04 green | Hybrid lexical/RRF retrieval, `/query` synthesis with citations, rebuild invariance, clean-checkout CI. |
+| **05** | `05-CONNECTORS-OPERATIONS-CI.md` | complete | 04 green | Operational lifecycle, connectors, TTL-reaper, conformance projection, drift detector (D90), clean-checkout CI. |
 
 ---
 

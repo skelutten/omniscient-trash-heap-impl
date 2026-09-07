@@ -1,6 +1,6 @@
 # Plan 05 — Connectors, operations and CI
 
-> **Status:** proposed, not started
+> **Status:** completed, verified (2026-09-07, D107)
 > **Prerequisite:** `04-PROPOSAL-PROMOTION-RECOVERY.md` green
 > **Next:** optional plans `90–93`
 

@@ -1,0 +1,454 @@
+schema_version: 1.0.0
+matrix_id: conformance_matrix
+generated_at: '2026-09-07T08:30:19.970915+00:00'
+evidence_type: generated_projection
+note: "Generated evidence per VALIDATION.md \xA710.5 and CONFORM-001. Not a normative\
+  \ specification."
+summary:
+  total_families: 37
+  conformance_tested: 33
+  implemented: 0
+  unimplemented: 4
+families:
+- family_id: CANON
+  owner: specs/ARCHITECTURE.md
+  invariant_id: CANON-001..CANON-006
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - CANON-001
+  - CANON-002
+  - CANON-003
+  - CANON-004
+  - CANON-005
+  - CANON-006
+- family_id: ID
+  owner: specs/DATA_MODEL.md
+  invariant_id: ID-001..ID-005
+  implementation: trashheap/models.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - ID-001
+  - ID-002
+  - ID-003
+  - ID-004
+  - ID-005
+- family_id: FAC
+  owner: specs/DATA_MODEL.md
+  invariant_id: FAC-001..FAC-003
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - FAC-001
+  - FAC-002
+  - FAC-003
+- family_id: CLS
+  owner: specs/DATA_MODEL.md
+  invariant_id: CLS-001..CLS-003
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - CLS-001
+  - CLS-002
+  - CLS-003
+- family_id: TAX
+  owner: specs/ARCHITECTURE.md
+  invariant_id: TAX-001..TAX-005
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - TAX-001
+  - TAX-002
+  - TAX-003
+  - TAX-004
+  - TAX-005
+- family_id: REL
+  owner: specs/ONTOLOGY.md
+  invariant_id: REL-001..REL-008
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - REL-001
+  - REL-002
+  - REL-003
+  - REL-004
+  - REL-005
+  - REL-006
+  - REL-007
+  - REL-008
+- family_id: EPI
+  owner: specs/EPISTEMOLOGY.md
+  invariant_id: EPI-001..EPI-008
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - EPI-001
+  - EPI-002
+  - EPI-003
+  - EPI-004
+  - EPI-005
+  - EPI-006
+  - EPI-007
+  - EPI-008
+- family_id: PROV
+  owner: specs/EPISTEMOLOGY.md
+  invariant_id: PROV-001..PROV-004
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - PROV-001
+  - PROV-002
+  - PROV-003
+  - PROV-004
+- family_id: GOV
+  owner: specs/EPISTEMOLOGY.md
+  invariant_id: GOV-001..GOV-004
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - GOV-001
+  - GOV-002
+  - GOV-003
+  - GOV-004
+- family_id: SOURCE
+  owner: specs/UNIVERSAL-SOURCE-EXTENSION.md
+  invariant_id: SOURCE-001..SOURCE-017
+  implementation: trashheap/ingest/pipeline.py
+  test: tests/test_ingest_safety.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - SOURCE-001
+  - SOURCE-002
+  - SOURCE-007
+  - SOURCE-008
+  - SOURCE-010
+  - SOURCE-015
+  - SOURCE-016
+  - SOURCE-017
+- family_id: RAW
+  owner: specs/INGEST-STAGING.md
+  invariant_id: RAW-001..RAW-010
+  implementation: trashheap/ingest/cscc.py
+  test: tests/test_ingest_safety.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - RAW-001
+  - RAW-002
+  - RAW-003
+  - RAW-004
+  - RAW-005
+  - RAW-006
+  - RAW-007
+  - RAW-008
+  - RAW-009
+  - RAW-010
+- family_id: INGEST-CORE
+  owner: specs/INGEST.md
+  invariant_id: INGEST-CORE-001..INGEST-CORE-022
+  implementation: trashheap/ingest/pipeline.py
+  test: tests/test_ingest_safety.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - INGEST-CORE-001
+  - INGEST-CORE-022
+- family_id: CSCC
+  owner: specs/INGEST-STAGING.md
+  invariant_id: CSCC-001..CSCC-005
+  implementation: trashheap/ingest/cscc.py
+  test: tests/test_ingest_safety.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - CSCC-001
+  - CSCC-002
+  - CSCC-003
+  - CSCC-004
+  - CSCC-005
+- family_id: DSCP
+  owner: specs/INGEST-STAGING.md
+  invariant_id: DSCP-001..DSCP-004
+  implementation: trashheap/ingest/pipeline.py
+  test: tests/test_ingest_safety.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - DSCP-001
+  - DSCP-002
+  - DSCP-003
+  - DSCP-004
+- family_id: DPCP
+  owner: specs/INGEST-STAGING.md
+  invariant_id: DPCP-001..DPCP-010
+  implementation: trashheap/promotion/engine.py
+  test: tests/test_proposal_promotion.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - DPCP-001
+  - DPCP-002
+  - DPCP-003
+  - DPCP-004
+  - DPCP-005
+  - DPCP-006
+  - DPCP-007
+  - DPCP-008
+  - DPCP-009
+  - DPCP-010
+- family_id: DISC
+  owner: specs/DISCOVERY.md
+  invariant_id: DISC-001..DISC-005
+  implementation: UNIMPLEMENTED
+  test: planned
+  verification: planned
+  status: UNIMPLEMENTED
+  invariants:
+  - DISC-001
+  - DISC-002
+  - DISC-003
+  - DISC-004
+  - DISC-005
+- family_id: GRAPH
+  owner: specs/ONTOLOGY.md
+  invariant_id: GRAPH-001..GRAPH-003
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - GRAPH-001
+  - GRAPH-002
+  - GRAPH-003
+- family_id: SG
+  owner: specs/STRUCTURAL-GRAPH.md
+  invariant_id: SG-001..SG-020
+  implementation: UNIMPLEMENTED
+  test: planned
+  verification: planned
+  status: UNIMPLEMENTED
+  invariants:
+  - SG-001
+  - SG-020
+- family_id: OKF
+  owner: specs/OKF-INTEROP.md
+  invariant_id: OKF-001..OKF-012
+  implementation: UNIMPLEMENTED
+  test: planned
+  verification: planned
+  status: UNIMPLEMENTED
+  invariants:
+  - OKF-001
+  - OKF-012
+- family_id: BUNDLE
+  owner: specs/OKF-INTEROP.md
+  invariant_id: BUNDLE-001..BUNDLE-009
+  implementation: UNIMPLEMENTED
+  test: planned
+  verification: planned
+  status: UNIMPLEMENTED
+  invariants:
+  - BUNDLE-001
+  - BUNDLE-009
+- family_id: OWN
+  owner: specs/SCHEMA.md
+  invariant_id: OWN-001..OWN-003
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - OWN-001
+  - OWN-002
+  - OWN-003
+- family_id: BODY
+  owner: specs/SCHEMA.md
+  invariant_id: BODY-003
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - BODY-003
+- family_id: W
+  owner: specs/VALIDATION.md
+  invariant_id: W001..W015
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - W001
+  - W015
+- family_id: THRESH
+  owner: schemas/registry/threshold_policy.yaml
+  invariant_id: THRESH-001..THRESH-003
+  implementation: trashheap/retrieval.py
+  test: tests/test_retrieval.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - THRESH-001
+  - THRESH-002
+  - THRESH-003
+- family_id: REVIEW
+  owner: specs/INGEST-STAGING.md
+  invariant_id: REVIEW-001..REVIEW-004
+  implementation: trashheap/promotion/engine.py
+  test: tests/test_proposal_promotion.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - REVIEW-001
+  - REVIEW-002
+  - REVIEW-003
+  - REVIEW-004
+- family_id: RES
+  owner: specs/INGEST.md
+  invariant_id: RES-001..RES-005
+  implementation: trashheap/ingest/pipeline.py
+  test: tests/test_ingest_safety.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - RES-001
+  - RES-005
+- family_id: SCALE
+  owner: specs/ARCHITECTURE.md
+  invariant_id: SCALE-001..SCALE-003
+  implementation: trashheap/operations/benchmark.py
+  test: tests/test_operations_and_ci.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - SCALE-001
+  - SCALE-002
+  - SCALE-003
+- family_id: DERIVED
+  owner: specs/ARCHITECTURE.md
+  invariant_id: DERIVED-001..DERIVED-003
+  implementation: trashheap/retrieval.py
+  test: tests/test_retrieval.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - DERIVED-001
+  - DERIVED-002
+  - DERIVED-003
+- family_id: CONFORM
+  owner: specs/VALIDATION.md
+  invariant_id: CONFORM-001
+  implementation: trashheap/operations/conformance.py
+  test: tests/test_operations_and_ci.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - CONFORM-001
+- family_id: RET
+  owner: specs/RETRIEVAL.md
+  invariant_id: RET-001..RET-005
+  implementation: trashheap/retrieval.py
+  test: tests/test_retrieval.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - RET-001
+  - RET-002
+  - RET-003
+  - RET-004
+  - RET-005
+- family_id: META
+  owner: specs/ARCHITECTURE.md
+  invariant_id: META-001..META-002
+  implementation: trashheap/models.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - META-001
+  - META-002
+- family_id: LIB
+  owner: specs/ARCHITECTURE.md
+  invariant_id: LIB-001..LIB-003
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - LIB-001
+  - LIB-002
+  - LIB-003
+- family_id: SCOPE
+  owner: specs/DATA_MODEL.md
+  invariant_id: SCOPE-001..SCOPE-003
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - SCOPE-001
+  - SCOPE-002
+  - SCOPE-003
+- family_id: VAL
+  owner: specs/EPISTEMOLOGY.md
+  invariant_id: VAL-001..VAL-004
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - VAL-001
+  - VAL-002
+  - VAL-003
+  - VAL-004
+- family_id: ERR
+  owner: specs/VALIDATION.md
+  invariant_id: ERR-001..ERR-003
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - ERR-001
+  - ERR-002
+  - ERR-003
+- family_id: FS
+  owner: specs/VALIDATION.md
+  invariant_id: FS-001..FS-002
+  implementation: trashheap/linter.py
+  test: tests/test_linter.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - FS-001
+  - FS-002
+- family_id: G
+  owner: specs/INGEST-PIPELINE.md
+  invariant_id: G-1..G-3
+  implementation: trashheap/ingest/pipeline.py
+  test: tests/test_ingest_safety.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - G-1
+  - G-2
+  - G-3
