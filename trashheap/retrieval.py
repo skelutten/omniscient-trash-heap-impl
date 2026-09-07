@@ -15,6 +15,7 @@ import math
 import re
 from collections import deque
 from datetime import date
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from trashheap.corpus import Corpus
@@ -43,6 +44,7 @@ DEFAULT_RETRIEVAL_PARAMS: Dict[str, Any] = {
     "facet_match_mode": "any",
     "conflict_strategy": "epistemic_then_confidence",
     "enable_vector": False,
+    "retrieval_mode": "canonical",
 }
 
 CATEGORY_PRIORITY: Dict[str, int] = {
@@ -219,11 +221,13 @@ class HybridRetriever:
         registries: LoadedRegistries,
         vector_index: Optional[VectorIndex] = None,
         embedder: Optional[Embedder] = None,
+        workspace_root: Optional[Path] = None,
     ):
         self.corpus = corpus
         self.registries = registries
         self.vector_index = vector_index
         self.embedder = embedder
+        self.workspace_root = workspace_root or Path(".")
         self.bm25_index = BM25Index(k1=1.5, b=0.75)
         self.bm25_index.index(self.corpus.objects)
 
@@ -282,6 +286,7 @@ class HybridRetriever:
                 parameters_origin["enable_vector"] = "default"
 
         enable_vector = bool(parameters_used.get("enable_vector", False))
+        retrieval_mode = str(parameters_used.get("retrieval_mode", "canonical"))
 
         scope_filter = parameters_used.get("scope")
         object_type_filter = parameters_used.get("object_type")
@@ -463,10 +468,22 @@ class HybridRetriever:
                         if len(visited_depth) >= max_expanded_nodes:
                             break
 
-        # Compute graph raw scores: 1 / (1 + depth)
+        # Compute graph raw scores
         graph_raw_scores: Dict[str, float] = {}
-        for nid, depth in visited_depth.items():
-            graph_raw_scores[nid] = 1.0 / (1.0 + depth)
+        graph_features_map: Dict[str, Dict[str, float]] = {}
+        if retrieval_mode == "graph_enhanced":
+            from trashheap.graph.analysis import GraphAnalyzer
+            from trashheap.graph.retrieval import GraphFeatureScorer
+
+            analyzer = GraphAnalyzer(self.corpus, self.workspace_root)
+            scorer = GraphFeatureScorer(analyzer)
+            for nid in visited_depth.keys():
+                score, feat_breakdown = scorer.score_candidate(nid, seed_nodes)
+                graph_raw_scores[nid] = score
+                graph_features_map[nid] = feat_breakdown
+        else:
+            for nid, depth in visited_depth.items():
+                graph_raw_scores[nid] = 1.0 / (1.0 + depth)
 
         norm_graph_scores = normalize_scores(graph_raw_scores)
 
@@ -573,11 +590,14 @@ class HybridRetriever:
                 contrib = round(w_graph / (k_rrf + rank), 7)
                 score_rrf += contrib
                 matched.append("graph")
-                signals["graph"] = {
+                sig = {
                     "raw_score": norm_graph_scores[nid],
                     "rank": rank,
                     "rrf_contribution": contrib,
                 }
+                if retrieval_mode == "graph_enhanced" and nid in graph_features_map:
+                    sig["features"] = graph_features_map[nid]
+                signals["graph"] = sig
 
             rrf_scores[nid] = round(score_rrf, 7)
             matched_by_map[nid] = matched
@@ -784,6 +804,7 @@ class HybridRetriever:
             "retrieval_version": RETRIEVAL_VERSION,
             "ranking_policy_version": RANKING_POLICY_VERSION,
             "relation_registry_version": RELATION_REGISTRY_VERSION,
+            "retrieval_mode": retrieval_mode,
             "modalities_available": modalities_available,
             "modalities_absent": modalities_absent,
             "parameters_used": parameters_used,

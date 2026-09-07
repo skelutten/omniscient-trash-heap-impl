@@ -197,10 +197,10 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     "DISC": {
         "owner": "specs/DISCOVERY.md",
         "invariants": ["DISC-001", "DISC-002", "DISC-003", "DISC-004", "DISC-005"],
-        "implementation": "UNIMPLEMENTED",
-        "test": "planned",
-        "verification": "planned",
-        "status": "UNIMPLEMENTED",
+        "implementation": "trashheap/graph/discovery.py, trashheap/graph/analysis.py",
+        "test": "tests/test_graph_intelligence.py",
+        "verification": "tools/check.sh",
+        "status": "CONFORMANCE_TESTED",
     },
     "GRAPH": {
         "owner": "specs/ONTOLOGY.md",

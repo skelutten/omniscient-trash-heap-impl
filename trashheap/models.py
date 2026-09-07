@@ -135,6 +135,22 @@ class KnowledgeObject:
             return self.frontmatter.domain
         return self.frontmatter_dict.get("domain")
 
+    @property
+    def relations(self) -> List[Dict[str, Any]]:
+        if self.frontmatter and self.frontmatter.relations:
+            return [
+                {
+                    "type": r.type,
+                    "target": r.target,
+                    "soft_link": r.soft_link,
+                }
+                for r in self.frontmatter.relations
+            ]
+        raw = self.frontmatter_dict.get("relations", [])
+        if isinstance(raw, list):
+            return [r for r in raw if isinstance(r, dict)]
+        return []
+
     def parse_sections(self) -> Dict[str, str]:
         """Extract Markdown H2 sections from the body."""
         sections: Dict[str, str] = {}

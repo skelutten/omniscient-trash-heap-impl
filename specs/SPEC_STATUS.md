@@ -79,16 +79,17 @@ production linter/conformance implementation for the complete architecture.
 > engine, operational lifecycle manager, and reproducible validation gates are fully implemented
 > and verified by 57+ automated tests in `tests/` and `tools/check.sh`.
 > Conformance status is projected deterministically into `artifacts/conformance_matrix.yaml`.
-> Non-goal tracks (`GRAPH-INTELLIGENCE.md`, `GRAPH-RETRIEVAL.md`, `DISCOVERY.md`, and `STRUCTURAL-GRAPH.md`)
-> remain `UNIMPLEMENTED` pending optional future plans. Knowledge Bundles and Google OKF v0.2 interop (`OKF-INTEROP.md`)
-> are fully implemented and conformance-tested (`trashheap/bundle/`).
+> Non-goal tracks (`STRUCTURAL-GRAPH.md`) remain `UNIMPLEMENTED` pending optional future plans.
+> Knowledge Bundles and Google OKF v0.2 interop (`OKF-INTEROP.md`) and Graph Intelligence / Discovery
+> (`GRAPH-INTELLIGENCE.md`, `GRAPH-RETRIEVAL.md`, `DISCOVERY.md`) are fully implemented and
+> conformance-tested (`trashheap/bundle/`, `trashheap/graph/`).
 
 | Area | Specification maturity | Implementation status | Evidence in repository |
 |---|---|---|---|
 | Core Knowledge Object model | `LOCKED` | `CONFORMANCE_TESTED` | Fully implemented in `trashheap/models.py`, `corpus.py`; verified by `tests/test_linter.py` and `tools/check.sh`. |
 | Base validation and linter | `LOCKED` | `CONFORMANCE_TESTED` | Multi-layer linter (`trashheap/linter.py`, `authoring.py`, `rename.py`); verified by `tests/test_linter.py`. |
-| Graph Intelligence | `PROPOSED` | `UNIMPLEMENTED` | Design documents exist; implementation is an optional extension (Plan 91 non-goal). |
-| Discovery | `PROPOSED` | `UNIMPLEMENTED` | Design documents exist; candidate discovery is an optional extension (Plan 92 non-goal). |
+| Graph Intelligence | `PROPOSED` | `CONFORMANCE_TESTED` | Topological metrics, derived edges, and opt-in graph-enhanced retrieval (`trashheap/graph/`, `tests/test_graph_intelligence.py`). |
+| Discovery | `PROPOSED` | `CONFORMANCE_TESTED` | Candidate discovery, duplicates, topological/ontological gaps, and governed promotion (`trashheap/graph/discovery.py`, `tests/test_graph_intelligence.py`). |
 | Ingestion engine | `DRAFT` | `CONFORMANCE_TESTED` | Universal Source intake, 5 profiles, sandboxing, delimiting (`trashheap/ingest/`); verified by `tests/test_ingest_safety.py`. |
 | Universal Source model | `PROPOSED` | `CONFORMANCE_TESTED` | Source categories, identity/provenance contracts (`trashheap/ingest/models.py`); verified by `tests/test_ingest_safety.py`. |
 | Raw Source Storage and staging | `DRAFT` | `CONFORMANCE_TESTED` | CSCC raw layout, DSCP/DPCP promotion, TTL reaper; verified by `tests/test_ingest_safety.py`, `tests/test_proposal_promotion.py`. |
@@ -127,9 +128,9 @@ Conformance maturity:  verified by automated test suite, check.sh gate, and conf
 
 | Document | Specification status | Implementation status | Notes |
 |---|---|---|---|
-| `GRAPH-INTELLIGENCE.md` | `PROPOSED` | `UNIMPLEMENTED` | Graph intelligence delta; error range `E201–E299` (Plan 91 non-goal) |
-| `GRAPH-RETRIEVAL.md` | `PROPOSED` | `UNIMPLEMENTED` | Opt-in graph-enhanced retrieval (Plan 90 non-goal) |
-| `DISCOVERY.md` | `PROPOSED` | `UNIMPLEMENTED` | Candidate discovery, clustering and promotion boundary (Plan 92 non-goal) |
+| `GRAPH-INTELLIGENCE.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Graph intelligence delta; error range `E201–E299` (`trashheap/graph/`, `tests/test_graph_intelligence.py`) |
+| `GRAPH-RETRIEVAL.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Opt-in graph-enhanced retrieval (`trashheap/graph/retrieval.py`, `tests/test_graph_intelligence.py`) |
+| `DISCOVERY.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Candidate discovery, clustering and promotion boundary (`trashheap/graph/discovery.py`, `tests/test_graph_intelligence.py`) |
 | `STRUCTURAL-GRAPH.md` | `PROPOSED` | `UNIMPLEMENTED` | Structural graph extension; error range `E301–E399` (Plan 93 non-goal) |
 | `OKF-INTEROP.md` | `PROPOSED` | `CONFORMANCE_TESTED` | OKF adapter and bundle contracts; error range `E401–E499` (`trashheap/bundle/`, `tests/test_bundles_and_okf.py`) |
 | `INGEST.md` | `DRAFT` | `CONFORMANCE_TESTED` | Trajectory ingestion specialization; error range `E101–E199` (`trashheap/ingest/`) |

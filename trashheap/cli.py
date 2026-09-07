@@ -14,6 +14,12 @@ from typing import Any, Dict, List, Optional
 from trashheap.bundle import BundleSelector, build_bundle, import_bundle
 from trashheap.constants import VERSION, ExitCode
 from trashheap.corpus import load_corpus
+from trashheap.graph import (
+    DiscoveryEngine,
+    DiscoveryLifecycleManager,
+    GraphAnalyzer,
+    build_and_publish_manifest,
+)
 from trashheap.ingest import (
     AccessDeniedError,
     IntegrityConflictError,
@@ -179,6 +185,12 @@ def build_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         default=False,
         help="Enable opt-in vector retrieval (Plan 90)",
+    )
+    query_parser.add_argument(
+        "--graph-enhanced",
+        action="store_true",
+        default=False,
+        help="Enable opt-in graph-enhanced retrieval (Plan 91 / GRAPH-RETRIEVAL.md)",
     )
 
     # 6. rebuild
@@ -417,6 +429,66 @@ def build_parser() -> argparse.ArgumentParser:
     b_import.add_argument("bundle_dir", type=str, help="Directory containing OKF bundle")
     b_import.add_argument("--target-scope", type=str, default="engineering", help="Target scope")
     b_import.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # 17. graph
+    graph_parser = subparsers.add_parser(
+        "graph",
+        help="Graph intelligence analysis, manifest, and derived projections (specs/GRAPH-INTELLIGENCE.md)",
+    )
+    graph_subs = graph_parser.add_subparsers(dest="graph_action", required=True)
+
+    g_manifest = graph_subs.add_parser("manifest", help="Generate canonical input manifest atomically")
+    g_manifest.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    g_manifest.add_argument("--output-dir", type=str, default="derived", help="Output directory")
+    g_manifest.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    g_analyze = graph_subs.add_parser("analyze", help="Calculate graph metrics and derived edges")
+    g_analyze.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    g_analyze.add_argument("--output-dir", type=str, default="derived/graph", help="Output directory")
+    g_analyze.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    # 18. discover
+    discover_parser = subparsers.add_parser(
+        "discover",
+        help="Discover duplicates, topological gaps, and ontological gaps (specs/DISCOVERY.md)",
+    )
+    discover_subs = discover_parser.add_subparsers(dest="discover_action", required=True)
+
+    d_scan = discover_subs.add_parser("scan", help="Run discovery scans across canonical corpus")
+    d_scan.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    d_scan.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
+    d_scan.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    d_list = discover_subs.add_parser("list", help="List discovered candidates")
+    d_list.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
+    d_list.add_argument("--status", type=str, default=None, help="Filter by status (e.g. pending, approved)")
+    d_list.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    d_review = discover_subs.add_parser("review", help="Review a discovery candidate")
+    d_review.add_argument("candidate_id", type=str, help="Candidate ID")
+    d_review.add_argument(
+        "--decision",
+        type=str,
+        required=True,
+        choices=["approved", "rejected", "reviewed"],
+        help="Review decision",
+    )
+    d_review.add_argument("--actor", type=str, default="operator", help="Reviewer actor identity")
+    d_review.add_argument("--reason", type=str, default="Operator review", help="Review rationale")
+    d_review.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
+    d_review.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    d_promote = discover_subs.add_parser("promote", help="Validate and promote an approved candidate")
+    d_promote.add_argument("candidate_id", type=str, help="Candidate ID")
+    d_promote.add_argument("--actor", type=str, default="operator", help="Promoting actor identity")
+    d_promote.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
+    d_promote.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    d_promote.add_argument("--json", action="store_true", help="Emit JSON output")
+
+    d_sweep = discover_subs.add_parser("sweep", help="Sweep and archive expired candidates older than 90 days")
+    d_sweep.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
+    d_sweep.add_argument("--current-date", type=str, default=None, help="Optional simulated ISO UTC date")
+    d_sweep.add_argument("--json", action="store_true", help="Emit JSON output")
 
     return parser
 
@@ -707,6 +779,7 @@ def handle_query(args: argparse.Namespace) -> int:
         "min_confidence": args.min_confidence,
         "min_relevance": args.min_relevance,
         "enable_vector": getattr(args, "vector", False),
+        "retrieval_mode": "graph_enhanced" if getattr(args, "graph_enhanced", False) else "canonical",
     }
 
     bundle = retriever.retrieve(query=args.prompt, cli_params=cli_params)
@@ -1256,6 +1329,138 @@ def handle_bundle(args: argparse.Namespace) -> int:
     return ExitCode.CONFIG_OR_ARG_ERROR
 
 
+def handle_graph(args: argparse.Namespace) -> int:
+    """Handle graph commands (manifest, analyze)."""
+    action = args.graph_action
+    ws_root = Path(args.workspace_root)
+    if action == "manifest":
+        out_dir = Path(args.output_dir)
+        manifest, m_path = build_and_publish_manifest(ws_root, out_dir)
+        if args.json:
+            print(json.dumps(manifest.to_dict(), indent=2))
+        else:
+            print(f"✓ Generated canonical manifest in {m_path}")
+            print(f"  Corpus hash: {manifest.corpus_hash}")
+        return ExitCode.SUCCESS
+    elif action == "analyze":
+        out_dir = Path(args.output_dir)
+        corpus = load_corpus(ws_root / "fixtures" / "canonical")
+        analyzer = GraphAnalyzer(corpus, ws_root)
+        metrics = analyzer.compute_node_metrics()
+        derived_manifest, _ = build_and_publish_manifest(ws_root, out_dir.parent)
+        edges = analyzer.compute_derived_edges(derived_manifest.corpus_hash)
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+        with open(out_dir / "node_metrics.jsonl", "w", encoding="utf-8") as f:
+            for m in metrics.values():
+                f.write(json.dumps(m.to_dict()) + "\n")
+        with open(out_dir / "derived_edges.jsonl", "w", encoding="utf-8") as f:
+            for e in edges:
+                f.write(json.dumps(e.to_dict()) + "\n")
+
+        if args.json:
+            res = {
+                "nodes_analyzed": len(metrics),
+                "derived_edges": len(edges),
+                "corpus_hash": derived_manifest.corpus_hash,
+            }
+            print(json.dumps(res, indent=2))
+        else:
+            print(f"✓ Analyzed graph topology for {len(metrics)} nodes in {out_dir}")
+            print(f"  Derived edges: {len(edges)}")
+        return ExitCode.SUCCESS
+    return ExitCode.CONFIG_OR_ARG_ERROR
+
+
+def handle_discover(args: argparse.Namespace) -> int:
+    """Handle discovery commands (scan, list, review, promote, sweep)."""
+    action = args.discover_action
+    disc_dir = Path(args.discovery_dir)
+    ws_root = Path(getattr(args, "workspace_root", "."))
+    mgr = DiscoveryLifecycleManager(disc_dir, ws_root)
+
+    if action == "scan":
+        corpus = load_corpus(ws_root / "fixtures" / "canonical")
+        registries = load_registries(ws_root / "schemas" / "registry")
+        engine = DiscoveryEngine(corpus, registries, ws_root)
+        manifest, _ = build_and_publish_manifest(ws_root, disc_dir.parent / "derived")
+        candidates = engine.scan_all_candidates(manifest.corpus_hash)
+        added = mgr.add_candidates(candidates)
+        if args.json:
+            res = {
+                "scanned": len(candidates),
+                "added_pending": added,
+                "total_candidates": len(mgr.candidates),
+            }
+            print(json.dumps(res, indent=2))
+        else:
+            print(f"✓ Discovery scan complete: found {len(candidates)} candidates ({added} new pending)")
+        return ExitCode.SUCCESS
+
+    elif action == "list":
+        status_filter = getattr(args, "status", None)
+        items = list(mgr.candidates.values())
+        if status_filter:
+            items = [c for c in items if c.status == status_filter]
+        items.sort(key=lambda c: c.candidate_id)
+        if args.json:
+            print(json.dumps([c.to_dict() for c in items], indent=2))
+        else:
+            print(f"Discovery candidates ({len(items)}):")
+            for c in items:
+                print(f"  [{c.status.upper()}] {c.candidate_id} ({c.candidate_type}, conf: {c.confidence})")
+        return ExitCode.SUCCESS
+
+    elif action == "review":
+        try:
+            cand = mgr.review_candidate(
+                candidate_id=args.candidate_id,
+                decision=args.decision,
+                actor=args.actor,
+                reason=args.reason,
+            )
+            if args.json:
+                print(json.dumps(cand.to_dict(), indent=2))
+            else:
+                print(f"✓ Candidate '{cand.candidate_id}' set to '{cand.status}' by {args.actor}")
+            return ExitCode.SUCCESS
+        except KeyError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return ExitCode.NOT_FOUND
+
+    elif action == "promote":
+        try:
+            corpus = load_corpus(ws_root / "fixtures" / "canonical")
+            registries = load_registries(ws_root / "schemas" / "registry")
+            cand = mgr.validate_and_promote(
+                candidate_id=args.candidate_id,
+                actor=args.actor,
+                corpus=corpus,
+                registries=registries,
+            )
+            if args.json:
+                print(json.dumps(cand.to_dict(), indent=2))
+            else:
+                print(f"✓ Candidate '{cand.candidate_id}' successfully promoted by {args.actor}")
+            return ExitCode.SUCCESS
+        except ValueError as e:
+            print(f"Validation error: {e}", file=sys.stderr)
+            return ExitCode.VALIDATION_ERROR
+        except KeyError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return ExitCode.NOT_FOUND
+
+    elif action == "sweep":
+        count = mgr.sweep_expiry(current_dt_iso=args.current_date)
+        if args.json:
+            print(json.dumps({"expired_count": count}, indent=2))
+        else:
+            print(f"✓ Swept expired candidates: {count} archived as expired")
+        return ExitCode.SUCCESS
+
+    return ExitCode.CONFIG_OR_ARG_ERROR
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point returning integer exit code."""
     parser = build_parser()
@@ -1288,6 +1493,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         "conformance": handle_conformance,
         "benchmark": handle_benchmark,
         "bundle": handle_bundle,
+        "graph": handle_graph,
+        "discover": handle_discover,
     }
 
     handler = handlers.get(args.command)

@@ -1,6 +1,6 @@
 # Plan 91 — Opt-in graph intelligence
 
-> **Status:** opt-in, deferred
+> **Status:** complete, verified (D110)
 > **Prerequisite:** `02-DETERMINISTIC-CORE.md` green
 > **Dependency:** versioned graph policy and an explicit derived-artifact gate.
 
