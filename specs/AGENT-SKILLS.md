@@ -83,3 +83,10 @@ The generated skill MUST specify the following 6 core operations:
 
 - **Emitter Script:** `scripts/generate_agent_skills.py` (invoked via `python3 scripts/generate_agent_skills.py` or CLI `trashheap generate-skills`).
 - **Verification Gate (Linter Rule `E050`):** Running the repository linter checks that `.agents/skills/trashheap/SKILL.md` is bit-for-bit identical to the generated output. If drift is detected, `E050: AgentSkillDriftError` is raised.
+
+### 4.1 Installation Scopes (Repository & Global)
+- **Repository Scope:** The skill definition lives in `.agents/skills/trashheap/SKILL.md` within the project root. AI coding assistants (e.g. Antigravity, Claude Code, Cursor) automatically discover it when operating in this workspace.
+- **Global User Scope:** To make the skill available across all directories and projects on the machine, install it globally using `trashheap generate-skills --global` (or `python3 scripts/generate_agent_skills.py --global`). This writes `~/.agents/skills/trashheap/SKILL.md`. Alternatively, a symlink can be created:
+  ```bash
+  ln -sfn $(pwd)/.agents/skills/trashheap ~/.agents/skills/trashheap
+  ```

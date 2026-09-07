@@ -259,6 +259,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--repo-root", type=str, default=None, help="Repository root directory"
     )
     skills_parser.add_argument(
+        "--global",
+        dest="global_install",
+        action="store_true",
+        help="Install skill globally to ~/.agents/skills/trashheap/SKILL.md",
+    )
+    skills_parser.add_argument(
         "--json", action="store_true", help="Emit machine-readable JSON output"
     )
 
@@ -968,6 +974,19 @@ def handle_rebuild(args: argparse.Namespace) -> int:
 def handle_generate_skills(args: argparse.Namespace) -> int:
     """Handle generate-skills command and drift verification (E050)."""
     repo_root = Path(args.repo_root) if args.repo_root else Path.cwd()
+
+    if getattr(args, "global_install", False):
+        from trashheap.skills import generate_agent_skills_content
+
+        global_path = Path.home() / ".agents" / "skills" / "trashheap" / "SKILL.md"
+        global_path.parent.mkdir(parents=True, exist_ok=True)
+        content = generate_agent_skills_content()
+        global_path.write_text(content, encoding="utf-8")
+        if args.json:
+            print(json.dumps({"status": "passed", "path": str(global_path)}, indent=2))
+        else:
+            print(f"✓ Installed global Agent Skill to {global_path}")
+        return ExitCode.SUCCESS
 
     if args.check:
         matches = check_agent_skills(repo_root)

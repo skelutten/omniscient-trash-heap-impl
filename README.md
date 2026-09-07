@@ -28,6 +28,34 @@ uv tool install .
 
 ---
 
+## Installera Agent Skill (`.agents/skills/trashheap`)
+
+Projektet följer den öppna standarden **Agent Skills** (`agentskills.io` / `dot-agents.com`). AI-agenter (t.ex. Antigravity, Claude Code, Cursor) använder denna skill för att känna till systemets slash-kommandon (`/lint`, `/validate`, `/query`, `/show`, `/stage-lint`, `/ingest`, `/rebuild`).
+
+### 1. Projektnivå (Automatisk)
+Skillen genereras automatiskt i repot under:
+```text
+.agents/skills/trashheap/SKILL.md
+```
+Agenter som öppnar detta repository upptäcker och laddar den automatiskt. För att synkronisera filen med senaste scheman och källkod:
+```bash
+uv run trashheap generate-skills
+```
+
+### 2. Global användarnivå (Tillgänglig i alla projekt och mappar)
+Om du vill att dina agenter ska ha tillgång till `trashheap`-kommandona även när du arbetar i andra projekt och kataloger kan du installera skillen globalt i din användarprofil:
+
+```bash
+# Automatisk global installation till ~/.agents/skills/trashheap/SKILL.md
+uv run trashheap generate-skills --global
+
+# Alternativt skapa en symbolisk länk:
+mkdir -p ~/.agents/skills
+ln -sfn $(pwd)/.agents/skills/trashheap ~/.agents/skills/trashheap
+```
+
+---
+
 ## Var lagras allt? (Datalayout)
 
 Systemet separerar strikt mellan kod/motor, kanoniska referensfixturer och externa wikikorpusar:

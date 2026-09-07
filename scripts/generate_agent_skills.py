@@ -21,7 +21,23 @@ def main() -> None:
         default=Path.cwd(),
         help="Repository root path (default: current working directory).",
     )
+    parser.add_argument(
+        "--global",
+        dest="global_install",
+        action="store_true",
+        help="Install skill globally to ~/.agents/skills/trashheap/SKILL.md",
+    )
     args = parser.parse_args()
+
+    if args.global_install:
+        from trashheap.skills import generate_agent_skills_content
+
+        global_path = Path.home() / ".agents" / "skills" / "trashheap" / "SKILL.md"
+        global_path.parent.mkdir(parents=True, exist_ok=True)
+        content = generate_agent_skills_content()
+        global_path.write_text(content, encoding="utf-8")
+        print(f"✓ Installed global Agent Skill to {global_path}")
+        sys.exit(0)
 
     repo_root = args.repo_root.resolve()
 
