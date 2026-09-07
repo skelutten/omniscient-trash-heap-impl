@@ -1,0 +1,214 @@
+# object_registry.yaml
+# Canonical source of truth for the CLASSIFICATION axis (ID-002, ID-005, FAC-001,
+# CLS-001). Holds both value sets of the CLASSIFICATION metadata category:
+#   object_types:  WHAT KIND of knowledge object it is
+#   domains:       WHICH area of expertise it belongs to
+#
+# Facet VALUE sets live in facet_registry.yaml; this file only declares WHICH
+# facets are mandatory per object type (required_facets).
+#
+# FIELD CONTRACT per object type
+#   code            : TYPE_CODE used in the ID (ID-002); MUST be unique
+#   category        : information | semantic | domain | events | procedural
+#   allowed_scopes  : scopes the type may be used in (ID-005 / E006)
+#   required_facets : facets that MUST be present (FAC-001 / E020)
+#   tag_strategy    : domain -> DOMAIN_TAG_PATTERN, year -> YEAR_TAG_PATTERN (ID-003)
+
+schema_version: "1.0.0"
+
+object_types:
+  Article:
+    code: ART
+    category: information
+    allowed_scopes: [personal, engineering]
+    required_facets: [language, audience]
+    tag_strategy: domain
+  Document:
+    code: DOC
+    category: information
+    allowed_scopes: [personal, engineering]
+    required_facets: [language]
+    tag_strategy: domain
+  Specification:
+    code: SPC
+    category: information
+    allowed_scopes: [engineering]
+    required_facets: [toolchain, lifecycle, architecture]
+    tag_strategy: domain
+  Report:
+    code: RPT
+    category: information
+    allowed_scopes: [personal, engineering]
+    required_facets: []
+    tag_strategy: year
+  Concept:
+    code: CON
+    category: semantic
+    allowed_scopes: [personal, engineering]
+    required_facets: [language]
+    tag_strategy: domain
+  Definition:
+    code: DEF
+    category: semantic
+    allowed_scopes: [personal, engineering]
+    required_facets: [language]
+    tag_strategy: domain
+  Principle:
+    code: PRN
+    category: semantic
+    allowed_scopes: [personal, engineering]
+    required_facets: [language]
+    tag_strategy: domain
+  Claim:
+    code: CLM
+    category: semantic
+    allowed_scopes: [personal, engineering]
+    required_facets: []
+    tag_strategy: year
+  Product:
+    code: PRD
+    category: domain
+    allowed_scopes: [engineering]
+    required_facets: [lifecycle]
+    tag_strategy: domain
+  Feature:
+    code: FET
+    category: domain
+    allowed_scopes: [engineering]
+    required_facets: [toolchain, prog_language, lifecycle]
+    tag_strategy: domain
+  Requirement:
+    code: REQ
+    category: domain
+    allowed_scopes: [engineering]
+    required_facets: [lifecycle]
+    tag_strategy: domain
+  Component:
+    code: CMP
+    category: domain
+    allowed_scopes: [engineering]
+    required_facets: [prog_language, toolchain, lifecycle]
+    tag_strategy: domain
+  WorkPackage:
+    code: WPK
+    category: domain
+    allowed_scopes: [engineering]
+    required_facets: [lifecycle]
+    tag_strategy: domain
+  Interface:
+    code: IFC
+    category: domain
+    allowed_scopes: [engineering]
+    required_facets: [architecture]
+    tag_strategy: domain
+  Protocol:
+    code: PRT
+    category: domain
+    allowed_scopes: [engineering]
+    required_facets: [architecture]
+    tag_strategy: domain
+  Incident:
+    code: INC
+    category: events
+    allowed_scopes: [engineering]
+    required_facets: [toolchain, lifecycle]
+    tag_strategy: year
+  TroubleReport:
+    code: TRB
+    category: events
+    allowed_scopes: [engineering]
+    required_facets: [toolchain, lifecycle]
+    tag_strategy: year
+  Experiment:
+    code: EXP
+    category: events
+    allowed_scopes: [personal, engineering]
+    required_facets: [toolchain]
+    tag_strategy: year
+  Observation:
+    code: OBS
+    category: events
+    allowed_scopes: [personal, engineering]
+    required_facets: [toolchain]
+    tag_strategy: year
+  Lesson:
+    code: LES
+    category: events
+    allowed_scopes: [personal, engineering]
+    required_facets: [toolchain, language]
+    tag_strategy: year
+  Workflow:
+    code: WFL
+    category: procedural
+    allowed_scopes: [personal, engineering]
+    required_facets: [toolchain, audience]
+    tag_strategy: domain
+  Procedure:
+    code: PRC
+    category: procedural
+    allowed_scopes: [personal, engineering]
+    required_facets: [audience]
+    tag_strategy: domain
+  Checklist:
+    code: CHK
+    category: procedural
+    allowed_scopes: [personal, engineering]
+    required_facets: [audience]
+    tag_strategy: domain
+  Skill:
+    code: SKL
+    category: procedural
+    allowed_scopes: [personal, engineering]
+    required_facets: [audience]
+    tag_strategy: domain
+  Sequence:
+    code: SEQ
+    category: procedural
+    allowed_scopes: [engineering]
+    required_facets: [architecture]
+    tag_strategy: domain
+
+# ============================================================
+# DomainEnum — CLASSIFICATION: which area of expertise (CLS-001 / E027)
+# ============================================================
+# `domain` is mandatory (1..1) on every object type. It is ORTHOGONAL to
+# taxonomy_path: the taxonomy says WHERE in the subject tree the object sits,
+# the domain says WHICH expertise is needed to judge it. Do not mirror the
+# taxonomy here.
+domains:
+  # --- Duckburg Vibe Inc platform & infrastructure domains ---
+  - distributed_systems   # cluster architecture, worker topology, consensus
+  - data_pipelines        # event streaming, pub/sub, message routing
+  - data_processing       # compute engines, stream transformations, batch workers
+  - api_protocols         # gRPC, RPC schemas, API gateways, REST, GraphQL
+  - storage_state         # databases, distributed cache, state replication
+  - runtime_frameworks    # async runtimes, event loops, concurrency, IPC
+  - configuration         # dynamic config, feature flags, service discovery
+  - observability         # OpenTelemetry tracing, Prometheus metrics, logging
+  - reliability           # circuit breakers, failover, disaster recovery, HA
+  - performance           # latency tuning, throughput, profiling, capacity
+  - security              # secure coding, IAM, encryption, threat modeling, CVEs
+  - networking_edge       # edge proxies, CDN, ingress, TLS termination
+  - cloud_infrastructure  # multi-cloud integrations, Kubernetes, cluster infrastructure
+
+  # --- software engineering domains ---
+  - software_engineering  # general design and implementation practice
+  - build_systems         # build, link, package, toolchain
+  - verification          # test, mocking, QA and coverage engineering
+  - devops                # CI/CD pipelines, GitOps, gating, release automation
+  - ai_engineering        # AI-assisted engineering practice and internal agent tooling
+  - engineering_process   # ways of working, ADRs, RFC processes, review policy
+
+  # --- broad discipline domains (used by both scopes) ---
+  # Deliberately COARSER than the taxonomy and NOT a 1:1 image of it (CLS-002).
+  # Several of these serve nodes in both scopes, e.g. `management` covers
+  # TX-PERS-09 and TX-ENG-15; `software_engineering` covers TX-PERS-07-03 and
+  # several engineering nodes; `security` covers TX-PERS-07-02 and TX-ENG-16.
+  - formal_science        # logic, philosophy of science, mathematics
+  - natural_science
+  - human_science         # psychology, cognition
+  - social_science        # society, economics, politics, history, culture
+  - computer_science
+  - engineering
+  - management
+  - practical_skills

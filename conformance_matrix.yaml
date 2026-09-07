@@ -1,0 +1,76 @@
+version: "1.0"
+architecture_version: "3.8.10"
+production_locked: false
+rows:
+  - rule: META-001
+    spec: true
+    registry: false
+    implementation: true
+    tests: true
+    ci: true
+  - rule: REL-001
+    spec: true
+    registry: true
+    implementation: true
+    tests: true
+    ci: true
+  - rule: REL-002
+    spec: true
+    registry: true
+    implementation: true
+    tests: true
+    ci: true
+  - rule: REL-005
+    spec: true
+    registry: true
+    implementation: true
+    tests: true
+    ci: true
+  - rule: TAX-001
+    spec: true
+    registry: true
+    implementation: true
+    tests: true
+    ci: true
+  - rule: TAX-006
+    spec: true
+    registry: true
+    implementation: true
+    tests: true
+    ci: true
+  - rule: FAC-001
+    spec: true
+    registry: true
+    implementation: true
+    tests: true
+    ci: true
+  - rule: GOV-002
+    spec: true
+    registry: true
+    implementation: true
+    tests: true
+    ci: true
+  - rule: RET-001
+    spec: true
+    registry: false
+    implementation: true
+    tests: true
+    ci: true
+  - rule: E008
+    spec: true
+    registry: false
+    implementation: true
+    tests: true
+    ci: true
+  - rule: E019
+    spec: true
+    registry: true
+    implementation: true
+    tests: true
+    ci: true
+  - rule: W001-W011
+    spec: true
+    registry: false
+    implementation: false
+    tests: false
+    ci: false

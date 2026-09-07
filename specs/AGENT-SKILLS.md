@@ -1,0 +1,79 @@
+# The Omniscient Trash Heap Specification: Agent Skills Standard Integration
+
+> **Part of**: The Omniscient Trash Heap Knowledge Architecture v3.8.10
+> **Document ID**: `LLM-WIKI-AGENT-SKILLS-001`
+> **Version**: `1.0.0`
+> **Status**: `PROPOSED`
+> **Implementation status**: `UNIMPLEMENTED`
+> **Normative owner**: This document owns the agent skill generation contract, slash command specifications, and compliance rules with the Agent Skills standard (`agentskills.io` / `dot-agents.com`).
+> **Related documents**: `ARCHITECTURE.md`, `VALIDATION.md`, `TOOL-INTEGRATION.md`, `specs/README.md`
+
+---
+
+## 1. Scope & Objective
+
+This specification formalizes the **Agent Skills standard** interface for autonomous coding and reasoning agents interacting with The Omniscient Trash Heap knowledge base.
+
+### Primary Directives:
+1. **No Hand-Edited Placeholders:** The skill file `.agents/skills/trashheap/SKILL.md` MUST NOT be manually maintained. It is a compiled, generated artifact emitted deterministically by `trashheap generate-skills` (or `tools/generate_skills.py`).
+2. **Strict Standard Compliance:** The generated `SKILL.md` MUST strictly adhere to the [Agent Skills Specification](https://agentskills.io/specification) and [dot-agents standard](https://www.dot-agents.com/) format, including YAML frontmatter and structured command documentation.
+3. **Execution Invariance:** Agents executing workflows (`/ingest`, `/stage-lint`, `/lint`, `/validate`, `/query`, `/rebuild`) must invoke deterministic underlying CLI entry points with standardized exit codes.
+
+---
+
+## 2. Normative Frontmatter & Metadata Contract
+
+The generated `.agents/skills/trashheap/SKILL.md` MUST begin with YAML frontmatter conforming to this schema:
+
+```yaml
+---
+name: trashheap
+description: Comprehensive workflow and schema guide for ingesting sources, running lints, and executing query synthesis in The Omniscient Trash Heap.
+version: 3.8.10
+license: Apache-2.0
+compatibility:
+  python: ">=3.11"
+  pydantic: ">=2.0"
+metadata:
+  repository: "https://github.com/daniel6651/llm-wiki-oe"
+  specification: "LLM-WIKI-AGENT-SKILLS-001"
+---
+```
+
+---
+
+## 3. Standard Slash Commands Contract
+
+The generated skill MUST specify the following 6 core operations:
+
+### 3.1 `/lint` — Whole Repository Integrity Check
+- **Command:** `python3 -m trashheap.cli lint` (or `tools/check.sh`)
+- **Flags:** `--warnings-as-errors`, `--scope {personal|engineering}`
+- **Behavior:** Validates all system invariants (`E001`–`E099`), YAML registry adherence, DAG acyclicity, and broken `[[wiki-link]]` targets.
+
+### 3.2 `/validate <file>` — Single File Conformance Check
+- **Command:** `python3 -m trashheap.cli validate <file_path>`
+- **Behavior:** Validates frontmatter against Pydantic models for `object_type`, `taxonomy`, and `epistemology`.
+
+### 3.3 `/stage-lint` — Ingestion Staging Triage
+- **Command:** `python3 -m trashheap.cli stage-lint`
+- **Behavior:** Scans `staging/`, analyzes raw content, drafts suggested frontmatter, and detects candidate relations.
+
+### 3.4 `/ingest <file>` — Governed Source Intake
+- **Command:** `python3 -m trashheap.cli ingest <file_path> [--source-type {web|pdf|note|transcript}]`
+- **Behavior:** Calculates SHA-256 content hash, places normalized raw representation into `staging/`, and registers source reference.
+
+### 3.5 `/query <prompt>` — Evidence-Based Query Synthesis
+- **Command:** `python3 -m trashheap.cli query "<prompt>"`
+- **Behavior:** Executes hybrid RRF retrieval across lexical index and structural graph, synthesizing answers with verified note citation links (`[[note-slug]]`).
+
+### 3.6 `/rebuild` — Disposable Index Reconstruction
+- **Command:** `python3 -m trashheap.cli rebuild`
+- **Behavior:** Wipes and idempotently reconstructs ephemeral SQLite metadata, inverted full-text index, and graph caches directly from Markdown notes.
+
+---
+
+## 4. Code Generation & Conformance Verification
+
+- **Emitter Script:** `scripts/generate_agent_skills.py` (invoked via `python3 scripts/generate_agent_skills.py` or CLI `trashheap generate-skills`).
+- **Verification Gate (Linter Rule `E050`):** Running the repository linter checks that `.agents/skills/trashheap/SKILL.md` is bit-for-bit identical to the generated output. If drift is detected, `E050: AgentSkillDriftError` is raised.

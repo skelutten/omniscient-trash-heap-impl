@@ -1,0 +1,95 @@
+# epistemic_registry.yaml
+# Canonical source of truth for EPISTEMIC DIMENSIONS and integer ranking scales (EPI-001, EPI-003).
+#
+# Epistemology answers "HOW DO WE KNOW THIS" (EPISTEMOLOGY.md §1).
+# The four dimensions are ORTHOGONAL (EPI-001) and SHALL NOT be derived from one another:
+#   evidence     — what empirical ground supports the claim
+#   verification — who or what checked the claim against its sources
+#   authority    — what institutional status the claim carries
+#   consensus    — what community agreement exists
+#
+# Integer weights drive the K(d) tie-breaking conflict key (EPI-003 / RETRIEVAL.md §9.3).
+# Higher integer rank indicates higher epistemic precedence during conflict suppression.
+
+schema_version: "1.0.0"
+
+dimensions:
+
+  # --------------------------------------------------------------
+  # evidence — empirical grounding level
+  # --------------------------------------------------------------
+  evidence:
+    description: "Empirical support grounding the claim."
+    values:
+      observed:
+        rank: 3
+        description: "Direct empirical observation or test run"
+      derived:
+        rank: 2
+        description: "Mathematically or logically derived from observed facts"
+      inferred:
+        rank: 1
+        description: "Synthesized or inducted by an agent or human author"
+      postulated:
+        rank: 0
+        description: "Hypothesis, theoretical assumption or working premise"
+
+  # --------------------------------------------------------------
+  # verification — validation rigor
+  # --------------------------------------------------------------
+  verification:
+    description: "Method of verification applied to the claim."
+    values:
+      formal_proof:
+        rank: 4
+        description: "Formally proved or exhaustively machine-checked"
+      peer_verified:
+        rank: 3
+        description: "Independently verified and confirmed by a human peer"
+      self_verified:
+        rank: 2
+        description: "Confirmed by the original author or automated test execution"
+      unverified:
+        rank: 1
+        description: "Captured or drafted without independent confirmation"
+      falsified:
+        rank: 0
+        description: "Disproven or invalidated by empirical evidence"
+
+  # --------------------------------------------------------------
+  # authority — institutional governance level
+  # --------------------------------------------------------------
+  authority:
+    description: "Organizational / institutional standing of the claim."
+    values:
+      normative:
+        rank: 4
+        description: "Binding standard, policy, specification or hard invariant"
+      authoritative:
+        rank: 3
+        description: "Official team guidance, approved architecture or handbook"
+      informative:
+        rank: 2
+        description: "Recommended practice, design note or explanatory article"
+      advisory:
+        rank: 1
+        description: "Informal suggestion, opinion or experimental observation"
+      deprecated:
+        rank: 0
+        description: "Superseded or historical content no longer endorsed"
+
+  # --------------------------------------------------------------
+  # consensus — community acceptance
+  # --------------------------------------------------------------
+  consensus:
+    description: "Degree of agreement across authors, reviewers, and systems."
+    values:
+      accepted:
+        rank: 2
+        description: "Broadly agreed upon; no active disputes"
+      proposed:
+        rank: 1
+        description: "Working proposal awaiting peer review or community trial"
+      contested:
+        rank: 0
+        description: "Under active dispute with conflicting claims present"

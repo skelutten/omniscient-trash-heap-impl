@@ -1,0 +1,45 @@
+# governance_policy.yaml
+# Canonical source of truth for the GOVERNANCE axis (GOV-001, GOV-002).
+#
+# `status` describes the state of the WIKI PAGE (repository management state).
+# `facets.lifecycle` describes the state of the SYSTEM the page is about, and lives
+# in facet_registry.yaml. GOV-001 forbids conflating the two.
+#
+# The linter reads this file dynamically; an unlisted status/consensus combination
+# MUST be rejected with E004 (GOV-002). Hard-coding the combinations in source code
+# is a GOV-002 violation.
+#
+# FIELD CONTRACT
+#   status_consensus_rules:
+#     <status>:                       one of the four StatusEnum values
+#       allowed_consensus: [<...>]    permitted ConsensusEnum values for that status
+#
+# StatusEnum    : draft | established | deprecated | archived
+# ConsensusEnum : proposed | contested | accepted   (see EPISTEMOLOGY.md §5.1)
+
+schema_version: "1.1.0"
+
+status_consensus_rules:
+  draft:
+    allowed_consensus: [proposed, contested]
+  established:
+    allowed_consensus: [contested, accepted]
+  deprecated:
+    allowed_consensus: [contested, accepted]
+  archived:
+    allowed_consensus: [contested, accepted]
+
+# Universal Source derivation policy. This registry owns access, privacy,
+# retention and propagation; source_registry.yaml owns classification only.
+source_scope_propagation:
+  default_rule: derived_access MUST NOT be broader than source_access
+  source_scopes: [personal, private, team, organization, public]
+  derived_scope_decision: explicit_policy_decision_required
+  allow_broader_access_exceptions: false
+  denied_source_behavior: do_not_ingest_or_quarantine
+  audit_fields: [source_ref, derived_ref, policy_version, actor_ref, decided_at, decision]
+
+privacy_and_retention:
+  policy_owner: governance_policy
+  source_registry_must_not_define: [privacy_class, access_policy, retention_policy, sharing_policy, pii_policy]
+  deletion_rule: deletion MUST preserve audit metadata unless law or policy requires redaction

@@ -1,0 +1,151 @@
+# Decision Log
+
+> **Status:** restored 2026-09-07; reconstructed, not original
+> **Purpose:** give every `Dnn` identifier cited in `specs/`, `plans/` and
+> `schemas/registry/` a single auditable home, and record the human sign-offs
+> that `plans/00-ROADMAP.md` §1 (**EPI-SPEC-001**) requires for post-freeze
+> specification changes.
+> **Normative owner:** this document owns the decision *record*. It does not own
+> any rule — each decision's normative text lives in the document listed under
+> "Lives in", which wins on divergence per `specs/README.md` §1.
+
+---
+
+## 1. Provenance of this file (read first)
+
+A `plans/DECISION_LOG.md` was created empty in commit `70096be` and **deleted in
+commit `615e4a4`**. No decision log has existed since. Consequently every `Dnn`
+identifier in this repository survives only as an inline citation in the document
+that applied it.
+
+**This file is a reconstruction from those citations, performed 2026-09-07.** It
+is not a contemporaneous record. Each entry below states where the decision is
+*applied*; none states who decided it or when, because that information was never
+written down and cannot be recovered from the repository.
+
+The numbering is **sparse**. These identifiers are cited nowhere in the
+repository and have no reconstructable content:
+
+```text
+D6, D9, D12–D18, D20–D23, D26–D28, D30–D38, D40–D53,
+D55–D78, D85–D89, D91, D92
+```
+
+Either they were decided and never recorded, or the numbers were skipped. This
+file does not guess. **Going forward, a decision MUST be added here in the same
+commit that first cites its identifier** (see §5).
+
+Separately, `review-outputs/Chad-01.md` uses `D1`–`D5` as review-finding labels.
+Whether that is the same series is unconfirmed; those five are **not** claimed by
+this log.
+
+---
+
+## 2. Reconstructed decisions (pre-freeze)
+
+| ID | Decision (as applied) | Lives in |
+|---|---|---|
+| **D7** | `Sequence` (`SEQ`) added as an engineering object type, because 20 flow pages are protocol message sequences | `object_registry.yaml`; recorded at `specs/README.md` §7 item 16 |
+| **D8** | Section-ownership contract adopted: machine-owned sections, byte-preserved human `## Notes`, fail-closed unknown sections | `specs/SCHEMA.md` §7.1; `specs/README.md` §7 item 21 |
+| **D10** | Security vulnerabilities/CVEs modeled as `TroubleReport` + `domain: security` rather than a new object type | `object_registry.yaml`; `specs/README.md` §7 item 12 |
+| **D11** | Tool pages modeled as `Component` + `facets.toolchain` rather than a new object type | `object_registry.yaml`; `specs/README.md` §7 item 13 |
+| **D19** | `schemas/registry/epistemic_registry.yaml` is the normative owner of the epistemic dimensions | `specs/EPISTEMOLOGY.md` header |
+| **D24** | Every linter diagnostic MUST be structured with exactly five fields | `specs/VALIDATION.md` §(diagnostic structure), line 41 |
+| **D25** | `lint <file>` SHALL filter reported diagnostics to the specified scope | `specs/VALIDATION.md` line 51 |
+| **D29** | Temporal and date-dependent checks (`W002`, `W003`, `W012`, …) are evaluated against an explicit, injectable evaluation date | `specs/VALIDATION.md` line 48 |
+| **D39** | Sentinel-value distinction for domain object specification facets (`W011`) | `specs/DATA_MODEL.md` line 108; `specs/VALIDATION.md` line 114 |
+| **D54** | `threshold_policy.yaml` created as the single normative home for internal cut-offs (**THRESH-002**), ending threshold proliferation | `schemas/registry/threshold_policy.yaml`; `specs/README.md` §7 item 23 |
+
+Review-allocated identifier blocks `C1`–`C5`, `H1`–`H9`, `R1`–`R6` and `N1` are
+tracked in `review-outputs/Qwen-01.md`, `Qwen-02.md` and were closed by commits
+`df12b16` and `286319a`. They are a different series and are **not** restated
+here.
+
+---
+
+## 3. D79–D95 — post-freeze specification hardening
+
+Landed in commit `5d33d1e` (2026-09-06), *after* the **EPI-SPEC-001** freeze.
+Reconciled in the commit that adds this file.
+
+| ID | Decision | Lives in |
+|---|---|---|
+| **D79** | `Embedder` protocol + `DeterministicDouble` test seam. **Honest Modality rule:** a test double (`is_double = True`) is forbidden from claiming the vector modality; bundles report vector as `absent` | `plans/90` Phase V1 |
+| **D80** | Offline embedding provider support (local ONNX / `all-MiniLM-L6-v2`, 384-dim, unit norm); defensive fail-closed store validation; ephemeral provisioning with `--cleanup` | `plans/90` Phase V2 |
+| **D81** | No arbitrary query-to-document similarity floor — only a `0.0` sign-convention floor; `GRAPH-SEMANTIC-SIMILARITY: 0.75` is reserved for inter-object graph edge inference. Multi-chunk scoring uses **max-over-chunks aggregation** with `chunk_index` passage attribution | `specs/RETRIEVAL.md` §9.1 items 2–3; `plans/90` Phases V2–V3; `threshold_policy.yaml` line 40 |
+| **D82** | Self-describing evidence bundles: `modalities_available` / `modalities_absent` derived from what actually executed; unspent modalities report `null`, never `0.0` | `specs/RETRIEVAL.md` §9.4; `plans/90` Phase V3 |
+| **D83** | Cross-encoder reranking **excluded** from the query path: bi-encoders cannot act as cross-encoders, weights are not offline-reachable, and a query-path model call would break offline determinism and **RET-002**. `FinalScore` defaults to `RRF(d)` | `specs/RETRIEVAL.md` §9.1 note; `plans/90` Phase V4 |
+| **D84** | Transparent degraded fallback to baseline lexical+graph retrieval when vector deps or indexes are absent; index staleness reported with exact reason | `plans/90` Phase V5 |
+| **D90** | Status-dashboard drift detector validating `SPEC_STATUS.md` against specs, registries, runtime, tests and CI markers | `plans/05` scope item 4 |
+| **D93** | **Graph modality condition:** graph participates in RRF only when expansion reached `depth > 0`. At depth 0 every score is $1.0$, so lexicographic tie-break would degenerate into alphabetical reordering. Reports `graph_consulted` vs `graph_reached` distinctly | `specs/RETRIEVAL.md` §9.1 item 1, §9.4; `plans/02` scope item 8 |
+| **D94** | Per-parameter precedence **CLI flag > `retrieval:` config block > §9.4 default**, with resolution source reported in `parameters_origin` alongside `parameters_used` | `specs/RETRIEVAL.md` §9.4; `plans/02` scope items 8, 10 |
+| **D95** | Opt-in `frontmatter: required\|derived` per migration map. `derived` extracts titles from doc macros (`%docTitle`) or first `# H1` and strips `%docResp` / `%docOwnerLineMgr` for privacy; `required` stays the strict default | `plans/60` item 11 |
+
+Also introduced by `5d33d1e` but **not** given D-identifiers: the two-pass
+extraction architecture and `G-1`–`G-3` granularity filter
+(`specs/INGEST-PIPELINE.md` §5.3), `W1`–`W3` workflow/procedure
+disambiguation with deterministic downgrade (`specs/DATA_MODEL.md` §3.1.1),
+passive staleness and knowledge-debt metrics (`specs/INGEST-STAGING.md` §7.3.2),
+ontological gap patterns (`specs/DISCOVERY.md` §10.2.2), and invariants
+**RET-004** (stateless query) / **RET-005** (air-gapped baseline).
+
+---
+
+## 3.1 D96–D98 — reconciliation decisions (2026-09-07)
+
+Taken while repairing defects found by a full read of the seven locked core
+specs. Each is a **narrowing or a removal**, not an expansion, so none raises any
+epistemic status; all three are recorded here per §5.
+
+| ID | Decision | Lives in | Status |
+|---|---|---|---|
+| **D96** | `GRAPH-001`'s composite-closure clause cited `SUBCOMPONENT_OF`, `CONTAINS` and `SPECIALIZES`. **None exists** in `relation_registry.yaml` (30 relations) or anywhere else in `specs/`. Per **REL-001** an invariant MUST NOT name relations outside the registry, so the closure set is narrowed to the hierarchical `dag: true` relations that do exist: `PART_OF`, `INSTANCE_OF`, `TYPE_OF`. `SUPERSEDES`, `DEPENDS_ON` and `DERIVED_FROM` are `dag: true` but not hierarchical and remain under per-type detection only. `ONTOLOGY.md` is confirmed as the owning statement of `GRAPH-001`–`003`; `VALIDATION.md` §11 restates for error-code mapping and MUST NOT diverge | `specs/ONTOLOGY.md` §Graph Invariants; `specs/VALIDATION.md` §11; `spec_ownership.yaml` (`GRAPH` owner moved from `GRAPH-INTELLIGENCE.md`, which defines none of them) | **CONFIRMED (Owner sign-off 2026-09-07)**. Mereological containment is fully modeled by `PART_OF` (inverse `HAS_PART`), instantiation by `INSTANCE_OF`, and taxonomic subtyping by `TYPE_OF`. Invariants **REL-001** and **REL-004** forbid adding redundant duplicate or virtual-inverse relations (`CONTAINS`, `SUBCOMPONENT_OF`, `SPECIALIZES`). The hierarchical closure set `{PART_OF, INSTANCE_OF, TYPE_OF}` is definitive. |
+| **D97** | `BODY-001` and `BODY-002` were cited in `SCHEMA.md` §7.1 as the authority for byte-preservation and regeneration idempotency but **were never defined anywhere**; the `BODY` series begins at `BODY-003`. The dangling aliases are **removed, not back-filled** — those two rules are already stated normatively by `OWN-002` and `OWN-003`, so minting `BODY-001`/`002` would create two IDs for one rule and breach **ERR-001** | `specs/SCHEMA.md` §7.1 identifier note | Mechanical |
+| **D98** | `spec_ownership.yaml` registered 29 families but omitted `RET`, `META`, `LIB`, `SCOPE`, `VAL`, `ERR`, `FS` and the new `G` series, so invariants in the locked core had no owner in the machine-readable projection required by `VALIDATION.md` §10.5 and **CONFORM-001**. All eight are added and `schema_version` moves `0.1.0` → `0.2.0`. Family owners follow the file's existing pattern (the domain document owns its rules; `VALIDATION.md` owns only the validation-native `W`, `ERR`, `FS`, `CONFORM`). Consequently `RET` is owned by `specs/RETRIEVAL.md`, and the `VALIDATION.md` §11 note is corrected from "owning record" to "consolidated register that MUST stay in sync with the owner" | `schemas/registry/spec_ownership.yaml`; `specs/VALIDATION.md` §11 | Mechanical |
+| **D99** | `research/sources-and-expanded-literature.md` §F claimed a complete SKOS mapping using `PARENT_OF`, `CHILD_OF`, `RELATED_TO` and `SPECIALIZES`, but only `RELATED_TO` exists in `relation_registry.yaml`. The claim is narrowed: `RELATED_TO` is only a conceptual analogue of SKOS `related`; no complete SKOS-to-registry mapping is normative. No registry relations are added. | `research/sources-and-expanded-literature.md` §F; `schemas/registry/relation_registry.yaml` | Documentation correction |
+
+Also repaired in the same pass, without needing a decision identifier:
+**RET-004** contradicted `RETRIEVAL.md`'s own Performance Considerations
+("Caching of search results is recommended"), so that bullet is now scoped to
+in-process, non-persisted memoization; and the two remaining unmeasured
+empirical assertions in the Vector Search subsection (chunk dilution, prose-model
+noise on structured content) are re-tagged as design rationale per **SCALE-001**.
+
+**Deliberately not decided here.** `W014` is a *warning*, so "regeneration MUST
+fail closed with `W014`" (**BODY-003**) cannot block a CI gate that runs plain
+`linter.py` — the CLI exits non-zero only on errors, or on warnings under
+`--strict`. Resolving this needs either a new ERROR code from the reserved
+`E051`–`E099` range (**ERR-002**, **ERR-003**) or a hard `--strict` requirement
+in the gate. Both are design decisions beyond a reconciliation pass; tracked as
+an open deviation in `specs/README.md` §7.
+
+---
+
+## 4. EPI-SPEC-001 sign-off record
+
+`plans/00-ROADMAP.md` §1 permits a post-freeze specification change only with
+empirical verification (passing runtime tests on real fixtures) **or** explicit
+human sign-off. Empirical verification is unavailable: the repository contains no
+runtime and no tests.
+
+| Change | Basis | Signed off by | Date |
+|---|---|---|---|
+| D79–D95 specification hardening (commit `5d33d1e`) | Explicit human sign-off — **not** empirical verification. The repository owner reviewed the triage of `5d33d1e` and directed that the decisions be kept and reconciled rather than reverted. | Repository owner (`Skelutten` / daniel6651) | 2026-09-07 |
+| Withdrawal of the "129 articles / 16,512 pairs; 58% vs 42%" calibration figure as evidence | **SCALE-001** — no benchmark artifact, dataset or reproduction script exists in this repository. Re-tagged as an unmeasured design hypothesis to be settled by the `plans/90` "paraphrase ranking proof" gate. | Qwen (agent), on the owner's remediation instruction | 2026-09-07 |
+
+This sign-off covers the **decision content** of D79–D95. It does **not** raise
+any implementation status: `specs/SPEC_STATUS.md` remains `LOCKED /
+UNIMPLEMENTED`, and per `plans/00-ROADMAP.md` §5 no prose change may upgrade it.
+
+---
+
+## 5. Recording rule (going forward)
+
+1. A new decision MUST be added to §3 (or a new dated section) **in the same
+   commit** that first cites its identifier.
+2. The next free identifier is **D99**. Do not reuse or backfill gaps in §1.
+3. An entry MUST state: the decision, the document that normatively owns it, and
+   — if it post-dates the freeze — its EPI-SPEC-001 basis in §4.
+4. A decision whose evidence is a measurement MUST cite a repository artifact
+   (dataset, script, output file). An uncited number is a hypothesis, per
+   **SCALE-001**.

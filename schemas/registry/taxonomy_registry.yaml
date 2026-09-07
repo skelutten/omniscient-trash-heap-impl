@@ -1,0 +1,418 @@
+# taxonomy_registry.yaml
+# Canonical source of truth for the taxonomy (TAX-001–TAX-008).
+# Nodes form a forest of directed trees per scope, without cycles.
+#
+# AXIS DISCIPLINE (ARCHITECTURE.md §1.1)
+#   This registry answers ONLY "what subject is this about".
+#     - What KIND of thing a page is        -> object_type   (object_registry.yaml)
+#     - What STATE it is in                 -> facets.lifecycle (facet_registry.yaml)
+#     - Who it is FOR                       -> facets.audience  (facet_registry.yaml)
+#     - Which tool/platform/language        -> facets           (facet_registry.yaml)
+#     - How it CONNECTS to other objects    -> relations        (relation_registry.yaml)
+#   Consequently there are deliberately NO nodes for "troubleshooting",
+#   "standards", "tools", "references", "plans", "features" or "roadmap" —
+#   those are object types, facets or relations, not subjects.
+#
+# FIELD CONTRACT
+#   taxonomy_id : globally unique (W010 on duplicate)
+#   name        : flat leaf-name; equals the frontmatter field taxonomy_path (TAX-007)
+#   scope       : personal | engineering
+#   parent_id   : null for a root node, else an existing node in the SAME scope (TAX-005)
+#   description : OPTIONAL documentation and boundary guard. Documentation only —
+#                 it MUST NOT affect path computation (TAX-008).
+#
+# SCOPE RULE (ARCHITECTURE.md §8.2)
+#   Knowledge that survives leaving this organisation -> scope: personal.
+#   Knowledge that depends on Duckburg Vibe Inc systems, toolchains or org -> scope: engineering.
+
+schema_version: "1.0.0"
+
+taxonomy:
+  # ============================================================
+  # SCOPE: personal  — portable, organisation-independent knowledge
+  # ============================================================
+  - taxonomy_id: "TX-PERS-01"
+    name: "01. Philosophy, Philosophy of Science & Logic"
+    scope: "personal"
+    parent_id: null
+
+  - taxonomy_id: "TX-PERS-02"
+    name: "02. Formal Sciences & Mathematics"
+    scope: "personal"
+    parent_id: null
+
+  - taxonomy_id: "TX-PERS-03"
+    name: "03. Natural Science"
+    scope: "personal"
+    parent_id: null
+
+  - taxonomy_id: "TX-PERS-04"
+    name: "04. Psychology & Cognition"
+    scope: "personal"
+    parent_id: null
+
+  - taxonomy_id: "TX-PERS-05"
+    name: "05. Society, Economics & Politics"
+    scope: "personal"
+    parent_id: null
+
+  - taxonomy_id: "TX-PERS-06"
+    name: "06. History, Culture & Humanities"
+    scope: "personal"
+    parent_id: null
+
+  - taxonomy_id: "TX-PERS-07"
+    name: "07. Computer Science, AI & IT Security"
+    scope: "personal"
+    parent_id: null
+    description: >
+      Portable computing knowledge. Org- and system-bound engineering practice at
+      Duckburg Vibe Inc belongs in scope: engineering, not here.
+
+  - taxonomy_id: "TX-PERS-07-01"
+    name: "07.01. Artificial Intelligence"
+    scope: "personal"
+    parent_id: "TX-PERS-07"
+    description: >
+      AI/ML theory, model behaviour, evaluation. NOT Duckburg Vibe's internal agent
+      tooling — that is TX-ENG-13.
+
+  - taxonomy_id: "TX-PERS-07-02"
+    name: "07.02. Cybersecurity"
+    scope: "personal"
+    parent_id: "TX-PERS-07"
+    description: >
+      Portable security knowledge: cryptography, attack classes, secure design
+      theory. Duckburg Vibe platform hardening and org security process is TX-ENG-16.
+
+  - taxonomy_id: "TX-PERS-07-03"
+    name: "07.03. Software Architecture"
+    scope: "personal"
+    parent_id: "TX-PERS-07"
+
+  - taxonomy_id: "TX-PERS-07-04"
+    name: "07.04. AI-Assisted Software Engineering"
+    scope: "personal"
+    parent_id: "TX-PERS-07"
+    description: >
+      Portable practice of engineering with LLMs: prompting, context engineering,
+      coding discipline, cognitive frameworks. Org- and system-bound agent
+      tooling at Duckburg Vibe Inc is TX-ENG-13.
+
+  - taxonomy_id: "TX-PERS-08"
+    name: "08. Technology & Engineering"
+    scope: "personal"
+    parent_id: null
+
+  - taxonomy_id: "TX-PERS-09"
+    name: "09. Strategy, Management & Leadership"
+    scope: "personal"
+    parent_id: null
+
+  - taxonomy_id: "TX-PERS-10"
+    name: "10. Practical Knowledge & Skills"
+    scope: "personal"
+    parent_id: null
+
+  # ============================================================
+  # SCOPE: engineering — Duckburg Vibe Inc platform-, toolchain- and organisation-bound knowledge
+  # ============================================================
+
+  # ---- 01. Domain & System Architecture ----
+  - taxonomy_id: "TX-ENG-01"
+    name: "01. Domain & System Architecture"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      System-level orientation for Duckburg Vibe Inc: core platform architecture,
+      subsystem topologies, service boundaries and component decomposition.
+
+  - taxonomy_id: "TX-ENG-01-01"
+    name: "01.01. Core Platform Architecture"
+    scope: "engineering"
+    parent_id: "TX-ENG-01"
+    description: >
+      Duckburg Vibe platform topology, distributed worker clusters and edge gateways.
+      Includes technical architecture specifications as object_type: Specification.
+
+  - taxonomy_id: "TX-ENG-01-02"
+    name: "01.02. Service Decomposition & Subsystems"
+    scope: "engineering"
+    parent_id: "TX-ENG-01"
+    description: >
+      Duckburg Vibe subsystem boundaries: core business domains, domain-driven
+      service decomposition and internal component relationships.
+
+  # ---- 02. Event Streaming & Ingestion Pipelines ----
+  - taxonomy_id: "TX-ENG-02"
+    name: "02. Event Streaming & Ingestion Pipelines"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Event streaming, pub/sub topics, event schemas, data ingestion pipelines,
+      consumer groups and partition management.
+
+  # ---- 03. Distributed Processing & Compute Engines ----
+  - taxonomy_id: "TX-ENG-03"
+    name: "03. Distributed Processing & Compute Engines"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      High-throughput worker pipelines, real-time stream processing, batch execution
+      and compute engines.
+
+  - taxonomy_id: "TX-ENG-03-01"
+    name: "03.01. Processing Frameworks & Async Engines"
+    scope: "engineering"
+    parent_id: "TX-ENG-03"
+    description: >
+      Async worker runtimes, pipeline concurrency models, backpressure and memory pools.
+
+  - taxonomy_id: "TX-ENG-03-02"
+    name: "03.02. Stream Processing Pipelines"
+    scope: "engineering"
+    parent_id: "TX-ENG-03"
+    description: >
+      Real-time transformations, stream windowing, aggregations and stateful stream operators.
+
+  - taxonomy_id: "TX-ENG-03-03"
+    name: "03.03. Task Scheduling & Batch Jobs"
+    scope: "engineering"
+    parent_id: "TX-ENG-03"
+    description: >
+      Distributed task queues, cron runners, batch workers and execution graphs.
+
+  # ---- 04. APIs, Protocols & RPC Services ----
+  - taxonomy_id: "TX-ENG-04"
+    name: "04. APIs, Protocols & RPC Services"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Internal RPC communication, public API endpoints, protocol encodings and
+      service interface contracts.
+
+  - taxonomy_id: "TX-ENG-04-01"
+    name: "04.01. Internal RPC & gRPC Services"
+    scope: "engineering"
+    parent_id: "TX-ENG-04"
+    description: >
+      gRPC services, Protobuf contracts, RPC error handling and internal schema definitions.
+
+  - taxonomy_id: "TX-ENG-04-02"
+    name: "04.02. Public API Gateways & REST/GraphQL"
+    scope: "engineering"
+    parent_id: "TX-ENG-04"
+    description: >
+      External API gateway routing, rate limiting, REST and GraphQL endpoints.
+
+  # ---- 05. State Management, Caching & Storage ----
+  - taxonomy_id: "TX-ENG-05"
+    name: "05. State Management, Caching & Storage"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Relational databases, document/key-value stores, distributed cache tiers,
+      replication topology and consistency protocols.
+
+  # ---- 06. Runtime Frameworks, Concurrency & IPC ----
+  - taxonomy_id: "TX-ENG-06"
+    name: "06. Runtime Frameworks, Concurrency & IPC"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Async runtimes, event loops, inter-process communication, lock-free data
+      structures and thread pools used at runtime. Build-time tooling is TX-ENG-10.
+
+  # ---- 07. Configuration & Service Management ----
+  - taxonomy_id: "TX-ENG-07"
+    name: "07. Configuration & Service Management"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Centralized dynamic configuration, feature flags, service registry,
+      discovery and node-internal resource allocation.
+
+  # ---- 08. Observability, Telemetry & Tracing ----
+  - taxonomy_id: "TX-ENG-08"
+    name: "08. Observability, Telemetry & Tracing"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Distributed tracing (OpenTelemetry), Prometheus metrics, structured log
+      streams and runtime inspection interfaces. How to READ the system; diagnosing
+      a specific failure is object_type: Lesson filed under the affected subject.
+
+  # ---- 09. Performance, Capacity & Benchmarking ----
+  - taxonomy_id: "TX-ENG-09"
+    name: "09. Performance, Capacity & Benchmarking"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Throughput optimization, latency analysis, profiling, load testing and
+      capacity planning.
+
+  # ---- 10. Software Construction & Build Systems ----
+  - taxonomy_id: "TX-ENG-10"
+    name: "10. Software Construction & Build Systems"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      How Duckburg Vibe software is built, linked, versioned and packaged. Which build
+      tool a page concerns is facets.toolchain, not a taxonomy node.
+
+  - taxonomy_id: "TX-ENG-10-01"
+    name: "10.01. Build Tooling & Target Layout"
+    scope: "engineering"
+    parent_id: "TX-ENG-10"
+    description: >
+      Monorepo module graph, build rules, target layout, include and linkage models.
+
+  - taxonomy_id: "TX-ENG-10-02"
+    name: "10.02. Dependency Management & Toolchains"
+    scope: "engineering"
+    parent_id: "TX-ENG-10"
+    description: >
+      Toolchain resolution, hermetic builds, lockfiles, external packages and
+      third-party dependency routing.
+
+  - taxonomy_id: "TX-ENG-10-03"
+    name: "10.03. Containerization, Packaging & Deliverables"
+    scope: "engineering"
+    parent_id: "TX-ENG-10"
+    description: >
+      OCI image layers, application bundles, SBOM generation and deliverable assembly.
+
+  # ---- 11. Verification, Testing & QA ----
+  - taxonomy_id: "TX-ENG-11"
+    name: "11. Verification, Testing & QA"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      How Duckburg Vibe products are verified. The test LEVEL (UT/Integration/E2E/Chaos) is
+      facets.test_level, not a taxonomy node.
+
+  - taxonomy_id: "TX-ENG-11-01"
+    name: "11.01. Test Frameworks & Test Doubles"
+    scope: "engineering"
+    parent_id: "TX-ENG-11"
+    description: >
+      Unit/integration test harnesses, mocks, stubs and automated verification fixtures.
+
+  - taxonomy_id: "TX-ENG-11-02"
+    name: "11.02. Code Coverage & Static Analysis"
+    scope: "engineering"
+    parent_id: "TX-ENG-11"
+    description: >
+      Code coverage gates, linters, static analyzers and automated policy checks.
+
+  # ---- 12. CI/CD, Deployment & Infrastructure as Code ----
+  - taxonomy_id: "TX-ENG-12"
+    name: "12. CI/CD, Deployment & Infrastructure as Code"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Continuous integration pipelines, GitOps workflows, deployment automation,
+      Kubernetes manifests and automated release gating.
+
+  # ---- 13. AI-Assisted Engineering & Internal Agent Tooling ----
+  - taxonomy_id: "TX-ENG-13"
+    name: "13. AI-Assisted Engineering & Internal Agent Tooling"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Applying AI-assisted engineering within Duckburg Vibe Inc products and organisation.
+      Portable LLM practice is TX-PERS-07-04.
+
+  - taxonomy_id: "TX-ENG-13-01"
+    name: "13.01. Agentic Development Workflows"
+    scope: "engineering"
+    parent_id: "TX-ENG-13"
+    description: >
+      Pair programming agents, automated PR review agents and code generation workflows.
+
+  - taxonomy_id: "TX-ENG-13-02"
+    name: "13.02. Agent Tooling, Skills & Context Engineering"
+    scope: "engineering"
+    parent_id: "TX-ENG-13"
+    description: >
+      Internal skill repositories, MCP server configurations, context curation and
+      model routing.
+
+  # ---- 14. Reliability, Resilience & Fault Tolerance ----
+  - taxonomy_id: "TX-ENG-14"
+    name: "14. Reliability, Resilience & Fault Tolerance"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      High availability, graceful degradation, circuit breakers, disaster recovery,
+      error budgets and incident post-mortem practices.
+
+  # ---- 15. Engineering Governance & Ways of Working ----
+  - taxonomy_id: "TX-ENG-15"
+    name: "15. Engineering Governance & Ways of Working"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      How engineering work is organised and governed: Architecture Decision Records (ADRs),
+      RFC processes, code review standards, inner-source practices and repository topology.
+
+  - taxonomy_id: "TX-ENG-15-01"
+    name: "15.01. Developer Documentation & Technical Writing"
+    scope: "engineering"
+    parent_id: "TX-ENG-15"
+    description: >
+      How developer guides, API documentation and release notes are authored and maintained.
+
+  # ---- 16. Application Security & Secure Engineering ----
+  - taxonomy_id: "TX-ENG-16"
+    name: "16. Application Security & Secure Engineering"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Security as it applies to Duckburg Vibe Inc products: secure coding and design rules,
+      threat modeling, vulnerability remediation and compliance evidence.
+      Portable security theory is TX-PERS-07-02.
+
+  - taxonomy_id: "TX-ENG-16-01"
+    name: "16.01. Secure Coding & Architecture"
+    scope: "engineering"
+    parent_id: "TX-ENG-16"
+    description: >
+      Secure coding guidelines, identity & access management (IAM), encryption,
+      and token verification standards.
+
+  - taxonomy_id: "TX-ENG-16-02"
+    name: "16.02. Threat Modeling & Vulnerability Management"
+    scope: "engineering"
+    parent_id: "TX-ENG-16"
+    description: >
+      Threat modeling, attack surface analysis, dependency vulnerability triage and
+      CVE remediation tracking.
+
+  - taxonomy_id: "TX-ENG-16-03"
+    name: "16.03. Platform Hardening & Compliance"
+    scope: "engineering"
+    parent_id: "TX-ENG-16"
+    description: >
+      Container hardening, secret management baselines, infrastructure policies and
+      compliance audits.
+
+  # ---- 17. Edge Computing & Network Ingress ----
+  # Populated as articles arrive; boundary guard per TAX-008.
+  - taxonomy_id: "TX-ENG-17"
+    name: "17. Edge Computing & Network Ingress"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Edge proxies, CDN configurations, TLS termination and ingress networking as seen
+      from the application cluster. NOT the internal compute pipeline — that is 03.
+
+  # ---- 18. Cloud Infrastructure & Multi-Cloud Services ----
+  # Populated as articles arrive; boundary guard per TAX-008.
+  - taxonomy_id: "TX-ENG-18"
+    name: "18. Cloud Infrastructure & Multi-Cloud Services"
+    scope: "engineering"
+    parent_id: null
+    description: >
+      Cloud provider services (AWS, GCP, Azure), managed infrastructure integrations
+      and multi-region cloud topology.

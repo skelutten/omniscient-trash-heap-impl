@@ -1,0 +1,90 @@
+# threshold_policy.yaml
+# Normative policy owner for internal deterministic cut-offs (THRESH-002).
+# Operator-facing controls remain limited by THRESH-003 in specs/RETRIEVAL.md.
+# Values are policy defaults, not calibration claims.
+
+schema_version: "0.1.0"
+policy_id: threshold_policy
+calibration_status: uncalibrated
+
+thresholds:
+  - threshold_id: RETRIEVAL-MAX-DEPTH
+    decision_domain: graph_expansion
+    value: 2
+    unit: hops
+    owner: specs/RETRIEVAL.md
+    rationale: Bound graph expansion in the baseline retrieval path.
+  - threshold_id: RETRIEVAL-MAX-NEIGHBORS
+    decision_domain: graph_expansion
+    value: 25
+    unit: neighbors_per_node
+    owner: specs/RETRIEVAL.md
+    rationale: Bound deterministic neighbor expansion.
+  - threshold_id: RETRIEVAL-RRF-K
+    decision_domain: rank_fusion
+    value: 60
+    unit: rank_constant
+    owner: specs/RETRIEVAL.md
+    rationale: Fixed RRF rank constant.
+  - threshold_id: GRAPH-EDGE-STRENGTH
+    decision_domain: graph_edge_selection
+    value: 0.15
+    unit: normalized_score
+    owner: specs/GRAPH-RETRIEVAL.md
+    rationale: Existing internal edge-strength cut-off; not empirically calibrated.
+  - threshold_id: GRAPH-SEMANTIC-SIMILARITY
+    decision_domain: graph_edge_selection
+    value: 0.75
+    unit: cosine_similarity
+    owner: specs/GRAPH-RETRIEVAL.md
+    rationale: Existing semantic similarity cut-off for inter-object graph edge inference and duplicate detection. Not empirically calibrated. MUST NOT be applied as a query-to-document retrieval floor (D81).
+  - threshold_id: DISCOVERY-DUPLICATE-SIMILARITY
+    decision_domain: duplicate_detection
+    value: 0.80
+    unit: cosine_similarity
+    owner: specs/DISCOVERY.md
+    rationale: Existing same-scope duplicate threshold; not empirically calibrated.
+  - threshold_id: DISCOVERY-MIN-COOCCURRENCE
+    decision_domain: discovery_cooccurrence
+    value: 3
+    unit: chunks
+    owner: specs/DISCOVERY.md
+    rationale: Existing cooccurrence cut-off; not empirically calibrated.
+  - threshold_id: INGEST-MODEL-CONFIDENCE
+    decision_domain: proposal_admission
+    value: 0.75
+    unit: normalized_score
+    owner: specs/INGEST.md
+    rationale: Existing admission boundary; not empirically calibrated.
+  - threshold_id: INGEST-DETERMINISTIC-QUALITY
+    decision_domain: proposal_admission
+    value: 0.45
+    unit: normalized_score
+    owner: specs/INGEST-PIPELINE.md
+    rationale: Existing deterministic quality floor; not empirically calibrated.
+  - threshold_id: INGEST-COMPOSITE-QUALITY
+    decision_domain: proposal_admission
+    value: 0.70
+    unit: normalized_score
+    owner: specs/INGEST-PIPELINE.md
+    rationale: Existing composite quality floor; not empirically calibrated.
+  - threshold_id: INGEST-SCOPE-CONFIDENCE
+    decision_domain: scope_assignment
+    value: 0.85
+    unit: normalized_score
+    owner: specs/INGEST-DATA-MODEL.md
+    rationale: Existing scope-confidence boundary; not empirically calibrated.
+  - threshold_id: GRAPH-MAX-OUTBOUND-DEGREE
+    decision_domain: graph_degree_cap
+    value: 20
+    unit: outbound_edges
+    owner: specs/VALIDATION.md
+    rationale: Bounded outbound degree threshold to prevent link soup (W015, GRAPH-004).
+
+rules:
+  - threshold_id: THRESH-002
+    statement: Every internal cut-off MUST be represented by one threshold record in this policy.
+  - threshold_id: THRESH-003
+    statement: Operator-facing filtering MUST remain limited to min_confidence and min_relevance.
+  - threshold_id: POLICY-VERSION
+    statement: Derived artifacts MUST carry this policy schema_version and policy_id.

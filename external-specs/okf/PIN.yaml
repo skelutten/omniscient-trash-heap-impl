@@ -1,0 +1,31 @@
+# Provenance pin for a VENDORED, READ-ONLY external specification.
+# Never edit SPEC.md. To upgrade: re-fetch, diff, update this pin, then update
+# the affected invariants in specs/OKF-INTEROP.md in the same change.
+
+upstream:
+  name: "Open Knowledge Format (OKF)"
+  version: "0.2"
+  owner: "GoogleCloudPlatform"
+  repository: "https://github.com/GoogleCloudPlatform/knowledge-catalog"
+  spec_url: "https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md"
+  raw_url: "https://raw.githubusercontent.com/GoogleCloudPlatform/knowledge-catalog/main/okf/SPEC.md"
+  branch: "main"
+  commit: "3fcbb9f828c2f23d109c855ee403c3a4c81f3a96"        # Verified against upstream GoogleCloudPlatform/knowledge-catalog main at retrieval timestamp
+
+retrieved:
+  at: "2026-08-17T13:20:00+02:00"
+  by: "human:eperson"
+  method: "curl https://raw.githubusercontent.com/.../okf/SPEC.md"
+  sha256: "2daabd96594e4f1d46a7a972be5bc023cad2e0281d4744cc4fa9cf527765a7d6"
+  lines: 1002
+  bytes: 37539
+
+license:
+  spdx: "Apache-2.0"
+  file: "LICENSE.md"
+  sha256: "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+  source: "https://raw.githubusercontent.com/GoogleCloudPlatform/knowledge-catalog/main/LICENSE.md"
+  attribution: "Copyright Google LLC, licensed under the Apache License 2.0. Vendored verbatim; not modified."
+
+consumed_by:
+  - "specs/OKF-INTEROP.md"    # OKF-001-OKF-010; §16

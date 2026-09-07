@@ -1,0 +1,112 @@
+{
+  "query": "Visa alla påståenden om Bazel remote caching prestanda",
+  "retrieval_version": "1.0.0",
+  "ranking_policy_version": "1.0.0",
+  "relation_registry_version": "3.8.10",
+  "parameters_used": {
+    "scope": "telecom",
+    "object_type": ["Claim"],
+    "facet_filter": {"toolchain": ["bazel"]},
+    "facet_match_mode": "any",
+    "seed_top_k": 10,
+    "max_depth": 2,
+    "max_neighbors_per_node": 25,
+    "max_expanded_nodes": 200,
+    "max_results": 20,
+    "valid_at": "2026-08-13",
+    "include_out_of_validity": false,
+    "include_cross_scope": false,
+    "include_drafts": false,
+    "include_deprecated": false,
+    "min_confidence": 0.0,
+    "conflict_strategy": "epistemic_then_confidence"
+  },
+  "candidate_count": 2,
+  "returned_count": 1,
+  "suppressed_count": 1,
+  "cross_scope_redactions_applied": false,
+  "evidence_bundle": [
+    {
+      "node_id": "TEL-CLM-2026-0039",
+      "title": "Bazel Remote Caching Reduces Build Latency by 40%",
+      "scope": "telecom",
+      "taxonomy_path": "02. SYSTEM_ARCHITECTURE_&_DESIGN / 02.03 Build_Systems_&_Distributed_Compilation",
+      "taxonomy_id": "TX-TEL-02-03",
+      "object_type": "Claim",
+      "domain": "software_engineering",
+      "status": "established",
+      "epistemology": {
+        "evidence": "observed",
+        "verification": "verified",
+        "authority": "internal",
+        "consensus": "accepted"
+      },
+      "facets": {
+        "toolchain": ["bazel"],
+        "lifecycle": "production"
+      },
+      "validity": {
+        "valid_from": "2026-01-01",
+        "valid_until": null
+      },
+      "matched_by": ["vector", "bm25"],
+      "score_components": {
+        "bm25_raw": 0.81,
+        "vector_raw": 0.89,
+        "graph_raw": 0.50,
+        "rrf_score": 0.0161836,
+        "reranker_score": 0.92,
+        "final": 0.92
+      },
+      "retrieval_signals": {
+        "bm25": {
+          "raw_score": 0.81,
+          "rank": 2,
+          "rrf_contribution": 0.0064516
+        },
+        "vector": {
+          "raw_score": 0.89,
+          "rank": 1,
+          "rrf_contribution": 0.0065574
+        },
+        "graph": {
+          "raw_score": 0.50,
+          "rank": 3,
+          "rrf_contribution": 0.0031746
+        }
+      },
+      "conflict_detected": true,
+      "conflicting_node_id": "TEL-CLM-2026-0042",
+      "provenance": {
+        "source_type": "post_mortem",
+        "source_ref": "INTERNAL-RPT-2026-0088",
+        "source_title": "Q2 Build Benchmarks Report",
+        "confidence": 0.90,
+        "last_verified": "2026-08-10"
+      },
+      "subgraph_relations": [
+        {"type": "CONTRADICTS", "target": "TEL-CLM-2026-0042"}
+      ],
+      "body_excerpt": "Mätningar visar konsekvent 40% lägre byggtider vid distribuerad cache..."
+    }
+  ],
+  "suppressed_nodes": [
+    {
+      "node_id": "TEL-CLM-2026-0042",
+      "reason": "conflict_lower_epistemic_rank",
+      "conflicting_node_id": "TEL-CLM-2026-0039",
+      "epistemology": {
+        "evidence": "observed",
+        "verification": "disputed",
+        "authority": "internal",
+        "consensus": "contested"
+      },
+      "provenance": {
+        "source_type": "observation",
+        "source_ref": "TEL-OBS-2026-0012",
+        "confidence": 0.60,
+        "last_verified": "2026-08-11"
+      }
+    }
+  ]
+}

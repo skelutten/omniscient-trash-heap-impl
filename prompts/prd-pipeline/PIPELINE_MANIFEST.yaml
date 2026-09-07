@@ -1,0 +1,133 @@
+schema_version: "0.1.0"
+manifest_id: prd-pipeline
+status: proposed
+execution_status: unimplemented
+shared_contract: 00_PIPELINE_CONTRACT.md
+
+# This manifest is declarative. It defines intended prompt ownership and handoffs;
+# it does not execute prompts or imply that output files are written automatically.
+
+modes:
+  phased:
+    entrypoint: 00_artifact_generation.md
+    terminal: 08_review_arbitrator.md
+  fast:
+    entrypoint: all_in_one_prd_pipeline.md
+    terminal: prd_output
+    minimum_contract: 00_PIPELINE_CONTRACT.md
+
+stages:
+  - id: stage-00
+    name: discovery
+    prompt: 00_artifact_generation.md
+    inputs: [raw_initiative, optional_context, optional_evidence]
+    outputs:
+      - artifact_bundle
+      - initiative.yaml
+      - bundle_manifest
+    status: canonical
+
+  - id: stage-01
+    name: initiative-review
+    prompt: 01_initiative_review.md
+    inputs: [artifact_bundle, optional_context]
+    outputs: [initiative_review_report]
+    status: canonical
+
+  - id: stage-02
+    name: structured-reasoning
+    prompt: 01_strategic_reasoning_suite.md
+    supporting_prompts:
+      - cot_thinking_base.md
+      - cot_module_prompts.md
+      - cot_advanced_thinking_modules.md
+      - graph_of_thoughts_synthesis.md
+    inputs: [artifact_bundle, initiative_review_report]
+    outputs: [reasoning_report]
+    status: canonical
+
+  - id: stage-03
+    name: initiative-refinement
+    prompt: 02_initiative_refinement.md
+    inputs: [artifact_bundle, initiative_review_report, reasoning_report]
+    outputs: [enriched_initiative]
+    status: canonical
+
+  - id: stage-04
+    name: prd-generation
+    prompt: 03_prd_generation.md
+    inputs: [enriched_initiative, reasoning_report, artifact_bundle]
+    outputs: [draft_prd]
+    status: canonical
+
+  - id: stage-05
+    name: prd-critique
+    prompt: 04_prd_critic.md
+    optional_variant: 02_adversarial_critic_suite.md
+    inputs: [draft_prd, enriched_initiative, reasoning_report]
+    outputs: [critic_report]
+    status: canonical
+
+  - id: stage-06
+    name: prd-refinement
+    prompt: 05_prd_refinement_iteration.md
+    inputs: [draft_prd, critic_report, artifact_bundle]
+    outputs: [revised_prd, disposition_report]
+    status: canonical
+
+  - id: stage-07
+    name: specification-expansion
+    prompt: 06_spec_expander.md
+    inputs: [revised_prd, artifact_bundle, current_specs, gap_report]
+    outputs: [spec_additions, implementation_plan_tasks]
+    status: canonical
+
+  - id: stage-08
+    name: reviewer-execution
+    prompt: 07_review_suite_integration.md
+    inputs: [review_corpus, corpus_manifest]
+    outputs: [reviewer_reports, findings_manifests]
+    status: canonical
+
+  - id: stage-09
+    name: arbitration
+    prompt: 08_review_arbitrator.md
+    inputs: [corpus_manifest, reviewer_reports, optional_prior_arbitration]
+    outputs: [arbitration_report, arbitration_manifest]
+    status: canonical
+
+variants:
+  - prompt: all_in_one_prd_pipeline.md
+    role: fast-mode-composite
+    replaces_stages: [stage-01, stage-03, stage-04]
+    status: canonical-fast-variant
+  - prompt: 02_adversarial_critic_suite.md
+    role: multi-lens-critic-variant
+    replaces_stage: stage-05
+    status: optional-variant
+  - prompt: 01_initiative_review.md
+    role: canonical-initiative-review
+    status: canonical
+  - prompt: 01_strategic_reasoning_suite.md
+    role: canonical-structured-reasoning
+    status: canonical
+
+handoff_rules:
+  required_metadata: [artifact_id, artifact_type, schema_version, pipeline_version, source_artifacts, evidence_status, status]
+  claim_statuses: [SUPPORTED, DERIVED, ASSUMPTION, PROPOSED, UNKNOWN, CONFLICTING]
+  finding_dispositions: [fixed, rejected, deferred, already_present, unverifiable, out_of_scope]
+  review_dispositions: [MERGED, UNIQUE, ALREADY_PRESENT, REJECTED_INVALID, DEFERRED, UNVERIFIABLE]
+  traceability: many_to_many
+  hidden_chain_of_thought_output: forbidden
+  automatic_file_writes: forbidden
+  runtime_status_upgrade_from_prompt_output: forbidden
+
+verification:
+  required_before_execution_claim:
+    - all referenced prompt files exist
+    - input and output handoffs are supplied
+    - manifests are complete
+    - evidence status is explicit
+    - no forbidden secrets are present
+    - gate decision is backed by findings manifest
+  current_runtime_status: unimplemented

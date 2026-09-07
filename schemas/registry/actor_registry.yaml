@@ -1,0 +1,43 @@
+# actor_registry.yaml
+# Normative owner of the minimal Actor namespace for Universal Source records.
+# Actors are not source types, Knowledge Objects, taxonomy nodes, or policy.
+
+schema_version: "0.2.0"
+registry_id: actor_registry
+description: >-
+  Minimal identity namespace for people and organizational actors referenced by
+  sources, events and provenance. Knowledge about an actor remains a separate
+  Knowledge Object and access/privacy policy remains governance-owned.
+
+actor_types:
+  Person:
+    description: Individual human actor.
+    identity_fields: [actor_id]
+    required_fields: [actor_id]
+  Organization:
+    description: Legal or organizational entity.
+    identity_fields: [actor_id]
+    required_fields: [actor_id]
+  Team:
+    description: Organizational team or working group.
+    identity_fields: [actor_id]
+    required_fields: [actor_id]
+  Group:
+    description: Non-hierarchical participant group.
+    identity_fields: [actor_id]
+    required_fields: [actor_id]
+
+# Role is an assignment/context, not an identity subtype.
+role_assignments:
+  examples: [author, reviewer, organizer, participant, sender, recipient, owner]
+  rule: Roles MUST reference an actor_id and MUST NOT create a new actor type.
+
+actor_id_pattern: "^ACTOR-[A-Z0-9][A-Z0-9_-]+$"
+
+invariants:
+  ACTOR-001: Actor IDs MUST match actor_id_pattern and be unique.
+  ACTOR-002: Actor identity MUST remain separate from knowledge about the actor.
+  ACTOR-003: Source and event records MAY reference actors but MUST NOT redefine the actor namespace.
+  ACTOR-004: Privacy, access, retention and sharing policy MUST be owned by governance/security policy.
+  ACTOR-005: Actor identity MUST be distinguishable from knowledge about that actor.
+  ACTOR-006: Role, membership and participation are contextual assignments, not actor subtypes.

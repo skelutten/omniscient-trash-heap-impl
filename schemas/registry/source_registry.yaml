@@ -1,0 +1,592 @@
+# source_registry.yaml
+# Normative source classification registry for the Universal Source Model.
+# Owns SOURCE-001..SOURCE-020 and source-type contracts.
+# RAW-001..RAW-010 are owned by INGEST-STAGING.md; this registry carries the
+# machine-readable raw-storage projection only.
+# Does not own Knowledge Objects, actors, taxonomy, or security policy.
+
+schema_version: "0.2.0"
+registry_id: source_registry
+description: >-
+  Canonical classification of captured information-bearing artifacts, events,
+  and experiences entering the Knowledge Compiler. Source type is orthogonal to
+  object_type, taxonomy, facets, relations, actors, and epistemic status.
+
+categories:
+  Artifact:
+    description: Durable, addressable representation or record.
+    required_fields: [representation]
+    identity_requirement: >-
+      At least one identity alternative MUST be present: resource URI/path,
+      external identity, or content hash.
+    recommended_fields: [title, author_ref, captured_at, content_hash, media_type]
+  Event:
+    description: Time-bound occurrence or interaction.
+    required_fields: [occurred_at]
+    recommended_fields: [actor_refs, participants, duration, location]
+    actor_rule: >-
+      actor_refs SHOULD be present; they become REQUIRED where the external
+      source provides actor identity or where the event is not independently
+      identifiable without an actor.
+  Experience:
+    description: Actor-bound cognitive, subjective, or reflective capture.
+    required_fields: [experienced_at, actor_ref]
+    recommended_fields: [content_hash, related_source_refs, context]
+
+# Source taxonomy is a source-classification projection, not the Knowledge
+# taxonomy. It may be used for adapter routing and discovery weighting only.
+source_taxonomy:
+  Digital:
+    children: [Web, Documentation, Communication, Calendar, Code, Data, Media]
+  Personal:
+    children: [Note, Thought, Question, Reflection]
+  Operational:
+    children: [Runtime, Delivery, Experiment]
+  Organizational:
+    # Documentation is also reachable from Digital; this source taxonomy is
+    # a routing projection and may have shared leaf names.
+    children: [Meeting, Training, DecisionRecord, Documentation]
+
+# source_type is the stable intrinsic type. medium and semantic_kind are
+# orthogonal dimensions: e.g. a web representation may contain an article,
+# and an email artifact may carry transmission metadata.
+source_types:
+  # Artifact: external and internal durable representations
+  web_resource:
+    category: Artifact
+    source_taxonomy: [Digital, Web]
+    medium: web
+    semantic_kinds: [article, news, document, forum_post, forum_thread, specification]
+    identity_fields_any_of: [[canonical_uri, representation_hash], [canonical_uri, observed_at]]
+    provenance_requirements: [canonical_uri, retrieved_at, representation_hash]
+    recommended_fields: [published_at, modified_at, author_ref, publisher_ref, content_snapshot, media_type]
+  internal_document:
+    category: Artifact
+    source_taxonomy: [Digital, Documentation]
+    medium: internal_system
+    semantic_kinds: [document, specification, article, wiki_page]
+    identity_fields_any_of: [[source_system, external_id, representation_hash], [repository_uri, path, revision, representation_hash]]
+    provenance_requirements: [source_system, external_id, access_scope, representation_hash]
+    recommended_fields: [workspace, space, repository, path, revision, owner_ref, last_modified]
+  book:
+    category: Artifact
+    source_taxonomy: [Digital, Media]
+    medium: file_or_print
+    semantic_kinds: [book, monograph]
+    identity_fields_any_of: [[isbn_or_catalog_id, edition], [title, author_ref, edition, representation_hash]]
+    provenance_requirements: [title, representation_hash]
+    recommended_fields: [publisher, publication_year, language, page_or_location]
+  document:
+    category: Artifact
+    source_taxonomy: [Digital, Documentation]
+    medium: file
+    semantic_kinds: [document, report, article, notes]
+    identity_fields_any_of: [[resource, representation_hash], [content_hash]]
+    provenance_requirements: [resource, representation_hash]
+  forum_post:
+    category: Artifact
+    source_taxonomy: [Digital, Web]
+    medium: web
+    semantic_kinds: [forum_post]
+    identity_fields_any_of: [[source_system, external_id], [canonical_uri, representation_hash]]
+    provenance_requirements: [source_system, external_id, representation_hash]
+  code_repository:
+    category: Artifact
+    source_taxonomy: [Digital, Code]
+    medium: git_or_filesystem
+    semantic_kinds: [code, repository, build_file, patch, diff]
+    identity_fields_any_of: [[repository_uri, revision_or_commit], [resource, representation_hash]]
+    provenance_requirements: [repository_uri, revision_or_commit, representation_hash]
+  specification:
+    category: Artifact
+    source_taxonomy: [Digital, Documentation]
+    medium: file_or_web
+    semantic_kinds: [specification, standard, rfc, openapi_spec, asyncapi_spec, vendor_icd, ietf_draft]
+    identity_fields_any_of: [[canonical_uri, representation_hash], [standard_id, edition, representation_hash]]
+    provenance_requirements: [representation_hash]
+  diagram_or_image:
+    category: Artifact
+    source_taxonomy: [Digital, Documentation]
+    medium: image_or_capture
+    semantic_kinds: [diagram, sequence_diagram, architecture_drawing, screenshot, whiteboard_photo]
+    identity_fields_any_of: [[resource, representation_hash], [content_hash]]
+    provenance_requirements: [representation_hash]
+  dataset:
+    category: Artifact
+    source_taxonomy: [Digital, Data]
+    medium: file_or_database
+    semantic_kinds: [dataset, table, measurement, log_dump]
+    identity_fields_any_of: [[resource, representation_hash], [source_system, external_id, representation_hash]]
+    provenance_requirements: [representation_hash]
+  notebook:
+    category: Artifact
+    source_taxonomy: [Digital, Code]
+    medium: notebook
+    semantic_kinds: [jupyter_notebook, observable_notebook, experiment_notebook]
+    identity_fields_any_of: [[resource, representation_hash], [repository_uri, revision_or_commit]]
+    provenance_requirements: [resource, representation_hash]
+  presentation:
+    category: Artifact
+    source_taxonomy: [Digital, Documentation]
+    medium: slides
+    semantic_kinds: [presentation, slide_deck, pitch, technical_briefing]
+    identity_fields_any_of: [[resource, representation_hash], [source_system, external_id, representation_hash]]
+    provenance_requirements: [representation_hash]
+  video_recording:
+    category: Artifact
+    source_taxonomy: [Digital, Media]
+    medium: video
+    semantic_kinds: [video, film, documentary, series, episode, demo, screen_recording]
+    identity_fields_any_of: [[provider, external_id, representation_hash], [resource, representation_hash]]
+    provenance_requirements: [representation_hash, captured_at]
+  audio_recording:
+    category: Artifact
+    source_taxonomy: [Digital, Media]
+    medium: audio
+    semantic_kinds: [audio, podcast, interview, voice_memo, technical_discussion]
+    identity_fields_any_of: [[provider, external_id, representation_hash], [resource, representation_hash]]
+    provenance_requirements: [representation_hash, captured_at]
+  configuration:
+    category: Artifact
+    source_taxonomy: [Digital, Code]
+    medium: file
+    semantic_kinds: [configuration, feature_flags, environment_file]
+    identity_fields_any_of: [[resource, representation_hash], [repository_uri, revision_or_commit]]
+    provenance_requirements: [resource, representation_hash]
+  schema_definition:
+    category: Artifact
+    source_taxonomy: [Digital, Code]
+    medium: file
+    semantic_kinds: [openapi, protobuf, asn1, yang, interface_definition, data_schema]
+    identity_fields_any_of: [[resource, representation_hash], [repository_uri, revision_or_commit]]
+    provenance_requirements: [resource, representation_hash]
+  log_trace:
+    category: Artifact
+    source_taxonomy: [Operational, Runtime]
+    medium: file_or_capture
+    semantic_kinds: [log, trace, packet_capture, performance_trace, syslog]
+    identity_fields_any_of: [[resource, representation_hash], [source_system, external_id, representation_hash]]
+    provenance_requirements: [representation_hash, captured_at]
+  legal_document:
+    category: Artifact
+    source_taxonomy: [Organizational, Documentation]
+    medium: file_or_web
+    semantic_kinds: [contract, license, nda, legal_document]
+    identity_fields_any_of: [[source_system, external_id, representation_hash], [resource, representation_hash]]
+    provenance_requirements: [representation_hash, access_scope]
+  email_message:
+    category: Artifact
+    source_taxonomy: [Digital, Communication]
+    medium: email
+    semantic_kinds: [email_message, email_thread]
+    identity_fields_any_of: [[provider, message_id], [source_system, message_id]]
+    provenance_requirements: [source_system, message_id, received_at]
+    event_metadata: [sent_at, received_at, in_reply_to, references]
+  conversation_capture:
+    category: Artifact
+    source_taxonomy: [Digital, Communication]
+    medium: chat
+    semantic_kinds: [conversation, channel, thread, message, slack, teams, discord, signal]
+    identity_fields_any_of: [[source_system, conversation_id, representation_hash], [source_system, thread_id, representation_hash]]
+    provenance_requirements: [source_system, conversation_id, captured_at, representation_hash]
+    event_metadata: [message_timestamps, participant_refs]
+  calendar_representation:
+    category: Artifact
+    source_taxonomy: [Digital, Calendar]
+    medium: calendar
+    semantic_kinds: [calendar_entry, recurring_series, reminder, appointment]
+    identity_fields_any_of: [[source_system, external_id, representation_hash], [source_system, recurrence_id, representation_hash]]
+    provenance_requirements: [source_system, external_id, representation_hash]
+    represents_event_types: [meeting, appointment, deadline, birthday, holiday, milestone, reminder]
+  ticket_record:
+    category: Artifact
+    source_taxonomy: [Organizational, Documentation]
+    medium: issue_tracker
+    semantic_kinds: [ticket, issue, bug, trouble_report]
+    identity_fields_any_of: [[source_system, external_id], [source_system, external_id, representation_hash]]
+    provenance_requirements: [source_system, external_id, captured_at]
+    may_report_events: [incident, deployment]
+  meeting_notes:
+    category: Artifact
+    source_taxonomy: [Organizational, Meeting]
+    medium: file_or_conversation
+    semantic_kinds: [meeting_notes, decision_log, action_log]
+    identity_fields_any_of: [[source_system, external_id, representation_hash], [resource, representation_hash]]
+    provenance_requirements: [representation_hash, captured_at]
+    represents_event_types: [meeting, workshop, training]
+  meeting_transcript:
+    category: Artifact
+    source_taxonomy: [Organizational, Meeting]
+    medium: audio_or_text
+    semantic_kinds: [transcript]
+    identity_fields_any_of: [[source_system, external_id, representation_hash], [resource, representation_hash]]
+    provenance_requirements: [representation_hash, captured_at]
+    represents_event_types: [meeting, call, workshop, training]
+  meeting_recording:
+    category: Artifact
+    source_taxonomy: [Organizational, Meeting]
+    medium: audio_or_video
+    semantic_kinds: [recording]
+    identity_fields_any_of: [[provider, external_id, representation_hash], [resource, representation_hash]]
+    provenance_requirements: [representation_hash, captured_at]
+    represents_event_types: [meeting, call, workshop, training]
+
+  # Event: occurrences, not representations of occurrences
+  meeting:
+    category: Event
+    source_taxonomy: [Organizational, Meeting]
+    medium: calendar_or_conversation
+    semantic_kinds: [meeting, standup, sync]
+    identity_fields_any_of: [[source_system, external_id, occurred_at], [occurred_at, participant_refs]]
+    provenance_requirements: [occurred_at]
+  appointment:
+    category: Event
+    source_taxonomy: [Digital, Calendar]
+    medium: calendar
+    semantic_kinds: [appointment]
+    identity_fields_any_of: [[source_system, external_id, occurred_at]]
+    provenance_requirements: [occurred_at]
+  deadline:
+    category: Event
+    source_taxonomy: [Digital, Calendar]
+    medium: calendar
+    semantic_kinds: [deadline]
+    identity_fields_any_of: [[source_system, external_id, occurred_at]]
+    provenance_requirements: [occurred_at]
+  birthday:
+    category: Event
+    source_taxonomy: [Digital, Calendar]
+    medium: calendar
+    semantic_kinds: [birthday]
+    identity_fields_any_of: [[source_system, external_id, occurred_at]]
+    provenance_requirements: [occurred_at]
+  holiday:
+    category: Event
+    source_taxonomy: [Digital, Calendar]
+    medium: calendar
+    semantic_kinds: [holiday]
+    identity_fields_any_of: [[source_system, external_id, occurred_at]]
+    provenance_requirements: [occurred_at]
+  milestone:
+    category: Event
+    source_taxonomy: [Operational, Delivery]
+    medium: project_system
+    semantic_kinds: [milestone]
+    identity_fields_any_of: [[source_system, external_id, occurred_at]]
+    provenance_requirements: [occurred_at]
+  reminder:
+    category: Event
+    source_taxonomy: [Digital, Calendar]
+    medium: calendar
+    semantic_kinds: [reminder]
+    identity_fields_any_of: [[source_system, external_id, occurred_at]]
+    provenance_requirements: [occurred_at]
+  call:
+    category: Event
+    source_taxonomy: [Organizational, Meeting]
+    medium: audio_or_video
+    semantic_kinds: [call, video_call, phone_call]
+    identity_fields_any_of: [[source_system, external_id, occurred_at]]
+    provenance_requirements: [occurred_at]
+  commit:
+    category: Event
+    source_taxonomy: [Digital, Code]
+    medium: git
+    semantic_kinds: [commit]
+    identity_fields_any_of: [[repository_uri, commit_sha]]
+    provenance_requirements: [repository_uri, commit_sha, occurred_at]
+  pull_request:
+    category: Event
+    source_taxonomy: [Digital, Code]
+    medium: git_host
+    semantic_kinds: [pull_request, merge_request]
+    identity_fields_any_of: [[source_system, external_id]]
+    provenance_requirements: [source_system, external_id, occurred_at]
+  code_review:
+    category: Event
+    source_taxonomy: [Digital, Code]
+    medium: git_host
+    semantic_kinds: [code_review, review_session]
+    identity_fields_any_of: [[source_system, external_id]]
+    provenance_requirements: [source_system, external_id, occurred_at]
+  ci_run:
+    category: Event
+    source_taxonomy: [Operational, Delivery]
+    medium: ci
+    semantic_kinds: [ci_run, build, pipeline_run]
+    identity_fields_any_of: [[source_system, external_id]]
+    provenance_requirements: [source_system, external_id, occurred_at]
+  test_run:
+    category: Event
+    source_taxonomy: [Operational, Delivery]
+    medium: test_system
+    semantic_kinds: [test_run, test_execution, flake_report]
+    identity_fields_any_of: [[source_system, external_id]]
+    provenance_requirements: [source_system, external_id, occurred_at]
+  incident:
+    category: Event
+    source_taxonomy: [Operational, Runtime]
+    medium: operations
+    semantic_kinds: [incident, outage, sev]
+    identity_fields_any_of: [[source_system, external_id], [occurred_at, system_refs]]
+    provenance_requirements: [occurred_at]
+  deployment:
+    category: Event
+    source_taxonomy: [Operational, Delivery]
+    medium: deployment_system
+    semantic_kinds: [deployment, release, rollout]
+    identity_fields_any_of: [[source_system, external_id]]
+    provenance_requirements: [source_system, external_id, occurred_at]
+  experiment_run:
+    category: Event
+    source_taxonomy: [Operational, Experiment]
+    medium: experiment_system
+    semantic_kinds: [experiment_run, experiment_execution]
+    identity_fields_any_of: [[experiment_id, run_id]]
+    provenance_requirements: [experiment_id, run_id, occurred_at]
+  workshop:
+    category: Event
+    source_taxonomy: [Organizational, Training]
+    medium: calendar_or_conversation
+    semantic_kinds: [workshop, hands_on_lab]
+    identity_fields_any_of: [[source_system, external_id, occurred_at]]
+    provenance_requirements: [occurred_at]
+  training:
+    category: Event
+    source_taxonomy: [Organizational, Training]
+    medium: calendar_or_conversation
+    semantic_kinds: [training, education]
+    identity_fields_any_of: [[source_system, external_id, occurred_at]]
+    provenance_requirements: [occurred_at]
+  message_transmission:
+    category: Event
+    source_taxonomy: [Digital, Communication]
+    medium: email_or_chat
+    semantic_kinds: [message_transmission, sent, received]
+    identity_fields_any_of: [[source_system, message_id, occurred_at]]
+    provenance_requirements: [occurred_at]
+  thread_activity:
+    category: Event
+    source_taxonomy: [Digital, Communication]
+    medium: email_or_chat
+    semantic_kinds: [thread_activity, reply, mention]
+    identity_fields_any_of: [[source_system, thread_id, occurred_at]]
+    provenance_requirements: [occurred_at]
+  reading_event:
+    category: Event
+    source_taxonomy: [Digital, Media]
+    medium: personal_capture
+    semantic_kinds: [reading]
+    identity_fields_any_of: [[actor_ref, source_ref, occurred_at]]
+    provenance_requirements: [occurred_at, actor_ref]
+  viewing_event:
+    category: Event
+    source_taxonomy: [Digital, Media]
+    medium: personal_capture
+    semantic_kinds: [viewing, watching]
+    identity_fields_any_of: [[actor_ref, source_ref, occurred_at]]
+    provenance_requirements: [occurred_at, actor_ref]
+  listening_event:
+    category: Event
+    source_taxonomy: [Digital, Media]
+    medium: personal_capture
+    semantic_kinds: [listening]
+    identity_fields_any_of: [[actor_ref, source_ref, occurred_at]]
+    provenance_requirements: [occurred_at, actor_ref]
+  agent_trajectory:
+    category: Event
+    source_taxonomy: [Operational, Runtime]
+    medium: agent_runtime
+    semantic_kinds: [session, trajectory, tool_run]
+    identity_fields_any_of: [[source_system, external_id, representation_hash]]
+    provenance_requirements: [source_system, external_id, representation_hash, occurred_at]
+
+  # Experience: low-friction capture; never canonical by capture alone
+  thought:
+    category: Experience
+    source_taxonomy: [Personal, Thought]
+    medium: personal_capture
+    semantic_kinds: [thought]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  idea:
+    category: Experience
+    source_taxonomy: [Personal, Thought]
+    medium: personal_capture
+    semantic_kinds: [idea, proposal]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  question:
+    category: Experience
+    source_taxonomy: [Personal, Question]
+    medium: personal_capture
+    semantic_kinds: [question, open_question, open_problem, knowledge_gap]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  observation:
+    category: Experience
+    source_taxonomy: [Personal, Note]
+    medium: personal_capture
+    semantic_kinds: [observation]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  insight:
+    category: Experience
+    source_taxonomy: [Personal, Thought]
+    medium: personal_capture
+    semantic_kinds: [insight, realization, pattern]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  hypothesis:
+    category: Experience
+    source_taxonomy: [Personal, Thought]
+    medium: personal_capture
+    semantic_kinds: [hypothesis]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  doubt:
+    category: Experience
+    source_taxonomy: [Personal, Thought]
+    medium: personal_capture
+    semantic_kinds: [doubt, uncertainty]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  assumption:
+    category: Experience
+    source_taxonomy: [Personal, Thought]
+    medium: personal_capture
+    semantic_kinds: [assumption, premise]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  reflection:
+    category: Experience
+    source_taxonomy: [Personal, Reflection]
+    medium: personal_capture
+    semantic_kinds: [reflection, journal_entry]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  learning:
+    category: Experience
+    source_taxonomy: [Personal, Reflection]
+    medium: personal_capture
+    semantic_kinds: [learning, raw_lesson]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  intention:
+    category: Experience
+    source_taxonomy: [Personal, Thought]
+    medium: personal_capture
+    semantic_kinds: [intention, goal, planned_investigation]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  memory:
+    category: Experience
+    source_taxonomy: [Personal, Reflection]
+    medium: personal_capture
+    semantic_kinds: [memory, recollection]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  contradiction_notice:
+    category: Experience
+    source_taxonomy: [Personal, Note]
+    medium: personal_capture
+    semantic_kinds: [contradiction_notice, conflict_observation]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+  affective_note:
+    category: Experience
+    source_taxonomy: [Personal, Reflection]
+    medium: personal_capture
+    semantic_kinds: [affective_note, feeling, emotion]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+    policy_note: Access/sensitivity policy is governed outside this registry.
+  note:
+    category: Experience
+    source_taxonomy: [Personal, Note]
+    medium: personal_capture
+    semantic_kinds: [note, journal_entry]
+    identity_fields_any_of: [[actor_ref, experienced_at, content_hash]]
+    provenance_requirements: [actor_ref, experienced_at, content_hash]
+
+lifecycle:
+  # `deleted` is a logical lifecycle state. Immutable raw bytes and audit
+  # manifests are retained according to the storage/retention policy; this
+  # registry state MUST NOT be interpreted as permission to overwrite raw data.
+  states: [captured, normalized, interpreted, verified, superseded, retracted, expired, deleted]
+  initial_state: captured
+  immutable_representation: true
+  transitions:
+    captured: [normalized, retracted, deleted]
+    normalized: [interpreted, superseded, retracted, expired]
+    interpreted: [verified, superseded, retracted, expired]
+    verified: [superseded, retracted, expired]
+    superseded: []
+    retracted: []
+    expired: []
+    deleted: []
+
+# Re-ingestion is an operation, never a source type.
+ingest_modes: [create, update, migrate, reingest, reindex]
+
+legacy_source_type_map:
+  web_page: web_resource
+  web_article: web_resource
+  internal_spec: internal_document
+  system_doc: internal_document
+  vendor_doc: specification
+  api_spec: specification
+  rfc: specification
+  standard: specification
+  conversation: conversation_capture
+  slack_message: conversation_capture
+  teams_message: conversation_capture
+  meeting_notes: meeting_notes
+  post_mortem: document
+  observation: observation
+  personal_note: note
+  email: email_message
+  book: book
+  code: code_repository
+
+invariants:
+  SOURCE-001: Every captured input MUST enter through the Universal Source Model.
+  SOURCE-002: Source type, object type, taxonomy, facets, relations, actors and epistemic status MUST remain separate namespaces.
+  SOURCE-003: Agent trajectories MUST be one specialized source type, never the universal ingestion abstraction.
+  SOURCE-004: Capture MUST be possible before canonical classification.
+  SOURCE-005: Discovery MAY derive Knowledge Objects but MUST NOT mutate a Source into one.
+  SOURCE-006: Every canonical Knowledge Object MUST retain provenance to one or more Sources.
+  SOURCE-007: Source identity and representation identity MUST be distinguishable.
+  SOURCE-008: Representations MUST be immutable; changed content creates a new representation.
+  SOURCE-009: Unknown source types, category mismatches, missing identity or missing provenance MUST fail closed.
+  SOURCE-010: Personal thoughts, ideas, questions and hypotheses MUST NOT automatically become verified evidence.
+  SOURCE-011: Connectors acquire; adapters normalize; ingestion validates; discovery proposes; governance promotes.
+  SOURCE-012: Source access and privacy constraints MUST propagate according to governance policy.
+  SOURCE-013: Re-ingestion of canonical objects is an ingest mode, not a source type.
+  SOURCE-014: A common envelope MAY contain a typed payload; universal ingestion MUST NOT flatten source-specific data.
+  SOURCE-015: Artifact identity MUST use a resource/external identity or content hash; Event identity MUST include occurrence context; Experience identity MUST include actor, time and content identity.
+  SOURCE-016: A representation MAY carry event metadata or represent an Event; this MUST NOT change its intrinsic source category.
+  SOURCE-017: Source classification MUST NOT replace Knowledge taxonomy or object classification.
+  SOURCE-018: A source MAY contribute to multiple derived objects and a canonical object MAY cite multiple source representations.
+  SOURCE-019: Source identity deduplication, representation deduplication, semantic duplicate detection and Knowledge duplicate detection are separate decisions.
+  SOURCE-020: Raw representations MUST be lossless and append-only; normalization MUST retain a reference to the raw representation.
+
+# These are architecture-level contracts, not runtime implementations.
+raw_storage:
+  invariant_range: [RAW-001, RAW-010]
+  rule: Captured representations MUST NOT be modified in place.
+  logical_layout: raw/sources/<source_id>/representations/<representation_id>/
+  source_metadata: source.yaml
+  representation_metadata: metadata.yaml
+  manifests: raw/manifests/
+  content_store:
+    mode: optional_content_addressable
+    object_layout: raw/objects/sha256/<prefix>/<sha256>
+    identity_field: content_hash
+    deduplicates_bytes_only: true
+  large_binary_policy: Metadata MAY remain in the repository while content is stored in filesystem, LFS or external blob storage.
+  derived_storage:
+    staging: staging/
+    canonical_knowledge: existing_personal_and_engineering_trees
+  retention_owner: governance_policy
+  raw_mutation: forbidden

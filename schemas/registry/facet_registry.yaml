@@ -1,0 +1,201 @@
+# facet_registry.yaml
+# Canonical source of truth for FACET VALUE SETS (FAC-001–FAC-004).
+#
+# Facets answer "WHICH PROPERTIES does this object have" (ARCHITECTURE.md §1.1).
+# They are ORTHOGONAL to:
+#   taxonomy_path  — WHERE in the subject tree      (taxonomy_registry.yaml)
+#   object_type    — WHAT KIND of object it is      (object_registry.yaml)
+#   domain         — WHICH area of expertise        (object_registry.yaml: domains)
+#   relations      — HOW it connects to others      (relation_registry.yaml)
+#
+# object_registry.yaml declares WHICH facets are mandatory per object_type.
+# This file declares WHICH VALUES each facet may take (FAC-003 / E026).
+#
+# FacetEnums in source code MUST be generated deterministically from this file
+# (FAC-004), mirroring REL-002 for relations.
+#
+# FIELD CONTRACT per facet
+#   cardinality  : 0..1 | 1..1 | 0..N | 1..N   (see DATA_MODEL.md §3.2)
+#   description  : what question the facet answers
+#   values       : the complete legal value set
+#   allows_none  : whether the sentinel value `none` is legal
+#                  (`none` MUST NOT be mixed with concrete values — FAC-002 / E015)
+
+schema_version: "1.0.0"
+
+facets:
+
+  # --------------------------------------------------------------
+  # toolchain — which tooling the knowledge concerns
+  # --------------------------------------------------------------
+  toolchain:
+    cardinality: "1..N"
+    description: "Build, test, analysis or runtime tooling the object concerns."
+    allows_none: true
+    values:
+      # build
+      - bazel
+      - cargo
+      - make
+      - cmake
+      - gradle
+      - npm
+      # dependency / packaging
+      - sbom
+      - docker
+      - podman
+      # test
+      - gtest
+      - cmocka
+      - pytest
+      - junit
+      - jest
+      - playwright
+      # quality
+      - eslint
+      - mypy
+      - ruff
+      - lcov
+      - valgrind
+      - asan
+      # observability / debug
+      - opentelemetry
+      - prometheus
+      - grafana
+      - gdb
+      - perf
+      # environment / CI
+      - devcontainer
+      - github_actions
+      - gitlab_ci
+      - jenkins
+      - argo
+      # runtime libraries & frameworks
+      - grpc
+      - protobuf
+      - kafka
+      - redis
+      # AI tooling
+      - mcp
+      - unknown         # not yet determined / pending classification (W011 fires)
+      - none            # does not apply (W011 does not fire)
+
+  # --------------------------------------------------------------
+  # prog_language — implementation language
+  # --------------------------------------------------------------
+  prog_language:
+    cardinality: "1..N"
+    description: "Programming or configuration language the object concerns."
+    allows_none: true
+    values:
+      - c
+      - cpp
+      - rust
+      - go
+      - python
+      - typescript
+      - javascript
+      - java
+      - starlark
+      - bash
+      - yaml
+      - json
+      - sql
+      - markdown
+      - unknown         # not yet determined / pending classification (W011 fires)
+      - none            # does not apply (W011 does not fire)
+
+  # --------------------------------------------------------------
+  # language — natural language of the content
+  # --------------------------------------------------------------
+  language:
+    cardinality: "1..N"
+    description: "Natural language the object's content is written in."
+    allows_none: false
+    values:
+      - en
+      - sv
+
+  # --------------------------------------------------------------
+  # audience — who the object is written for
+  # --------------------------------------------------------------
+  audience:
+    cardinality: "1..1"
+    description: "Primary intended reader."
+    allows_none: false
+    values:
+      - newcomer        # onboarding reader
+      - engineer        # implementing developer
+      - architect       # system/solution architect
+      - tester          # verification engineer
+      - integrator      # system integration
+      - operator        # runs the deployed platform
+      - customer        # external reader (CPI and released documentation)
+      - manager         # planning and portfolio reader
+      - agent           # consumed primarily by an LLM agent
+
+  # --------------------------------------------------------------
+  # architecture — deployment / hardware / platform context
+  # --------------------------------------------------------------
+  architecture:
+    cardinality: "1..N"
+    description: "Hardware, platform or deployment context the object applies to."
+    allows_none: true
+    values:
+      - x86_64
+      - aarch64
+      - baremetal
+      - container
+      - kubernetes
+      - serverless
+      - unknown         # not yet determined / pending classification (W011 fires)
+      - none            # does not apply (W011 does not fire)
+
+  # --------------------------------------------------------------
+  # lifecycle — the DOMAIN SYSTEM's lifecycle state
+  # --------------------------------------------------------------
+  # GOV-001: `lifecycle` is the lifecycle of the thing described.
+  #          `status` is the lifecycle of the WIKI PAGE describing it.
+  #          They MUST NOT be conflated. An `established` page may describe a
+  #          `planned` feature.
+  #
+  # Usage across object types:
+  #   Feature / WorkPackage / Requirement : planned -> ongoing -> delivered
+  #   Component / Product / tool pages    : maintained | legacy | withdrawn
+  #   Specification                       : planned | maintained | withdrawn
+  lifecycle:
+    cardinality: "1..1"
+    description: >
+      Lifecycle state of the described system, feature or work item — never of
+      the wiki page (see GOV-001).
+    allows_none: true
+    values:
+      - planned         # decided/specified, work not started
+      - ongoing         # work in progress
+      - delivered       # completed and shipped
+      - maintained      # in active use and maintained
+      - legacy          # still functional, superseded by a newer approach
+      - withdrawn       # removed from the product
+      - unknown         # not yet determined / pending classification (W011 fires)
+      - none            # does not apply (W011 does not fire)
+
+  # --------------------------------------------------------------
+  # test_level — verification level (NEW in schema_version 1.0.0)
+  # --------------------------------------------------------------
+  test_level:
+    cardinality: "0..N"
+    description: >
+      Verification level the object concerns. Orthogonal to `toolchain`: the same
+      framework can serve several levels, and the same level can use several
+      frameworks.
+    allows_none: true
+    values:
+      - unit            # unit test
+      - smoke           # smoke / sanity test
+      - integration     # integration test
+      - e2e             # end-to-end system test
+      - performance     # load / benchmark test
+      - chaos           # chaos / resilience test
+      - security        # vulnerability / pentest check
+      - unknown         # not yet determined / pending classification (W011 fires)
+      - none

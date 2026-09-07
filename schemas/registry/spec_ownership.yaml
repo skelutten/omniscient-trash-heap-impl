@@ -1,0 +1,96 @@
+# spec_ownership.yaml
+# Machine-readable ownership projection. Normative wording remains in the
+# owning specification; this file records one owner per invariant family.
+
+schema_version: "0.2.0"
+registry_id: spec_ownership
+status: declarative_only
+
+invariant_families:
+  - family_id: CANON
+    owner: specs/ARCHITECTURE.md
+  - family_id: ID
+    owner: specs/DATA_MODEL.md
+  - family_id: FAC
+    owner: specs/DATA_MODEL.md
+  - family_id: CLS
+    owner: specs/DATA_MODEL.md
+  - family_id: TAX
+    owner: specs/ARCHITECTURE.md
+  - family_id: REL
+    owner: specs/ONTOLOGY.md
+  - family_id: EPI
+    owner: specs/EPISTEMOLOGY.md
+  - family_id: PROV
+    owner: specs/EPISTEMOLOGY.md
+  - family_id: GOV
+    owner: specs/EPISTEMOLOGY.md
+  - family_id: SOURCE
+    owner: specs/UNIVERSAL-SOURCE-EXTENSION.md
+  - family_id: RAW
+    owner: specs/INGEST-STAGING.md
+  - family_id: INGEST-CORE
+    owner: specs/INGEST.md
+  - family_id: CSCC
+    owner: specs/INGEST-STAGING.md
+  - family_id: DSCP
+    owner: specs/INGEST-STAGING.md
+  - family_id: DPCP
+    owner: specs/INGEST-STAGING.md
+  - family_id: DISC
+    owner: specs/DISCOVERY.md
+  - family_id: GRAPH
+    owner: specs/ONTOLOGY.md
+  - family_id: SG
+    owner: specs/STRUCTURAL-GRAPH.md
+  - family_id: OKF
+    owner: specs/OKF-INTEROP.md
+  - family_id: BUNDLE
+    owner: specs/OKF-INTEROP.md
+  - family_id: OWN
+    owner: specs/SCHEMA.md
+  - family_id: BODY
+    owner: specs/SCHEMA.md
+  - family_id: W
+    owner: specs/VALIDATION.md
+  - family_id: THRESH
+    owner: schemas/registry/threshold_policy.yaml
+  - family_id: REVIEW
+    owner: specs/INGEST-STAGING.md
+  - family_id: RES
+    owner: specs/INGEST.md
+  - family_id: SCALE
+    owner: specs/ARCHITECTURE.md
+  - family_id: DERIVED
+    owner: specs/ARCHITECTURE.md
+  - family_id: CONFORM
+    owner: specs/VALIDATION.md
+  # --- families added 2026-09-07 (D98) ---
+  # VALIDATION.md §10.5 requires exactly one owner per invariant family and
+  # CONFORM-001 requires that ownership be centrally checkable through this
+  # file. The families below were referenced by invariants in the locked core
+  # but had no record here, so the projection was incomplete.
+  - family_id: RET
+    owner: specs/RETRIEVAL.md
+  - family_id: META
+    owner: specs/ARCHITECTURE.md
+  - family_id: LIB
+    owner: specs/ARCHITECTURE.md
+  - family_id: SCOPE
+    owner: specs/DATA_MODEL.md
+  # VAL-001 is owned by EPISTEMOLOGY.md and restated in VALIDATION.md §10.2 (E007) and §11.
+  - family_id: VAL
+    owner: specs/EPISTEMOLOGY.md
+  - family_id: ERR
+    owner: specs/VALIDATION.md
+  - family_id: FS
+    owner: specs/VALIDATION.md
+  - family_id: G
+    owner: specs/INGEST-PIPELINE.md
+
+validation:
+  duplicate_family_owners: error
+  unknown_owner_paths: error
+  invariant_ids_require_owner: error
+  conformance_evidence_fields: [owner, invariant_id, implementation, test, verification]
+  runtime_and_tests: planned

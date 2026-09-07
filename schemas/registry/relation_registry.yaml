@@ -1,0 +1,240 @@
+# relation_registry.yaml
+# Canonical source of truth for the ONTOLOGY axis (REL-001–REL-009).
+#
+# REL-001: this file is the ONLY source of truth for canonical relations.
+# REL-002: RelationTypeEnum in source code MUST be generated deterministically
+#          from this file. Never hand-maintain a parallel enum.
+# REL-004: virtual inverse relations (the `inverse_view` names) MUST NOT be
+#          persisted in YAML source files — they are views, not stored edges (E019).
+#
+# FIELD CONTRACT per relation
+#   category      : one of the 10 categories; sets graph-traversal priority
+#                   (structural=1 … semantic=10, see RETRIEVAL.md §9.2)
+#   inverse_view  : name of the virtual inverse. MUST be unique for non-symmetric
+#                   relations (REL-008 / E025). A symmetric relation MUST set this
+#                   to its own name and is EXEMPT from the uniqueness check.
+#   dag           : true -> cycle detection runs for this relation type
+#                   (GRAPH-001 / E010)
+#   symmetric     : true -> A rel B implies B rel A
+#   source_types  : permitted source object types (REL-005/REL-006, E021/E022)
+#   target_types  : permitted target object types (REL-005/REL-006, E021/E022)
+#                   every type MUST exist in ObjectTypeEnum (REL-007 / E023)
+#
+# REL-009: where two relations express the same fact in opposite directions
+#          (DESCRIBES vs DOCUMENTED_BY), the DOCUMENTED object declares it.
+
+schema_version: "1.0.0"
+
+relations:
+  PART_OF:
+    category: structural
+    inverse_view: HAS_PART
+    dag: true
+    symmetric: false
+    source_types: [Feature, Component, Requirement, WorkPackage]
+    target_types: [Product, Feature, Component, WorkPackage]
+  SUPERSEDES:
+    category: evolution
+    inverse_view: REPLACED_BY
+    dag: true
+    symmetric: false
+    source_types: [Specification, Feature, Component, Requirement, Article, Document]
+    target_types: [Specification, Feature, Component, Requirement, Article, Document]
+  DEPENDS_ON:
+    category: dependency
+    inverse_view: REQUIRED_BY
+    dag: true
+    symmetric: false
+    source_types: [Feature, Component, Requirement, WorkPackage, Specification]
+    target_types: [Feature, Component, Requirement, Product, Specification]
+  DERIVED_FROM:
+    category: derivation
+    inverse_view: GENERATED
+    dag: true
+    symmetric: false
+    source_types: [Lesson, Claim, Report, Observation, WorkPackage]
+    target_types: [Incident, TroubleReport, Experiment, Observation, Claim, Specification]
+  INSTANCE_OF:
+    category: structural
+    inverse_view: HAS_INSTANCE
+    dag: true
+    symmetric: false
+    source_types: [Component, Product, Feature]
+    target_types: [Concept, Definition, Protocol]
+  TYPE_OF:
+    category: structural
+    inverse_view: HAS_TYPE
+    dag: true
+    symmetric: false
+    source_types: [Concept, Definition]
+    target_types: [Concept]
+  IMPLEMENTS:
+    category: engineering
+    inverse_view: IMPLEMENTED_BY
+    dag: false
+    symmetric: false
+    source_types: [Component, WorkPackage]
+    target_types: [Feature, Requirement, Specification, Interface, Protocol]
+  SATISFIES:
+    category: engineering
+    inverse_view: SATISFIED_BY
+    dag: false
+    symmetric: false
+    source_types: [Feature, Component]
+    target_types: [Requirement, Specification]
+  AFFECTS:
+    category: engineering
+    inverse_view: AFFECTED_BY
+    dag: false
+    symmetric: false
+    source_types: [Feature, WorkPackage, Incident, TroubleReport]
+    target_types: [Component, Product, Feature, Interface]
+  USES:
+    category: engineering
+    inverse_view: USED_BY
+    dag: false
+    symmetric: false
+    source_types: [Component, Feature, Workflow, Procedure, Sequence]
+    target_types: [Component, Interface, Protocol, Product]
+  PROVIDES:
+    category: engineering
+    inverse_view: PROVIDED_BY
+    dag: false
+    symmetric: false
+    source_types: [Component, Feature, Interface, Protocol]
+    target_types: [Component, Feature, Interface, Protocol]
+  REQUIRES:
+    category: engineering
+    inverse_view: REQUIRED_FOR
+    dag: false
+    symmetric: false
+    source_types: [Component, Feature, Protocol, Interface]
+    target_types: [Component, Interface, Protocol]
+  VERIFIED_BY:
+    category: verification
+    inverse_view: VERIFIES
+    dag: false
+    symmetric: false
+    source_types: [Requirement, Feature, Component, Claim]
+    target_types: [Experiment, Report, Observation, TroubleReport]
+  TESTED_BY:
+    category: verification
+    inverse_view: TESTS
+    dag: false
+    symmetric: false
+    source_types: [Component, Feature]
+    target_types: [Experiment, Report]
+  INTRODUCED_IN:
+    category: evolution
+    inverse_view: INTRODUCES
+    dag: false
+    symmetric: false
+    source_types: [Feature, Component]
+    target_types: [WorkPackage, Incident, TroubleReport]
+  DESCRIBES:
+    category: documentation
+    inverse_view: DESCRIBED_BY
+    dag: false
+    symmetric: false
+    opposed_to: DOCUMENTED_BY
+    source_types: [Article, Document, Specification, Report]
+    target_types: [Product, Feature, Component, Concept, Requirement, Interface, Protocol, Sequence]
+  DEFINES:
+    category: documentation
+    inverse_view: DEFINED_BY
+    dag: false
+    symmetric: false
+    source_types: [Definition, Specification, Interface, Protocol]
+    target_types: [Concept, Interface, Protocol]
+  DOCUMENTED_BY:
+    category: documentation
+    inverse_view: DOCUMENTS
+    dag: false
+    symmetric: false
+    opposed_to: DESCRIBES
+    source_types: [Product, Feature, Component, Requirement, Interface, Protocol, Sequence]
+    target_types: [Article, Document, Specification, Report]
+  CITES:
+    category: documentation
+    inverse_view: CITED_BY
+    dag: false
+    symmetric: false
+    source_types: [Article, Document, Report, Claim, Lesson]
+    target_types: [Document, Article, Specification, Claim]
+  REFERENCES:
+    category: documentation
+    inverse_view: REFERENCED_BY
+    dag: false
+    symmetric: false
+    source_types: [Article, Document, Report, Claim, Lesson, Specification]
+    target_types: [Document, Article, Specification, Claim, Report]
+  SUPPORTED_BY:
+    category: epistemic
+    inverse_view: SUPPORTS
+    dag: false
+    symmetric: false
+    source_types: [Claim, Principle]
+    target_types: [Observation, Experiment, Report, Document]
+  EVIDENCED_BY:
+    category: epistemic
+    inverse_view: EVIDENCES
+    dag: false
+    symmetric: false
+    source_types: [Claim]
+    target_types: [Observation, Experiment, Report]
+  INFERRED_FROM:
+    category: epistemic
+    inverse_view: INFERS
+    dag: false
+    symmetric: false
+    source_types: [Claim, Lesson, Principle]
+    target_types: [Observation, Experiment, Claim, Report]
+  DISPUTED_BY:
+    category: epistemic
+    inverse_view: DISPUTES
+    dag: false
+    symmetric: false
+    source_types: [Claim, Principle]
+    target_types: [Claim, Observation, Report]
+  APPLIES_TO:
+    category: procedural
+    inverse_view: APPLIED_BY
+    dag: false
+    symmetric: false
+    source_types: [Lesson, Principle, Procedure, Workflow, Checklist, Skill]
+    target_types: [Product, Feature, Component, Requirement, WorkPackage]
+  IMPLEMENTED_AS:
+    category: procedural
+    inverse_view: IMPLEMENTS_PROCEDURE
+    dag: false
+    symmetric: false
+    source_types: [Principle, Lesson]
+    target_types: [Workflow, Procedure, Checklist, Skill]
+  RELATED_TO:
+    category: semantic
+    inverse_view: RELATED_TO
+    dag: false
+    symmetric: true
+    source_types: [Article, Document, Specification, Report, Concept, Definition, Principle, Claim, Product, Feature, Requirement, Component, WorkPackage, Interface, Protocol, Incident, TroubleReport, Experiment, Observation, Lesson, Workflow, Procedure, Checklist, Skill, Sequence]
+    target_types: [Article, Document, Specification, Report, Concept, Definition, Principle, Claim, Product, Feature, Requirement, Component, WorkPackage, Interface, Protocol, Incident, TroubleReport, Experiment, Observation, Lesson, Workflow, Procedure, Checklist, Skill, Sequence]
+  SIMILAR_TO:
+    category: semantic
+    inverse_view: SIMILAR_TO
+    dag: false
+    symmetric: true
+    source_types: [Article, Document, Specification, Report, Concept, Definition, Principle, Claim, Product, Feature, Requirement, Component, WorkPackage, Interface, Protocol, Incident, TroubleReport, Experiment, Observation, Lesson, Workflow, Procedure, Checklist, Skill, Sequence]
+    target_types: [Article, Document, Specification, Report, Concept, Definition, Principle, Claim, Product, Feature, Requirement, Component, WorkPackage, Interface, Protocol, Incident, TroubleReport, Experiment, Observation, Lesson, Workflow, Procedure, Checklist, Skill, Sequence]
+  CONTRASTS_WITH:
+    category: semantic
+    inverse_view: CONTRASTS_WITH
+    dag: false
+    symmetric: true
+    source_types: [Article, Document, Specification, Report, Concept, Definition, Principle, Claim, Product, Feature, Requirement, Component, WorkPackage, Interface, Protocol, Incident, TroubleReport, Experiment, Observation, Lesson, Workflow, Procedure, Checklist, Skill, Sequence]
+    target_types: [Article, Document, Specification, Report, Concept, Definition, Principle, Claim, Product, Feature, Requirement, Component, WorkPackage, Interface, Protocol, Incident, TroubleReport, Experiment, Observation, Lesson, Workflow, Procedure, Checklist, Skill, Sequence]
+  CONTRADICTS:
+    category: epistemic
+    inverse_view: CONTRADICTS
+    dag: false
+    symmetric: true
+    source_types: [Claim, Principle]
+    target_types: [Claim, Principle]
