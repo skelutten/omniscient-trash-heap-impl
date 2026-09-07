@@ -204,10 +204,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Include deprecated objects in query results",
     )
     query_parser.add_argument(
+        "--include-body",
+        action="store_true",
+        default=False,
+        help="Include full body text in evidence bundle",
+    )
+    query_parser.add_argument(
         "--graph-enhanced",
         action="store_true",
         default=False,
         help="Enable opt-in graph-enhanced retrieval (Plan 91 / GRAPH-RETRIEVAL.md)",
+    )
+
+    # show (display full content of a Knowledge Object)
+    show_parser = subparsers.add_parser(
+        "show",
+        help="Display the full content of a Knowledge Object by node ID or path",
+    )
+    show_parser.add_argument("target", type=str, help="Node ID or file path")
+    show_parser.add_argument(
+        "--corpus-root", type=str, default="fixtures/canonical", help="Corpus root directory"
     )
 
     # 6. rebuild
@@ -883,12 +899,44 @@ def handle_query(args: argparse.Namespace) -> int:
         "min_relevance": args.min_relevance,
         "include_drafts": getattr(args, "include_drafts", False),
         "include_deprecated": getattr(args, "include_deprecated", False),
+        "include_body": getattr(args, "include_body", False),
         "enable_vector": getattr(args, "vector", False),
         "retrieval_mode": "graph_enhanced" if getattr(args, "graph_enhanced", False) else "canonical",
     }
 
     bundle = retriever.retrieve(query=args.prompt, cli_params=cli_params)
     print(json.dumps(bundle, indent=2))
+    return ExitCode.SUCCESS
+
+
+def handle_show(args: argparse.Namespace) -> int:
+    """Handle show command displaying full Knowledge Object content."""
+    target = args.target
+    p = Path(target)
+    if p.exists() and p.is_file():
+        print(p.read_text(encoding="utf-8"))
+        return ExitCode.SUCCESS
+
+    corpus_root = Path(args.corpus_root)
+    if not corpus_root.exists():
+        print(f"Corpus root '{corpus_root}' not found", file=sys.stderr)
+        return ExitCode.NOT_FOUND
+
+    corpus = load_corpus(corpus_root)
+    found = None
+    for ko in corpus.objects:
+        if ko.id == target or (ko.path and ko.path.stem == target):
+            found = ko
+            break
+
+    if not found:
+        print(f"Object '{target}' not found in corpus '{corpus_root}'", file=sys.stderr)
+        return ExitCode.NOT_FOUND
+
+    if found.path and found.path.exists():
+        print(found.path.read_text(encoding="utf-8"))
+    else:
+        print(found.raw_body)
     return ExitCode.SUCCESS
 
 
@@ -1875,6 +1923,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "validate": handle_validate,
         "rename": handle_rename,
         "query": handle_query,
+        "show": handle_show,
         "rebuild": handle_rebuild,
         "generate-skills": handle_generate_skills,
         "stage-lint": handle_stage_lint,

@@ -783,7 +783,11 @@ class HybridRetriever:
                 },
                 "subgraph_relations": subgraph_rels,
                 "body_excerpt": extract_body_excerpt(ko.raw_body),
+                "path": str(ko.path) if ko.path else None,
             }
+
+            if parameters_used.get("include_body"):
+                node_entry["body"] = ko.raw_body
 
             if conf_info.get("detected"):
                 node_entry["conflicting_relation_type"] = conf_info.get("conflicting_relation_type")
