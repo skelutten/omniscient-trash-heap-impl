@@ -37,8 +37,8 @@ Phase 5 (Resilience):  Rebuild Invariance & Crash/Recovery Verification
 | **01** | `01-REPOSITORY-FOUNDATION.md` | complete | none | Installable package, minimal YAML registry loader, CLI entry point. |
 | **02** | `02-DETERMINISTIC-CORE.md` | complete | 01 green | Canonical frontmatter parser, linter (`E001`–`E099`), Agent Skills emitter (`SKILL.md`), atomic rename. |
 | **03** | `03-SOURCE-INGESTION-SAFETY.md` | complete | 02 green | Universal source intake, untrusted web/pdf fencing (`<untrusted_source>`), path sandboxing, SHA-256 hash deduplication. |
-| **04** | `04-PROPOSAL-PROMOTION-RECOVERY.md` | next | 03 green | Candidate proposal extraction, human review approval contract, deterministic atomic promotion (`.tmp` + `os.replace`). |
-| **05** | `05-CONNECTORS-OPERATIONS-CI.md` | blocked by 04 | 04 green | Hybrid lexical/RRF retrieval, `/query` synthesis with citations, rebuild invariance, clean-checkout CI. |
+| **04** | `04-PROPOSAL-PROMOTION-RECOVERY.md` | complete | 03 green | Candidate proposal extraction, human review approval contract, deterministic atomic promotion (`.tmp` + `os.replace`). |
+| **05** | `05-CONNECTORS-OPERATIONS-CI.md` | next | 04 green | Hybrid lexical/RRF retrieval, `/query` synthesis with citations, rebuild invariance, clean-checkout CI. |
 
 ---
 

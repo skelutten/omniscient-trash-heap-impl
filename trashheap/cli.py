@@ -22,6 +22,17 @@ from trashheap.ingest import (
     stage_lint,
 )
 from trashheap.linter import Finding, Linter
+from trashheap.promotion import (
+    ApprovalBindingError,
+    ConflictError,
+    ValidationRollbackError,
+    approve_candidate,
+    get_journal,
+    list_candidates,
+    load_candidate,
+    promote_candidate,
+    reject_candidate,
+)
 from trashheap.rebuild import rebuild_indexes
 from trashheap.registry.loader import RegistryLoadError, load_registries
 from trashheap.registry.validator import RegistryFinding, validate_cross_registries
@@ -218,6 +229,62 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_parser.add_argument(
         "--json", action="store_true", help="Emit machine-readable JSON output"
     )
+
+    # 10. review
+    review_parser = subparsers.add_parser(
+        "review",
+        help="Review and governance operations for candidate proposals (specs/REVIEW-PROMOTION.md)",
+    )
+    review_subs = review_parser.add_subparsers(dest="review_action", required=True)
+
+    # review list
+    r_list = review_subs.add_parser("list", help="List candidate proposals")
+    r_list.add_argument("--scope", type=str, default=None, choices=["personal", "engineering"])
+    r_list.add_argument("--status", type=str, default=None, help="Filter by candidate state")
+    r_list.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    r_list.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # review show
+    r_show = review_subs.add_parser("show", help="Show candidate proposal details")
+    r_show.add_argument("candidate_id", type=str, help="Candidate proposal ID")
+    r_show.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    r_show.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # review approve
+    r_approve = review_subs.add_parser("approve", help="Approve candidate proposal (REVIEW-002)")
+    r_approve.add_argument("candidate_id", type=str, help="Candidate proposal ID")
+    r_approve.add_argument("--reviewer", type=str, required=True, help="Reviewer actor (e.g. human:alice)")
+    r_approve.add_argument("--reason", type=str, default="Approved via review", help="Approval rationale")
+    r_approve.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    r_approve.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # review reject
+    r_reject = review_subs.add_parser("reject", help="Reject candidate proposal (REVIEW-009)")
+    r_reject.add_argument("candidate_id", type=str, help="Candidate proposal ID")
+    r_reject.add_argument("--reviewer", type=str, required=True, help="Reviewer actor")
+    r_reject.add_argument("--reason", type=str, required=True, help="Rejection rationale")
+    r_reject.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    r_reject.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # review promote
+    r_promote = review_subs.add_parser("promote", help="Promote approved candidate via DPCP (§9)")
+    r_promote.add_argument("candidate_id", type=str, help="Candidate proposal ID")
+    r_promote.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    r_promote.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # review recover
+    r_recover = review_subs.add_parser("recover", help="Crash recovery for interrupted DPCP promotions (§9.2)")
+    r_recover.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    r_recover.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+
+    # 11. promote (top-level alias for review promote)
+    promote_parser = subparsers.add_parser(
+        "promote",
+        help="Promote approved candidate via DPCP (§9, PROMO-001..PROMO-010)",
+    )
+    promote_parser.add_argument("candidate_id", type=str, help="Candidate proposal ID")
+    promote_parser.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    promote_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
 
     return parser
 
@@ -632,6 +699,153 @@ def handle_ingest(args: argparse.Namespace) -> int:
         return ExitCode.VALIDATION_ERROR
 
 
+def _execute_promote(candidate_id: str, ws_root: Path, as_json: bool) -> int:
+    try:
+        res = promote_candidate(candidate_id, ws_root)
+        if as_json:
+            print(json.dumps({"status": "promoted", "result": res.to_dict()}, indent=2))
+        else:
+            noop_str = " (no-op: already promoted)" if res.is_noop else ""
+            print(f"✓ Promoted '{candidate_id}' -> {res.target_path}{noop_str}")
+        return ExitCode.SUCCESS
+    except ApprovalBindingError as e:
+        if as_json:
+            print(json.dumps({"status": "error", "error_type": "ApprovalBindingError", "message": str(e)}, indent=2))
+        else:
+            print(f"Approval Binding Error: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
+    except ValidationRollbackError as e:
+        if as_json:
+            print(json.dumps({"status": "error", "error_type": "ValidationRollbackError", "message": str(e)}, indent=2))
+        else:
+            print(f"Validation Rollback: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
+    except ConflictError as e:
+        if as_json:
+            print(json.dumps({"status": "error", "error_type": "ConflictError", "message": str(e)}, indent=2))
+        else:
+            print(f"Conflict Error: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
+    except FileNotFoundError as e:
+        if as_json:
+            print(json.dumps({"status": "error", "message": str(e)}, indent=2))
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        return ExitCode.NOT_FOUND
+    except Exception as e:
+        if as_json:
+            print(json.dumps({"status": "error", "error_type": type(e).__name__, "message": str(e)}, indent=2))
+        else:
+            print(f"Promotion Error: {e}", file=sys.stderr)
+        return ExitCode.VALIDATION_ERROR
+
+
+def handle_review(args: argparse.Namespace) -> int:
+    """Handle candidate proposal review operations (specs/REVIEW-PROMOTION.md)."""
+    action = getattr(args, "review_action", None)
+    ws_root = Path(getattr(args, "workspace_root", ".") or ".").resolve()
+
+    if action == "list":
+        candidates = list_candidates(ws_root, state_filter=args.status)
+        if args.scope:
+            candidates = [c for c in candidates if c.proposed_frontmatter.get("scope") == args.scope]
+        if args.json:
+            print(json.dumps([c.model_dump() for c in candidates], indent=2))
+        else:
+            print(f"Candidates ({len(candidates)}):")
+            for c in candidates:
+                print(f"  - {c.candidate_id} [{c.state}] rev:{c.proposal_revision} -> {c.target_path}")
+        return ExitCode.SUCCESS
+
+    elif action == "show":
+        try:
+            c = load_candidate(args.candidate_id, ws_root)
+            if args.json:
+                print(json.dumps(c.model_dump(), indent=2))
+            else:
+                print(f"Candidate: {c.candidate_id} (rev {c.proposal_revision})")
+                print(f"  State: {c.state} (materialization: {c.materialization_state})")
+                print(f"  Target: {c.target_path}")
+                print(f"  Hash: {c.proposal_hash}")
+                if c.review_decision:
+                    print(f"  Decision: {c.review_decision.decision} by {c.review_decision.reviewer}")
+            return ExitCode.SUCCESS
+        except FileNotFoundError as e:
+            if args.json:
+                print(json.dumps({"status": "error", "message": str(e)}, indent=2))
+            else:
+                print(f"Error: {e}", file=sys.stderr)
+            return ExitCode.NOT_FOUND
+
+    elif action == "approve":
+        try:
+            c = approve_candidate(
+                candidate_id=args.candidate_id,
+                reviewer=args.reviewer,
+                reason=args.reason or "Approved via review",
+                workspace_root=ws_root,
+            )
+            if args.json:
+                print(json.dumps({"status": "approved", "candidate": c.model_dump()}, indent=2))
+            else:
+                print(f"✓ Approved candidate '{c.candidate_id}' (rev {c.proposal_revision}) by {args.reviewer}")
+            return ExitCode.SUCCESS
+        except ApprovalBindingError as e:
+            if args.json:
+                print(json.dumps({"status": "error", "error_type": "ApprovalBindingError", "message": str(e)}, indent=2))
+            else:
+                print(f"Approval Error: {e}", file=sys.stderr)
+            return ExitCode.VALIDATION_ERROR
+        except Exception as e:
+            if args.json:
+                print(json.dumps({"status": "error", "message": str(e)}, indent=2))
+            else:
+                print(f"Error: {e}", file=sys.stderr)
+            return ExitCode.VALIDATION_ERROR
+
+    elif action == "reject":
+        try:
+            c = reject_candidate(
+                candidate_id=args.candidate_id,
+                reviewer=args.reviewer,
+                reason=args.reason,
+                workspace_root=ws_root,
+            )
+            if args.json:
+                print(json.dumps({"status": "rejected", "candidate": c.model_dump()}, indent=2))
+            else:
+                print(f"✓ Rejected candidate '{c.candidate_id}' by {args.reviewer}")
+            return ExitCode.SUCCESS
+        except Exception as e:
+            if args.json:
+                print(json.dumps({"status": "error", "message": str(e)}, indent=2))
+            else:
+                print(f"Error: {e}", file=sys.stderr)
+            return ExitCode.VALIDATION_ERROR
+
+    elif action == "promote":
+        return _execute_promote(args.candidate_id, ws_root, args.json)
+
+    elif action == "recover":
+        journal = get_journal(ws_root)
+        recovered = journal.recover_crash(ws_root)
+        if args.json:
+            print(json.dumps({"status": "recovered", "log": recovered}, indent=2))
+        else:
+            print(f"Crash recovery executed: {len(recovered)} action(s) taken.")
+            for entry in recovered:
+                print(f"  - {entry}")
+        return ExitCode.SUCCESS
+
+    return ExitCode.CONFIG_OR_ARG_ERROR
+
+
+def handle_promote(args: argparse.Namespace) -> int:
+    """Handle promote command shortcut."""
+    ws_root = Path(getattr(args, "workspace_root", ".") or ".").resolve()
+    return _execute_promote(args.candidate_id, ws_root, args.json)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point returning integer exit code."""
     parser = build_parser()
@@ -657,6 +871,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         "generate-skills": handle_generate_skills,
         "stage-lint": handle_stage_lint,
         "ingest": handle_ingest,
+        "review": handle_review,
+        "promote": handle_promote,
     }
 
     handler = handlers.get(args.command)

@@ -1,6 +1,6 @@
 # Plan 04 — Proposal, promotion and recovery
 
-> **Status:** proposed, not started
+> **Status:** complete
 > **Prerequisite:** `03-SOURCE-INGESTION-SAFETY.md` green
 > **Next:** `05-CONNECTORS-OPERATIONS-CI.md`
 > **Normative contract:** `../specs/REVIEW-PROMOTION.md`

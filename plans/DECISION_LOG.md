@@ -133,6 +133,7 @@ Taken during the implementation of `plans/01-REPOSITORY-FOUNDATION.md` and prepa
 | **D103** | Baseline Hybrid Retrieval & Evidence Bundle Specification: Baseline retrieval (`trashheap.retrieval.HybridRetriever`) implements 8-step pipeline: BM25 Okapi lexical indexing ($k_1=1.5, b=0.75$) with $[0.0, 1.0]$ normalization, BFS graph expansion with §9.2 neighbor key priority, D93 graph modality participation (graph participates in RRF only if `depth > 0` reached; depth 0 reported as absent), RRF fusion ($k=60, w_{\text{bm25}}=0.4, w_{\text{graph}}=0.2$), D82 honest modality reporting (`vector` reported as `null`, not `0.0`), D94 per-parameter precedence (`cli > config > default`) with `parameters_origin` tracking, and §9.3 $K(d)$ epistemic conflict cluster ranking. | `trashheap/retrieval.py`, `specs/RETRIEVAL.md` §9.1–§9.5 | Executed & Tested |
 | **D104** | Agent Skills Standard Interface & Invariant Verification: Implemented deterministic Agent Skills generator in `trashheap.skills` and `scripts/generate_agent_skills.py` emitting `.agents/skills/trashheap/SKILL.md` conforming to `agentskills.io` / `dot-agents.com` format with 6 standard slash commands (`/lint`, `/validate`, `/stage-lint`, `/ingest`, `/query`, `/rebuild`). Wired linter rule `E050: GeneratedSkillDriftError` to detect drift when `SKILL.md` diverges bit-for-bit from generator output. | `trashheap/skills.py`, `scripts/generate_agent_skills.py`, `trashheap/linter.py`, `specs/AGENT-SKILLS.md` | Executed & Tested |
 | **D105** | Source Ingestion Safety, CSCC & Fencing: Implemented Universal Source intake pipeline (`trashheap.ingest`), enforcing path sandboxing via `sandbox_path` (`AccessDeniedError` / `FR-13`), prompt injection defense via immutable `<untrusted_source>` delimiters (`FR-12`, `NFR-6`) with closing tag escaping (`&lt;/untrusted_source&gt;`), resource limits check (`QuarantineError`), 8-step Crash-safe Source Capture Commit (CSCC §7.1.2) under `raw/sources/<source_id>/representations/<rep_id>/`, idempotency with zero mutation (`RAW-010`), integrity conflict detection (`IntegrityConflictError` / `E141`), 5 executable profiles (`document`, `agent_trajectory`, `thought`, `meeting`, `code_repository`), staging Evidence Unit projection (`EU-...`), and CLI commands `trashheap ingest` and `trashheap stage-lint`. | `trashheap/ingest/`, `tests/test_ingest_safety.py`, `fixtures/adversarial/` | Executed & Tested |
+| **D106** | Proposal Review, Approval Binding & DPCP Promotion Protocol: Implemented governed transition from staged material to canonical Knowledge Objects (`trashheap.promotion`), enforcing state model (`pending` -> `in_review` -> `approved` -> `promoted` / `rejected`), immutable transition tracking (`REVIEW-001`), reviewer identity validation against `ACTOR_PATTERN` (`REVIEW-004`), approval binding to exact candidate ID, revision, proposal hash, and source revision (`REVIEW-002`), OS-level advisory locking (`canonical_promotion.lock`), 5-step Durable Promotion Commit Protocol (DPCP §9) via SQLite WAL journal, Layer 1–5 in-memory validation with rollback on failure (`PROMO-004`), atomic publication (`os.replace`), idempotency cache (`PROMO-005`), conflict detection on existing target (`PROMO-006`), crash recovery with orphan sweep (`PROMO-008`), and CLI `review` and `promote` commands. | `trashheap/promotion/`, `tests/test_proposal_promotion.py`, `specs/REVIEW-PROMOTION.md` | Executed & Tested |
 
 ---
 
@@ -150,8 +151,9 @@ runtime and no tests.
 | D100–D101 Implementation Foundation & Fixture Alignment | Empirical verification: passing tests in `tests/test_registries.py`, `tests/test_smoke.py`, and executable gate `tools/check.sh`. | Skelutten / Antigravity Agent | 2026-09-07 |
 | D102–D104 Deterministic Core, Retrieval & Skills Verification | Empirical verification: 41 passing pytest tests across Layers 1–5, atomic rename, section ownership, RRF retrieval, and gate `tools/check.sh`. | Antigravity Agent | 2026-09-07 |
 | D105 Source Ingestion Safety, CSCC & Fencing Verification | Empirical verification: 50 passing pytest tests across sandboxing, prompt injection delimiters, CSCC crash safety, idempotency, profile validation, and gate `tools/check.sh`. | Antigravity Agent | 2026-09-07 |
+| D106 Proposal Review, Approval Binding & DPCP Promotion Verification | Empirical verification: 57 passing pytest tests across candidate lifecycle, approval binding, DPCP rollback, atomic promotion, crash recovery, and gate `tools/check.sh`. | Antigravity Agent | 2026-09-07 |
 
-This sign-off covers the **decision content** of D79–D95 and runtime foundation D100–D105.
+This sign-off covers the **decision content** of D79–D95 and runtime foundation D100–D106.
 
 ---
 
@@ -159,7 +161,7 @@ This sign-off covers the **decision content** of D79–D95 and runtime foundatio
 
 1. A new decision MUST be added to §3 (or a new dated section) **in the same
    commit** that first cites its identifier.
-2. The next free identifier is **D106**. Do not reuse or backfill gaps in §1.
+2. The next free identifier is **D107**. Do not reuse or backfill gaps in §1.
 3. An entry MUST state: the decision, the document that normatively owns it, and
    — if it post-dates the freeze — its EPI-SPEC-001 basis in §4.
 4. A decision whose evidence is a measurement MUST cite a repository artifact
