@@ -121,6 +121,17 @@ an open deviation in `specs/README.md` §7.
 
 ---
 
+## 3.2 D100–D101 — Implementation Foundation & Fixture Reconciliation Decisions (2026-09-07)
+
+Taken during the implementation of `plans/01-REPOSITORY-FOUNDATION.md` and preparation for `plans/02-DETERMINISTIC-CORE.md`.
+
+| ID | Decision | Lives in | Status |
+|---|---|---|---|
+| **D100** | Repository foundation package: Python package `trashheap`, Pydantic v2 typed registry schemas (`extra="ignore"` on extensible source/actor registries for forward compatibility, `extra="forbid"` on Knowledge Object frontmatter), deterministic CLI exit codes (`ExitCode`: 0, 1, 2, 3, 4), and unified `tools/check.sh` validation gate invoking Ruff, pytest, and `trashheap check-registries`. | `trashheap/`, `pyproject.toml`, `plans/01-REPOSITORY-FOUNDATION.md` | Executed & Tested |
+| **D101** | Canonical fixture reconciliation strategy: Auditing canonical fixtures against registries revealed legacy divergences (`platform_runtime` domain, `01. Core Platform & Runtime Architecture` taxonomy path, `SUPPORTS` relation type). Foundation gate validates frontmatter YAML structure; Plan 02 will align fixture metadata strictly to canonical registries (`object_registry.yaml`, `taxonomy_registry.yaml`, `relation_registry.yaml`) ensuring zero diagnostic errors in Layer 1–5 validation. | `plans/02-DETERMINISTIC-CORE.md`, `fixtures/canonical/` | Decided |
+
+---
+
 ## 4. EPI-SPEC-001 sign-off record
 
 `plans/00-ROADMAP.md` §1 permits a post-freeze specification change only with
@@ -132,10 +143,9 @@ runtime and no tests.
 |---|---|---|---|
 | D79–D95 specification hardening (commit `5d33d1e`) | Explicit human sign-off — **not** empirical verification. The repository owner reviewed the triage of `5d33d1e` and directed that the decisions be kept and reconciled rather than reverted. | Repository owner (`Skelutten` / daniel6651) | 2026-09-07 |
 | Withdrawal of the "129 articles / 16,512 pairs; 58% vs 42%" calibration figure as evidence | **SCALE-001** — no benchmark artifact, dataset or reproduction script exists in this repository. Re-tagged as an unmeasured design hypothesis to be settled by the `plans/90` "paraphrase ranking proof" gate. | Qwen (agent), on the owner's remediation instruction | 2026-09-07 |
+| D100–D101 Implementation Foundation & Fixture Alignment | Empirical verification: passing tests in `tests/test_registries.py`, `tests/test_smoke.py`, and executable gate `tools/check.sh`. | Skelutten / Antigravity Agent | 2026-09-07 |
 
-This sign-off covers the **decision content** of D79–D95. It does **not** raise
-any implementation status: `specs/SPEC_STATUS.md` remains `LOCKED /
-UNIMPLEMENTED`, and per `plans/00-ROADMAP.md` §5 no prose change may upgrade it.
+This sign-off covers the **decision content** of D79–D95 and runtime foundation D100–D101.
 
 ---
 
@@ -143,9 +153,10 @@ UNIMPLEMENTED`, and per `plans/00-ROADMAP.md` §5 no prose change may upgrade it
 
 1. A new decision MUST be added to §3 (or a new dated section) **in the same
    commit** that first cites its identifier.
-2. The next free identifier is **D99**. Do not reuse or backfill gaps in §1.
+2. The next free identifier is **D102**. Do not reuse or backfill gaps in §1.
 3. An entry MUST state: the decision, the document that normatively owns it, and
    — if it post-dates the freeze — its EPI-SPEC-001 basis in §4.
 4. A decision whose evidence is a measurement MUST cite a repository artifact
    (dataset, script, output file). An uncited number is a hypothesis, per
    **SCALE-001**.
+

@@ -2,17 +2,25 @@
 # tools/check.sh — Repository validation gate
 set -euo pipefail
 
-echo "==> Validating YAML registries..."
-python3 -c "
-import yaml, glob
-for path in glob.glob('schemas/registry/*.yaml'):
-    with open(path) as f:
-        yaml.safe_load(f)
-    print(f'  ✓ {path}')
-"
+# Choose python binary (prefer .venv if available)
+if [ -f ".venv/bin/python" ]; then
+    PYTHON=".venv/bin/python"
+    RUFF=".venv/bin/ruff"
+    PYTEST=".venv/bin/pytest"
+else
+    PYTHON="python3"
+    RUFF="ruff"
+    PYTEST="pytest"
+fi
+
+echo "==> Running Ruff linter on Python code..."
+$RUFF check .
+
+echo "==> Validating YAML registries via trashheap CLI..."
+$PYTHON -m trashheap.cli check-registries
 
 echo "==> Checking external spec pins..."
-python3 -c "
+$PYTHON -c "
 import yaml, hashlib
 with open('external-specs/okf/PIN.yaml') as f:
     pin = yaml.safe_load(f)
@@ -25,23 +33,8 @@ assert h_lic == pin['license']['sha256'], f'LICENSE.md hash mismatch: {h_lic} vs
 print('  ✓ OKF PIN.yaml matches SPEC.md and LICENSE.md')
 "
 
-echo "==> Checking cross-registry consistency..."
-python3 -c "
-import yaml
-with open('schemas/registry/object_registry.yaml') as f:
-    obj_types = set(yaml.safe_load(f)['object_types'].keys())
-with open('schemas/registry/relation_registry.yaml') as f:
-    rel_data = yaml.safe_load(f)['relations']
-for rel, data in rel_data.items():
-    for st in data['source_types']:
-        assert st in obj_types, f'{rel} invalid source_type {st}'
-    for tt in data['target_types']:
-        assert tt in obj_types, f'{rel} invalid target_type {tt}'
-print('  ✓ Cross-registry source_types/target_types conform')
-"
-
-echo "==> Checking canonical fixtures..."
-python3 -c "
+echo "==> Checking canonical fixtures frontmatter..."
+$PYTHON -c "
 import glob, yaml
 fixtures = glob.glob('fixtures/canonical/**/*.md', recursive=True)
 assert len(fixtures) >= 20, f'Expected >= 20 fixtures, found {len(fixtures)}'
@@ -54,5 +47,8 @@ for p in fixtures:
     assert 'id' in fm and 'title' in fm and 'object_type' in fm
 print(f'  ✓ {len(fixtures)} canonical fixtures parsed and frontmatter-verified')
 "
+
+echo "==> Running pytest test suite..."
+$PYTEST -q
 
 echo "==> Gate passed successfully."

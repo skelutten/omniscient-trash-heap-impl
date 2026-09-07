@@ -1,6 +1,6 @@
 # Plan 01 — Repository foundation
 
-> **Status:** proposed, not started
+> **Status:** complete (2026-09-07)
 > **Prerequisite:** none
 > **Next:** `02-DETERMINISTIC-CORE.md`
 
