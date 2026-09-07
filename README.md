@@ -125,18 +125,18 @@ ln -sfn $(pwd)/.agents/skills/trashheap ~/.agents/skills/trashheap
 The system strictly enforces physical separation between code, test fixtures, and real wiki corpora:
 
 1. **Engine & Implementation:**
-   - Location: `/home/daniel6651/omniscient-trash-heap-impl` (this repository)
+   - Location: `/home/$USER/omniscient-trash-heap-impl` (this repository)
    - CLI package: `trashheap/`
    - Local test suites: `tests/`
 2. **Canonical Reference Corpus (Test Fixtures):**
    - Location: `fixtures/canonical/`
    - Contains 20 certified reference Knowledge Objects used for conformance testing and CI gates. Standard default for `--corpus-root`.
 3. **Converted Real-World Wiki:**
-   - Location: `/home/daniel6651/wiki`
+   - Location: `/home/$USER/wiki`
    - Contains **572 migrated articles** categorized under `personal/` taxonomy directories (e.g. `02_formella_vetenskaper_matematik/` [formal sciences & mathematics], `04_psykologi_kognition/` [psychology & cognition]).
    - Every note carries full YAML frontmatter and unbroken provenance back to its original source (`source_refs`).
 4. **Historical Raw Capture:**
-   - Location: `/home/daniel6651/wiki-old/wiki`
+   - Location: `/home/$USER/wiki-old/wiki`
    - Preserved as a read-only historical snapshot.
 
 ---
@@ -149,7 +149,7 @@ The `query` command runs a 4-way hybrid Reciprocal Rank Fusion (RRF, $k=60$) sea
 Because the default root is `fixtures/canonical/`, specify `--corpus-root`:
 
 ```bash
-uv run trashheap query "poker" --corpus-root /home/daniel6651/wiki --include-drafts
+uv run trashheap query "poker" --corpus-root /home/$USER/wiki --include-drafts
 ```
 
 > **Why `--include-drafts`?**  
@@ -158,13 +158,13 @@ uv run trashheap query "poker" --corpus-root /home/daniel6651/wiki --include-dra
 ### Advanced Search Flags
 ```bash
 # Enable opt-in offline 384-dimensional dense vector embeddings
-uv run trashheap query "game theory decision making" --corpus-root /home/daniel6651/wiki --include-drafts --vector
+uv run trashheap query "game theory decision making" --corpus-root /home/$USER/wiki --include-drafts --vector
 
 # Filter by scope
 uv run trashheap query "architecture" --scope engineering
 
 # Include full article body in the JSON payload
-uv run trashheap query "poker" --corpus-root /home/daniel6651/wiki --include-drafts --include-body
+uv run trashheap query "poker" --corpus-root /home/$USER/wiki --include-drafts --include-body
 ```
 
 ---
@@ -175,13 +175,13 @@ In the Evidence Bundle, `body_excerpt` is intentionally capped at $\le 250$ char
 
 ### Option 1: `trashheap show` (Recommended)
 ```bash
-uv run trashheap show PERS-DOC-MIG_DOYLE_BRUNSON_SUPER_SYSTEM_1_2CC294-0001 --corpus-root /home/daniel6651/wiki
+uv run trashheap show PERS-DOC-MIG_DOYLE_BRUNSON_SUPER_SYSTEM_1_2CC294-0001 --corpus-root /home/$USER/wiki
 ```
 
 ### Option 2: Direct Markdown file access
 Open the note directly from the filesystem in any editor (`less`, `cat`, VS Code, Obsidian):
 ```bash
-cat /home/daniel6651/wiki/personal/02_formella_vetenskaper_matematik/PERS-DOC-MIG_DOYLE_BRUNSON_SUPER_SYSTEM_1_2CC294-0001.md
+cat /home/$USER/wiki/personal/02_formella_vetenskaper_matematik/PERS-DOC-MIG_DOYLE_BRUNSON_SUPER_SYSTEM_1_2CC294-0001.md
 ```
 
 ---
@@ -191,8 +191,8 @@ cat /home/daniel6651/wiki/personal/02_formella_vetenskaper_matematik/PERS-DOC-MI
 Add these to your `~/.bashrc` for instant terminal access without typing paths:
 
 ```bash
-alias mywiki='uv run --directory /home/daniel6651/omniscient-trash-heap-impl trashheap query --corpus-root /home/daniel6651/wiki --include-drafts'
-alias mywikishow='uv run --directory /home/daniel6651/omniscient-trash-heap-impl trashheap show --corpus-root /home/daniel6651/wiki'
+alias mywiki='uv run --directory /home/$USER/omniscient-trash-heap-impl trashheap query --corpus-root /home/$USER/wiki --include-drafts'
+alias mywikishow='uv run --directory /home/$USER/omniscient-trash-heap-impl trashheap show --corpus-root /home/$USER/wiki'
 ```
 
 Then simply use:

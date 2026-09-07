@@ -177,7 +177,7 @@ relations:
 
 ## 5. Non-Functional Requirements & Performance Targets
 
-- **NFR-1 (Runtime Baseline):** Python `>=3.11`, Pydantic v2, PyYAML, `uv` package management, `pytest`, and `ruff` linting/formatting per [`PREFERRED-TECH-STACK.md`](file:///home/daniel6651/llm-wiki-oe/input-artifacts/PREFERRED-TECH-STACK.md).
+- **NFR-1 (Runtime Baseline):** Python `>=3.11`, Pydantic v2, PyYAML, `uv` package management, `pytest`, and `ruff` linting/formatting per [`PREFERRED-TECH-STACK.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/input-artifacts/PREFERRED-TECH-STACK.md).
 - **NFR-2 (Performance Budgets & Empirical Targets):**
   - Schema linting and validation of 1,000 notes MUST satisfy the design budget of $< 2.0$ seconds (single-pass I/O).
   - Full disposable index rebuild of 1,000 notes MUST complete in $< 5.0$ seconds.
