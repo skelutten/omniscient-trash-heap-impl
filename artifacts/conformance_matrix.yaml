@@ -1,6 +1,6 @@
 schema_version: 1.0.0
 matrix_id: conformance_matrix
-generated_at: '2026-09-07T21:38:08.250524+00:00'
+generated_at: '2026-09-07T21:43:51.220067+00:00'
 evidence_type: generated_projection
 note: "Generated evidence per VALIDATION.md \xA710.5 and CONFORM-001. Not a normative\
   \ specification."
