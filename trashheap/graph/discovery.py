@@ -129,9 +129,7 @@ class DiscoveryEngine:
 
         return duplicates
 
-    def scan_topological_gaps(
-        self, corpus_hash: str
-    ) -> List[RelationDiscoveryCandidate]:
+    def scan_topological_gaps(self, corpus_hash: str) -> List[RelationDiscoveryCandidate]:
         """Scan for topological knowledge gaps via 2-of-3 predicates (DISC-003, DISCOVERY.md §10.2.1).
 
         A = same_scope_and_community
@@ -212,10 +210,9 @@ class DiscoveryEngine:
                 if (u, v) in canonical_edges:
                     continue
 
-                pred_a = (
-                    node_to_community.get(u) is not None
-                    and node_to_community.get(u) == node_to_community.get(v)
-                )
+                pred_a = node_to_community.get(u) is not None and node_to_community.get(
+                    u
+                ) == node_to_community.get(v)
 
                 shared_chunks = chunk_hits[u] & chunk_hits[v]
                 cooc_count = len(shared_chunks)
@@ -522,7 +519,9 @@ class DiscoveryLifecycleManager:
                 os.unlink(temp_audit.name)
             raise
 
-    def add_candidates(self, new_candidates: List[DiscoveryCandidate], actor: str = "system") -> int:
+    def add_candidates(
+        self, new_candidates: List[DiscoveryCandidate], actor: str = "system"
+    ) -> int:
         """Add newly discovered candidates in pending state (DELTA-CORE-004)."""
         added = 0
         now = current_iso_timestamp()
@@ -554,7 +553,9 @@ class DiscoveryLifecycleManager:
 
         valid_decisions = {"approved", "rejected", "reviewed"}
         if decision not in valid_decisions:
-            raise ValueError(f"Invalid review decision: {decision}. Must be one of {valid_decisions}")
+            raise ValueError(
+                f"Invalid review decision: {decision}. Must be one of {valid_decisions}"
+            )
 
         candidate = self.candidates[candidate_id]
         prev_status = candidate.status
@@ -599,9 +600,13 @@ class DiscoveryLifecycleManager:
         if isinstance(candidate, RelationDiscoveryCandidate):
             # 1. Verify endpoints still exist
             if candidate.source_id not in objects_by_id:
-                raise ValueError(f"Promotion failed: source object '{candidate.source_id}' does not exist")
+                raise ValueError(
+                    f"Promotion failed: source object '{candidate.source_id}' does not exist"
+                )
             if candidate.target_id not in objects_by_id:
-                raise ValueError(f"Promotion failed: target object '{candidate.target_id}' does not exist")
+                raise ValueError(
+                    f"Promotion failed: target object '{candidate.target_id}' does not exist"
+                )
 
             # 2. Reject self-references
             if candidate.source_id == candidate.target_id:
@@ -611,10 +616,14 @@ class DiscoveryLifecycleManager:
             rel_type = candidate.suggested_relation or "RELATES_TO"
             rel_def = registries.relations.get(rel_type)
             if not rel_def:
-                raise ValueError(f"Promotion failed: unknown relation type '{rel_type}' in relation registry")
+                raise ValueError(
+                    f"Promotion failed: unknown relation type '{rel_type}' in relation registry"
+                )
 
             if getattr(rel_def, "is_virtual_inverse", False):
-                raise ValueError(f"Promotion failed: virtual inverse relation '{rel_type}' cannot be promoted")
+                raise ValueError(
+                    f"Promotion failed: virtual inverse relation '{rel_type}' cannot be promoted"
+                )
 
         prev_status = candidate.status
         candidate.status = "promoted"

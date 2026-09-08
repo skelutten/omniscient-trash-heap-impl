@@ -32,7 +32,9 @@ def scan_canonical_inputs(
     entries: List[Tuple[str, Path, str]] = []
 
     # 1. Canonical Markdown objects
-    canon_dir = corpus_dir if corpus_dir is not None else (workspace_root / "fixtures" / "canonical")
+    canon_dir = (
+        corpus_dir if corpus_dir is not None else (workspace_root / "fixtures" / "canonical")
+    )
     if canon_dir.exists():
         for p in sorted(canon_dir.glob("**/*.md")):
             if p.is_file():

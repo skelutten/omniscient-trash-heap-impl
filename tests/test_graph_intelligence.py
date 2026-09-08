@@ -252,7 +252,9 @@ def test_discovery_lifecycle_and_audit_disc_005(tmp_path: Path):
     assert swept >= 1
     assert mgr.candidates["DISC-GAP-OLD-002"].status == "expired"
     # Audit log updated with expiry
-    assert any(a.new_status == "expired" and a.candidate_id == "DISC-GAP-OLD-002" for a in mgr.audit_log)
+    assert any(
+        a.new_status == "expired" and a.candidate_id == "DISC-GAP-OLD-002" for a in mgr.audit_log
+    )
 
 
 def test_opt_in_graph_retrieval():
@@ -327,13 +329,28 @@ def test_graph_and_discover_cli(tmp_path: Path):
     assert rc == 0
 
     # Read candidates to find one to review
-    candidates_lines = (disc_dir / "candidates.jsonl").read_text(encoding="utf-8").strip().splitlines()
+    candidates_lines = (
+        (disc_dir / "candidates.jsonl").read_text(encoding="utf-8").strip().splitlines()
+    )
     assert len(candidates_lines) > 0
     first_cand = json.loads(candidates_lines[0])
     cid = first_cand["candidate_id"]
 
     # 5. discover review
-    rc = main(["discover", "review", cid, "--decision", "approved", "--actor", "lead_architect", "--discovery-dir", str(disc_dir), "--json"])
+    rc = main(
+        [
+            "discover",
+            "review",
+            cid,
+            "--decision",
+            "approved",
+            "--actor",
+            "lead_architect",
+            "--discovery-dir",
+            str(disc_dir),
+            "--json",
+        ]
+    )
     assert rc == 0
 
     # 6. discover sweep

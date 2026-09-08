@@ -246,10 +246,14 @@ class PubmedBenchmarkHarness:
         ]
         controls_refused = 0
         for ctrl_q in controls:
-            ctrl_bundle = retriever.retrieve(query=ctrl_q, cli_params={"max_results": 10, "min_relevance": 0.1})
+            ctrl_bundle = retriever.retrieve(
+                query=ctrl_q, cli_params={"max_results": 10, "min_relevance": 0.1}
+            )
             # Stage 1 refusal: no candidates or zero relevant results
             results = ctrl_bundle.get("evidence_bundle", [])
-            if not results or all(r.get("score_components", {}).get("final", 0) < 0.1 for r in results):
+            if not results or all(
+                r.get("score_components", {}).get("final", 0) < 0.1 for r in results
+            ):
                 controls_refused += 1
 
         # Test citation bracket filtering

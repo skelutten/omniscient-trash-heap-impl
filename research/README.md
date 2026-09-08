@@ -15,8 +15,11 @@ records for ideas that were adopted.
 |---|---|---|
 | `GRAPH-RAG-RESEARCH-NOTES.md` | Raw dialogue transcript | `STRUCTURAL-GRAPH.md` (SG-001–SG-020), `OKF-INTEROP.md` (OKF-001–OKF-010), `ARCHITECTURE.md` §2.2–§2.3 (Knowledge Library paradigm) |
 | `llm-wiki-pattern-karpathy.md` | Prior-art provenance record | The overall wiki pattern; `~/.kiro/wiki` conventions; `RETRIEVAL.md`, `BUNDLE-009`, `DISCOVERY.md` promotion lifecycle |
-| `related-implementations.md` | Prior-art implementations (P1–P7) | graybox, GraphRAG, G-Memory, `files.md`, `synthadoc`, HiSkill, Rel(AI)Build: source of **CANON-006**, ontological triad validation, and deviations 21/23 |
+| `related-implementations.md` | Prior-art implementations (P1–P10) | graybox, GraphRAG, G-Memory, `files.md`, `synthadoc`, HiSkill, Rel(AI)Build, OpenWiki, agentic-kg, production-grade-agents: source of **CANON-006**, ontological triad validation, and deviations 21/23 |
 | `critiques-and-community-feedback.md` | Critique + community feedback (S1–S7) | Implementation guidance: `VALIDATION.md` §10.1/§12, `ONTOLOGY.md` REL-004a, `GRAPH-RETRIEVAL.md` §8, S4 hallucination propagation, S5 cognitive erosion, S6 RecMem recurrence, S7 deterministic pipelines |
+| `openwiki-grounded-claims-and-local-serving.md` | Empirical road test review | `STRUCTURAL-GRAPH.md` (SG-001–SG-020), `OKF-INTEROP.md` (OKF-001–OKF-010), `RETRIEVAL.md` (RET-009), `INGEST-STAGING.md` (durable checkpoints) |
+| `pubmed-zero-llm-knowledge-graph.md` | Adversarial benchmark review | `RETRIEVAL.md` (§9.6, §9.7, RET-006–RET-009), `GRAPH-INTELLIGENCE.md` (§11.1 CSR), `INGEST-ADAPTERS.md` (§3.8, ADA-008), `plans/96-OPT-IN-PUBMED-BENCHMARK.md` |
+| `agentic-architectures-and-production-systems.md` | Pattern taxonomy & enterprise review | `ARCHITECTURE.md` (CANON-006, 7 layers), `INGEST-STAGING.md` (CSCC/DSCP), `VALIDATION.md` (epistemic firewalls), `RETRIEVAL.md` (deterministic routing) |
 | `sources-and-expanded-literature.md` | Curated Survey & Foundations | Core literature (OKF, lat.md, Graphify, Karpathy, Jin, Shuyi Wang, SkillClaw, MemGraphRAG, BM25, RRF, HNSW, ARIES, Shannon, RE2, PROV-O, KR&R, Cyc, SKOS, Facets, Bloom, Chunking, HippoRAG, LightRAG, A-MEM, CoALA, CRAG) |
 
 

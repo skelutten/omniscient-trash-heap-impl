@@ -5,6 +5,7 @@ from trashheap.graph.analysis import (
     chunk_text_deterministic,
     normalize_chunk_text,
 )
+from trashheap.graph.csr import CsrGraphProjection
 from trashheap.graph.discovery import (
     DiscoveryEngine,
     DiscoveryLifecycleManager,
@@ -29,6 +30,7 @@ from trashheap.graph.retrieval import GraphFeatureScorer
 
 __all__ = [
     "Community",
+    "CsrGraphProjection",
     "DerivationMetadata",
     "DerivedEdge",
     "DiscoveryAuditEntry",

@@ -558,16 +558,11 @@ def generate_conformance_matrix(
         status = mapped.get("status", "UNIMPLEMENTED")
 
         # Verify physical presence in repository
-        impl_ok = (
-            impl != "UNIMPLEMENTED"
-            and all((workspace_root / p.strip()).exists() for p in impl.split(","))
+        impl_ok = impl != "UNIMPLEMENTED" and all(
+            (workspace_root / p.strip()).exists() for p in impl.split(",")
         )
 
-        test_files = [
-            workspace_root / p.strip()
-            for p in test.split(",")
-            if p.strip() != "planned"
-        ]
+        test_files = [workspace_root / p.strip() for p in test.split(",") if p.strip() != "planned"]
         test_funcs_found = sum(count_executable_tests(tf) for tf in test_files)
         for tf in test_files:
             if tf not in seen_test_paths:
@@ -626,7 +621,9 @@ def generate_conformance_matrix(
                 old_families = old_data.get("families", [])
                 new_summary_check = {k: v for k, v in summary.items()}
                 old_summary_check = {k: old_summary.get(k) for k in new_summary_check}
-                if new_summary_check == old_summary_check and old_families == [f.to_dict() for f in entries]:
+                if new_summary_check == old_summary_check and old_families == [
+                    f.to_dict() for f in entries
+                ]:
                     existing_generated_at = old_data.get("generated_at")
         except Exception:
             pass

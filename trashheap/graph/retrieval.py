@@ -76,7 +76,14 @@ class GraphFeatureScorer:
 
         # phi4: 1 if c and at least one seed belong to same community, else 0
         c_comm = self.node_to_community.get(candidate_id)
-        phi4 = 1.0 if (c_comm is not None and any(self.node_to_community.get(s) == c_comm for s in seed_nodes)) else 0.0
+        phi4 = (
+            1.0
+            if (
+                c_comm is not None
+                and any(self.node_to_community.get(s) == c_comm for s in seed_nodes)
+            )
+            else 0.0
+        )
 
         # phi5: PPR (0.0 when disabled)
         phi5 = 0.0

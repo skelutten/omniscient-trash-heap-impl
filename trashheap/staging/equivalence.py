@@ -50,9 +50,13 @@ def sync_baseline_to_parquet(
             cross_scope=False,
             inferred_domain=fm.get("domain", "software_engineering"),
             inferred_taxonomy_id=fm.get("taxonomy_id", "TX-ENG-01"),
-            inferred_facets=json.dumps({
-                k: v for k, v in fm.items() if k in ("language", "audience", "toolchain", "lifecycle")
-            }),
+            inferred_facets=json.dumps(
+                {
+                    k: v
+                    for k, v in fm.items()
+                    if k in ("language", "audience", "toolchain", "lifecycle")
+                }
+            ),
             epistemic_status=fm.get("evidence", "inferred"),
             evidence_level="trajectory_observed",
             validation_status=fm.get("verification", "unverified"),
@@ -157,11 +161,7 @@ def verify_backend_equivalence(
         if p_id not in baseline_map:
             missing_in_baseline.append(p_id)
 
-    is_equiv = (
-        len(missing_in_parquet) == 0
-        and len(missing_in_baseline) == 0
-        and len(diffs) == 0
-    )
+    is_equiv = len(missing_in_parquet) == 0 and len(missing_in_baseline) == 0 and len(diffs) == 0
 
     return EquivalenceReport(
         is_equivalent=is_equiv,

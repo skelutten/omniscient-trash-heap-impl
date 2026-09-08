@@ -28,6 +28,103 @@ RETRIEVAL_VERSION = "1.0.0"
 RANKING_POLICY_VERSION = "1.0.0"
 RELATION_REGISTRY_VERSION = "3.8.10"
 
+# Stage 1 & Stage 2 Refusal Reason Codes (specs/RETRIEVAL.md §9.6, RET-006..RET-008)
+UNGROUNDED_DESCRIPTOR = "UNGROUNDED_DESCRIPTOR"
+NO_ADMISSIBLE_PATH = "NO_ADMISSIBLE_PATH"
+EMPTY_BODY_TERMINAL = "EMPTY_BODY_TERMINAL"
+SUPERSEDED_EVIDENCE = "SUPERSEDED_EVIDENCE"
+INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+
+STOPWORDS: Set[str] = {
+    "a",
+    "an",
+    "the",
+    "and",
+    "or",
+    "but",
+    "if",
+    "then",
+    "else",
+    "when",
+    "at",
+    "from",
+    "by",
+    "for",
+    "with",
+    "about",
+    "against",
+    "between",
+    "into",
+    "through",
+    "during",
+    "before",
+    "after",
+    "above",
+    "below",
+    "to",
+    "of",
+    "up",
+    "down",
+    "in",
+    "out",
+    "on",
+    "off",
+    "over",
+    "under",
+    "again",
+    "further",
+    "once",
+    "here",
+    "there",
+    "where",
+    "why",
+    "how",
+    "all",
+    "any",
+    "both",
+    "each",
+    "few",
+    "more",
+    "most",
+    "other",
+    "some",
+    "such",
+    "no",
+    "nor",
+    "not",
+    "only",
+    "own",
+    "same",
+    "so",
+    "than",
+    "too",
+    "very",
+    "can",
+    "will",
+    "just",
+    "should",
+    "now",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "have",
+    "has",
+    "had",
+    "having",
+    "do",
+    "does",
+    "did",
+    "doing",
+    "would",
+    "could",
+    "role",
+    "play",
+}
+
 DEFAULT_RETRIEVAL_PARAMS: Dict[str, Any] = {
     "seed_top_k": 10,
     "max_depth": 2,
@@ -45,6 +142,7 @@ DEFAULT_RETRIEVAL_PARAMS: Dict[str, Any] = {
     "conflict_strategy": "epistemic_then_confidence",
     "enable_vector": False,
     "retrieval_mode": "canonical",
+    "enforce_structural_gates": False,
 }
 
 CATEGORY_PRIORITY: Dict[str, int] = {
@@ -212,6 +310,101 @@ def epistemic_conflict_key(ko: KnowledgeObject) -> Tuple[Any, ...]:
     return (v_val, a_val, c_val, e_val, conf, last_verified, id_neg_ascii)
 
 
+def prepare_scoring_window(
+    text: str,
+    title: Optional[str] = None,
+    max_tokens: int = 512,
+    chars_per_token: int = 4,
+) -> str:
+    """Prepare a section-aware scoring window defending against the Truncation Trap (RET-009).
+
+    Rather than blindly slicing text[:max_tokens], this preserves document opening
+    and explicitly extracts trailing conclusion/findings/summary sections.
+    """
+    max_chars = max_tokens * chars_per_token
+    if len(text) <= max_chars:
+        return text
+
+    conclusion_patterns = [
+        r"(?i)(##+\s*(conclusions?|findings?|discussion|summary).*)",
+        r"(?i)(\n(conclusions?|findings?):\s*.*)",
+    ]
+    conclusion_match = None
+    for pat in conclusion_patterns:
+        m = re.search(pat, text)
+        if m:
+            conclusion_match = m
+            break
+
+    half_budget = max_chars // 2
+    if conclusion_match:
+        conc_start = conclusion_match.start()
+        conc_text = text[conc_start:]
+        if len(conc_text) > half_budget:
+            conc_text = conc_text[:half_budget]
+        opening_budget = max_chars - len(conc_text) - 10
+        opening_text = text[:opening_budget].rstrip()
+        return f"{opening_text}\n\n[...]\n\n{conc_text.lstrip()}"
+
+    opening = text[:half_budget].rstrip()
+    trailing = text[-half_budget:].lstrip()
+    return f"{opening}\n\n[...]\n\n{trailing}"
+
+
+def evaluate_stage_2_refusal(
+    evidence_bundle: Dict[str, Any],
+    claim_entailment_score: Optional[float] = None,
+    calibrated_confidence: Optional[float] = None,
+    min_entailment: float = 0.5,
+    min_confidence: float = 0.65,
+) -> Dict[str, Any]:
+    """Evaluate Stage 2 propositional refusal gates (RET-007, specs/RETRIEVAL.md §9.6).
+
+    A non-empty graph path certifies topological aboutness, NOT propositional truth.
+    Stage 2 evaluates candidate claim entailment and calibrated model confidence.
+    """
+    if evidence_bundle.get("retrieval_status") == "REFUSED":
+        return evidence_bundle.get("refusal") or {"stage": 1, "status": "REFUSED"}
+
+    entailment_passed = True
+    if claim_entailment_score is not None and claim_entailment_score < min_entailment:
+        entailment_passed = False
+
+    confidence_passed = True
+    if calibrated_confidence is not None and calibrated_confidence < min_confidence:
+        confidence_passed = False
+
+    if not entailment_passed or not confidence_passed:
+        return {
+            "status": "REFUSED",
+            "stage": 2,
+            "type": "propositional",
+            "reason": INSUFFICIENT_EVIDENCE,
+            "message": "Passage evidence fails propositional entailment or calibrated confidence threshold",
+            "gates": {
+                "claim_entailment": {
+                    "passed": entailment_passed,
+                    "score": claim_entailment_score,
+                    "threshold": min_entailment,
+                },
+                "calibrated_confidence": {
+                    "passed": confidence_passed,
+                    "confidence": calibrated_confidence,
+                    "threshold": min_confidence,
+                },
+            },
+        }
+
+    return {
+        "status": "ADMISSIBLE",
+        "stage": 2,
+        "gates": {
+            "claim_entailment": {"passed": True, "score": claim_entailment_score},
+            "calibrated_confidence": {"passed": True, "score": calibrated_confidence},
+        },
+    }
+
+
 class HybridRetriever:
     """Hybrid RRF retriever for Knowledge Objects."""
 
@@ -244,6 +437,47 @@ class HybridRetriever:
             rels = ko.frontmatter_dict.get("relations", [])
             if isinstance(rels, list):
                 self.relations_by_source[ko.id] = [r for r in rels if isinstance(r, dict)]
+
+        # Lazy CSR graph projection
+        self._csr_projection: Optional[Any] = None
+
+        # Build vocabulary for Stage 1 ontology grounding gate (RET-006)
+        self.ontology_terms: Set[str] = set()
+        for ko in self.corpus.objects:
+            if ko.id:
+                self.ontology_terms.add(ko.id.lower())
+            if ko.title:
+                for token in tokenize(ko.title):
+                    if token not in STOPWORDS and len(token) > 2:
+                        self.ontology_terms.add(token)
+            if ko.frontmatter:
+                for kw in ko.frontmatter.keywords:
+                    for token in tokenize(kw):
+                        if token not in STOPWORDS and len(token) > 2:
+                            self.ontology_terms.add(token)
+                for alias in ko.frontmatter.aliases:
+                    for token in tokenize(alias):
+                        if token not in STOPWORDS and len(token) > 2:
+                            self.ontology_terms.add(token)
+                if ko.frontmatter.taxonomy_path:
+                    for part in ko.frontmatter.taxonomy_path.split("/"):
+                        for token in tokenize(part):
+                            if token not in STOPWORDS and len(token) > 2:
+                                self.ontology_terms.add(token)
+
+        if hasattr(self.registries, "taxonomy_registry") and self.registries.taxonomy_registry:
+            for term in getattr(self.registries.taxonomy_registry, "taxonomies", {}).keys():
+                for token in tokenize(str(term)):
+                    if token not in STOPWORDS and len(token) > 2:
+                        self.ontology_terms.add(token)
+
+    @property
+    def csr(self):
+        if self._csr_projection is None:
+            from trashheap.graph.csr import CsrGraphProjection
+
+            self._csr_projection = CsrGraphProjection.build_from_corpus(self.corpus, directed=False)
+        return self._csr_projection
 
     def retrieve(
         self,
@@ -690,7 +924,100 @@ class HybridRetriever:
                 continue
             surviving_candidates.append(nid)
 
-        final_node_ids = surviving_candidates[:max_results]
+        # Evaluate Stage 1 Structural Refusal Gates (specs/RETRIEVAL.md §9.6, RET-006, RET-007)
+        # Gate 1: Ontology Grounding Gate
+        query_tokens = [t for t in tokenize(query) if t not in STOPWORDS and len(t) > 2]
+        grounded_terms = [t for t in query_tokens if t in self.ontology_terms]
+        grounding_passed = len(grounded_terms) > 0 if query_tokens else True
+
+        # Gate 2: Path Admissibility Gate
+        mentioned_nids = [t.upper() for t in tokenize(query) if t.upper() in self.csr.node_to_int]
+        path_admissibility_passed = True
+        if len(mentioned_nids) >= 2:
+            has_any_path = False
+            for i in range(len(mentioned_nids)):
+                for j in range(i + 1, len(mentioned_nids)):
+                    if self.csr.has_path(
+                        mentioned_nids[i],
+                        mentioned_nids[j],
+                        max_depth=parameters_used.get("max_depth", 2),
+                    ):
+                        has_any_path = True
+                        break
+                if has_any_path:
+                    break
+            path_admissibility_passed = has_any_path
+
+        # Gate 3: Terminal Validity Gate
+        terminal_validity_passed = True
+        if surviving_candidates:
+            valid_terminals = [
+                nid
+                for nid in surviving_candidates
+                if eligible_objects[nid].raw_body and eligible_objects[nid].raw_body.strip()
+            ]
+            terminal_validity_passed = len(valid_terminals) > 0
+
+        # Gate 4: Retraction / Supersession Gate
+        retraction_passed = True
+        if surviving_candidates:
+            active_candidates = []
+            for nid in surviving_candidates:
+                ko_obj = eligible_objects[nid]
+                status_str = (ko_obj.frontmatter_dict.get("status") or "").lower()
+                is_superseded = status_str in ["superseded", "retracted"]
+                out_rels = self.relations_by_source.get(nid, [])
+                if any(r.get("type") in ["SUPERSEDED_BY", "INVALIDATED_BY"] for r in out_rels):
+                    is_superseded = True
+                if not is_superseded:
+                    active_candidates.append(nid)
+            retraction_passed = len(active_candidates) > 0
+
+        stage_1_passed = (
+            grounding_passed
+            and path_admissibility_passed
+            and terminal_validity_passed
+            and retraction_passed
+        )
+        refusal_reason = None
+        refusal_message = None
+        if not grounding_passed:
+            refusal_reason = UNGROUNDED_DESCRIPTOR
+            refusal_message = "Query concepts failed ontology grounding in registered taxonomy"
+        elif not path_admissibility_passed:
+            refusal_reason = NO_ADMISSIBLE_PATH
+            refusal_message = "No admissible graph path connects the grounded concepts within maximum traversal depth"
+        elif not terminal_validity_passed:
+            refusal_reason = EMPTY_BODY_TERMINAL
+            refusal_message = (
+                "All retrieved terminal candidate nodes contain empty or unquotable bodies"
+            )
+        elif not retraction_passed:
+            refusal_reason = SUPERSEDED_EVIDENCE
+            refusal_message = (
+                "All candidate evidence nodes are superseded or retracted without active successors"
+            )
+
+        enforce_refusal = parameters_used.get("enforce_structural_gates", False)
+        if enforce_refusal and not stage_1_passed:
+            retrieval_status = "REFUSED"
+            refusal = {
+                "stage": 1,
+                "type": "structural",
+                "reason": refusal_reason,
+                "message": refusal_message,
+                "gates": {
+                    "ontology_grounding": grounding_passed,
+                    "path_admissibility": path_admissibility_passed,
+                    "terminal_validity": terminal_validity_passed,
+                    "retraction_supersession": retraction_passed,
+                },
+            }
+            final_node_ids = []
+        else:
+            retrieval_status = "ADMISSIBLE"
+            refusal = None
+            final_node_ids = surviving_candidates[:max_results]
 
         # 8. Build Evidence Bundle Nodes
         evidence_bundle_nodes: List[Dict[str, Any]] = []
@@ -749,6 +1076,9 @@ class HybridRetriever:
                 "rrf_score": rrf_scores[nid],
                 "reranker_score": rrf_scores[nid],  # D83: defaults to RRF
                 "final": rrf_scores[nid],
+                "scoring_window": prepare_scoring_window(
+                    ko.raw_body, title=ko.title, max_tokens=512
+                ),
             }
 
             node_entry: Dict[str, Any] = {
@@ -791,7 +1121,9 @@ class HybridRetriever:
                         if ko.path and Path(ko.path).is_relative_to(self.workspace_root)
                         else (Path(ko.path).name if ko.path else None)
                     )
-                ) if ko.path else None,
+                )
+                if ko.path
+                else None,
             }
 
             if parameters_used.get("include_body"):
@@ -817,6 +1149,28 @@ class HybridRetriever:
             "ranking_policy_version": RANKING_POLICY_VERSION,
             "relation_registry_version": RELATION_REGISTRY_VERSION,
             "retrieval_mode": retrieval_mode,
+            "retrieval_status": retrieval_status,
+            "refusal": refusal,
+            "stage_1_structural_gates": {
+                "status": "PASSED" if stage_1_passed else "FAILED",
+                "reason": refusal_reason,
+                "message": refusal_message,
+                "gates": {
+                    "ontology_grounding": {
+                        "passed": grounding_passed,
+                        "grounded_terms": grounded_terms,
+                    },
+                    "path_admissibility": {
+                        "passed": path_admissibility_passed,
+                    },
+                    "terminal_validity": {
+                        "passed": terminal_validity_passed,
+                    },
+                    "retraction_supersession": {
+                        "passed": retraction_passed,
+                    },
+                },
+            },
             "modalities_available": modalities_available,
             "modalities_absent": modalities_absent,
             "parameters_used": parameters_used,

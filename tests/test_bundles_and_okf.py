@@ -62,7 +62,9 @@ def test_okf_concept_export_field_mapping():
     assert fm["trashheap"]["status"] == ko.frontmatter_dict.get("status")
     assert fm["trashheap"]["taxonomy_id"] == ko.frontmatter_dict.get("taxonomy_id")
     assert "epistemology" in fm["trashheap"]
-    assert fm["trashheap"]["epistemology"]["verification"] == ko.frontmatter_dict.get("verification")
+    assert fm["trashheap"]["epistemology"]["verification"] == ko.frontmatter_dict.get(
+        "verification"
+    )
     assert "provenance" in fm["trashheap"]
     assert fm["trashheap"]["provenance"]["confidence"] == ko.frontmatter_dict.get("confidence")
 
@@ -261,14 +263,21 @@ def test_cli_bundle_export_and_import(tmp_path: Path, capsys):
     export_dir = tmp_path / "cli_bundle"
 
     # 1. Export
-    code = main([
-        "bundle", "export",
-        "--corpus-root", "fixtures/canonical",
-        "--output-dir", str(export_dir),
-        "--bundle-id", "BND-CLI-001",
-        "--title", "CLI Test Bundle",
-        "--json",
-    ])
+    code = main(
+        [
+            "bundle",
+            "export",
+            "--corpus-root",
+            "fixtures/canonical",
+            "--output-dir",
+            str(export_dir),
+            "--bundle-id",
+            "BND-CLI-001",
+            "--title",
+            "CLI Test Bundle",
+            "--json",
+        ]
+    )
     assert code == 0
     captured = capsys.readouterr()
     manifest_data = json.loads(captured.out)
@@ -277,11 +286,14 @@ def test_cli_bundle_export_and_import(tmp_path: Path, capsys):
     assert (export_dir / "bundle_manifest.json").is_file()
 
     # 2. Import
-    code = main([
-        "bundle", "import",
-        str(export_dir),
-        "--json",
-    ])
+    code = main(
+        [
+            "bundle",
+            "import",
+            str(export_dir),
+            "--json",
+        ]
+    )
     assert code == 0
     captured = capsys.readouterr()
     import_data = json.loads(captured.out)

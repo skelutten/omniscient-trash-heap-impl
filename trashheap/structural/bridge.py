@@ -21,7 +21,11 @@ class BridgeEngine:
 
     def __init__(self, workspace_root: Path, cache_dir: Optional[Path] = None):
         self.workspace_root = Path(workspace_root)
-        self.cache_dir = Path(cache_dir) if cache_dir else self.workspace_root / ".trashheap" / "cache" / "structural"
+        self.cache_dir = (
+            Path(cache_dir)
+            if cache_dir
+            else self.workspace_root / ".trashheap" / "cache" / "structural"
+        )
         self.bridges: Dict[str, BridgeEdge] = {}
 
     def load_bridges(self) -> None:
@@ -147,7 +151,9 @@ class BridgeEngine:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         payload = {k: v.model_dump() for k, v in sorted(self.bridges.items())}
 
-        with tempfile.NamedTemporaryFile("w", dir=self.cache_dir, delete=False, encoding="utf-8") as tf:
+        with tempfile.NamedTemporaryFile(
+            "w", dir=self.cache_dir, delete=False, encoding="utf-8"
+        ) as tf:
             json.dump(payload, tf, indent=2, sort_keys=True)
             temp_p = Path(tf.name)
         os.replace(temp_p, self.cache_dir / "bridges.json")

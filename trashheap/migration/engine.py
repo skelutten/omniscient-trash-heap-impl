@@ -31,16 +31,19 @@ from trashheap.slug import taxonomy_id_to_directory
 
 class MigrationError(Exception):
     """Base exception for migration errors."""
+
     pass
 
 
 class UnmanagedTargetError(MigrationError):
     """Raised when target directory exists and contains unmanaged non-migration files (Rule 2)."""
+
     pass
 
 
 class ChangedSourceError(MigrationError):
     """Raised when source corpus hash changed without a fresh target directory (Rule 2)."""
+
     pass
 
 
@@ -160,7 +163,7 @@ class MigrationEngine:
 
         # Re-verify source directory has not been mutated (Rule 1, Rule 7)
         post_source_hash, _ = compute_corpus_hash(source_dir)
-        source_mutated = (post_source_hash != source_hash)
+        source_mutated = post_source_hash != source_hash
 
         counts = {
             "total_source_files": len(file_records),
@@ -222,10 +225,14 @@ class MigrationEngine:
             f.write(json.dumps(manifest.model_dump(), indent=2, sort_keys=True))
 
         with open(target_dir / "link_proposals.json", "w", encoding="utf-8") as f:
-            f.write(json.dumps([p.model_dump() for p in all_link_proposals], indent=2, sort_keys=True))
+            f.write(
+                json.dumps([p.model_dump() for p in all_link_proposals], indent=2, sort_keys=True)
+            )
 
         with open(target_dir / "facet_proposals.json", "w", encoding="utf-8") as f:
-            f.write(json.dumps([p.model_dump() for p in all_facet_proposals], indent=2, sort_keys=True))
+            f.write(
+                json.dumps([p.model_dump() for p in all_facet_proposals], indent=2, sort_keys=True)
+            )
 
         with open(target_dir / "legacy_tag_audit.json", "w", encoding="utf-8") as f:
             f.write(json.dumps(legacy_tag_audit, indent=2, sort_keys=True))

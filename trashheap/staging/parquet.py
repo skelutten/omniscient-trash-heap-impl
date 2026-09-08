@@ -62,8 +62,7 @@ def commit_staged_parquet(
     target_sql = _validated_sql_path(target_path)
     tmp_sql = _validated_sql_path(tmp_path)
     temp_target = (
-        target_path.parent
-        / f".tmp_commit_{target_path.stem}_{identity.proposal_id}.parquet"
+        target_path.parent / f".tmp_commit_{target_path.stem}_{identity.proposal_id}.parquet"
     )
     temp_target_sql = _validated_sql_path(temp_target)
 
@@ -146,7 +145,9 @@ def reconcile_parquet_schema(
     if not file_path.exists():
         # Bootstrap empty table with full expected schema
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        select_expr = ", ".join(f"{default_val} AS {name}" for name, _, default_val in expected_columns)
+        select_expr = ", ".join(
+            f"{default_val} AS {name}" for name, _, default_val in expected_columns
+        )
         duckdb.sql(f"COPY (SELECT {select_expr} WHERE FALSE) TO '{file_sql}' (FORMAT PARQUET)")
         return
 
@@ -166,7 +167,9 @@ def reconcile_parquet_schema(
             col_exprs.append(f"{default_val} AS {col_name}")
         else:
             current_type = existing_cols[col_name]
-            if current_type != col_type and not (col_type == "TIMESTAMPTZ" and "TIMESTAMP" in current_type):
+            if current_type != col_type and not (
+                col_type == "TIMESTAMPTZ" and "TIMESTAMP" in current_type
+            ):
                 needs_rewrite = True
                 col_exprs.append(f"TRY_CAST({col_name} AS {col_type}) AS {col_name}")
             else:
@@ -448,7 +451,9 @@ class ParquetStagingBackend(StagingBackend):
 
         valid_tables = ["concept_proposals", "ambiguous_scope", "rejected_low_quality"]
         if target_table not in valid_tables:
-            raise DSCPIntegrityError(f"Invalid target_table '{target_table}' for Parquet staging [E114]")
+            raise DSCPIntegrityError(
+                f"Invalid target_table '{target_table}' for Parquet staging [E114]"
+            )
 
         target_path = self.discovery_root / f"{target_table}.parquet"
         tx_id = f"tx_{uuid.uuid4().hex[:12]}"
@@ -488,7 +493,15 @@ class ParquetStagingBackend(StagingBackend):
                     staging_tmp_path, status, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, 'PENDING_COMMIT', ?, ?);
                 """,
-                (tx_id, identity.proposal_id, identity.input_sha256, target_table, str(tmp_parquet), now_iso, now_iso),
+                (
+                    tx_id,
+                    identity.proposal_id,
+                    identity.input_sha256,
+                    target_table,
+                    str(tmp_parquet),
+                    now_iso,
+                    now_iso,
+                ),
             )
             conn.commit()
 
@@ -523,11 +536,15 @@ class ParquetStagingBackend(StagingBackend):
     ) -> Optional[Dict[str, Any]]:
         import duckdb
 
-        tables_to_search = [target_table] if target_table else [
-            "concept_proposals",
-            "ambiguous_scope",
-            "rejected_low_quality",
-        ]
+        tables_to_search = (
+            [target_table]
+            if target_table
+            else [
+                "concept_proposals",
+                "ambiguous_scope",
+                "rejected_low_quality",
+            ]
+        )
 
         for t_name in tables_to_search:
             t_path = self.discovery_root / f"{t_name}.parquet"
@@ -583,11 +600,15 @@ class ParquetStagingBackend(StagingBackend):
     def count_proposals(self, target_table: Optional[str] = None) -> int:
         import duckdb
 
-        tables = [target_table] if target_table else [
-            "concept_proposals",
-            "ambiguous_scope",
-            "rejected_low_quality",
-        ]
+        tables = (
+            [target_table]
+            if target_table
+            else [
+                "concept_proposals",
+                "ambiguous_scope",
+                "rejected_low_quality",
+            ]
+        )
         total = 0
         conn = duckdb.connect()
         try:
@@ -595,7 +616,9 @@ class ParquetStagingBackend(StagingBackend):
                 t_path = self.discovery_root / f"{t_name}.parquet"
                 if t_path.exists():
                     sql_path = _validated_sql_path(t_path)
-                    res = conn.execute(f"SELECT COUNT(*) FROM parquet_scan('{sql_path}')").fetchone()
+                    res = conn.execute(
+                        f"SELECT COUNT(*) FROM parquet_scan('{sql_path}')"
+                    ).fetchone()
                     if res:
                         total += res[0]
         finally:

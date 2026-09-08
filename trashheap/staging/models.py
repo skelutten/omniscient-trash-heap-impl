@@ -17,7 +17,7 @@ class BackendType(str, Enum):
     """Available staging backend implementations."""
 
     BASELINE = "baseline"  # Filesystem YAML + SQLite journal
-    PARQUET = "parquet"    # DuckDB + Parquet discovery tables
+    PARQUET = "parquet"  # DuckDB + Parquet discovery tables
 
 
 class StagingBackendStatus(str, Enum):

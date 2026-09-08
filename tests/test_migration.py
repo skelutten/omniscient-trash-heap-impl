@@ -246,7 +246,9 @@ def test_rule_6_source_ref_normalization(legacy_corpus: Path, tmp_path: Path):
     corpus = load_corpus(target_dir)
 
     # Find the system overview object
-    system_obj = next((o for o in corpus.objects if "System Architecture" in o.frontmatter.title), None)
+    system_obj = next(
+        (o for o in corpus.objects if "System Architecture" in o.frontmatter.title), None
+    )
     assert system_obj is not None
     assert isinstance(system_obj.frontmatter.source_refs, list)
     assert "docs/v1/system.md" in system_obj.frontmatter.source_refs
@@ -359,34 +361,38 @@ def test_cli_migrate_commands(legacy_corpus: Path, tmp_path: Path, capsys: pytes
     target_exec = tmp_path / "cli_exec"
 
     # Plan
-    code = main([
-        "migrate",
-        "plan",
-        "--source-dir",
-        str(legacy_corpus),
-        "--target-dir",
-        str(target_plan),
-        "--target-scope",
-        "engineering",
-        "--json",
-    ])
+    code = main(
+        [
+            "migrate",
+            "plan",
+            "--source-dir",
+            str(legacy_corpus),
+            "--target-dir",
+            str(target_plan),
+            "--target-scope",
+            "engineering",
+            "--json",
+        ]
+    )
     assert code == ExitCode.SUCCESS
     out = capsys.readouterr().out
     data = json.loads(out)
     assert data["mode"] == "dry-run"
 
     # Execute
-    code2 = main([
-        "migrate",
-        "execute",
-        "--source-dir",
-        str(legacy_corpus),
-        "--target-dir",
-        str(target_exec),
-        "--target-scope",
-        "engineering",
-        "--json",
-    ])
+    code2 = main(
+        [
+            "migrate",
+            "execute",
+            "--source-dir",
+            str(legacy_corpus),
+            "--target-dir",
+            str(target_exec),
+            "--target-scope",
+            "engineering",
+            "--json",
+        ]
+    )
     assert code2 == ExitCode.SUCCESS
     out2 = capsys.readouterr().out
     data2 = json.loads(out2)

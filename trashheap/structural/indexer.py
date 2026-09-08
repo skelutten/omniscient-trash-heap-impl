@@ -28,7 +28,9 @@ class StructuralGraphIndexer:
     ):
         self.repo_root = Path(repo_root)
         self.repo_name = repo_name
-        self.cache_dir = Path(cache_dir) if cache_dir else self.repo_root / ".trashheap" / "cache" / "structural"
+        self.cache_dir = (
+            Path(cache_dir) if cache_dir else self.repo_root / ".trashheap" / "cache" / "structural"
+        )
         self.extractor = extractor or ASTExtractor(repo_name=repo_name)
 
         self.nodes: Dict[str, StructuralNode] = {}
@@ -43,7 +45,15 @@ class StructuralGraphIndexer:
             patterns = ["**/*.py"]
 
         matched: List[Path] = []
-        ignored_dirs = {".git", ".venv", "__pycache__", ".pytest_cache", ".trashheap", "build", "dist"}
+        ignored_dirs = {
+            ".git",
+            ".venv",
+            "__pycache__",
+            ".pytest_cache",
+            ".trashheap",
+            "build",
+            "dist",
+        }
 
         for pat in patterns:
             for p in self.repo_root.glob(pat):
@@ -67,8 +77,12 @@ class StructuralGraphIndexer:
             with open(graph_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            self.nodes = {k: StructuralNode.model_validate(v) for k, v in data.get("nodes", {}).items()}
-            self.edges = {k: StructuralEdge.model_validate(v) for k, v in data.get("edges", {}).items()}
+            self.nodes = {
+                k: StructuralNode.model_validate(v) for k, v in data.get("nodes", {}).items()
+            }
+            self.edges = {
+                k: StructuralEdge.model_validate(v) for k, v in data.get("edges", {}).items()
+            }
             self.file_hashes = data.get("file_hashes", {})
             if "manifest" in data:
                 self.manifest = StructuralGraphManifest.model_validate(data["manifest"])
@@ -216,13 +230,17 @@ class StructuralGraphIndexer:
         }
 
         # Write graph.json atomically
-        with tempfile.NamedTemporaryFile("w", dir=self.cache_dir, delete=False, encoding="utf-8") as tf:
+        with tempfile.NamedTemporaryFile(
+            "w", dir=self.cache_dir, delete=False, encoding="utf-8"
+        ) as tf:
             json.dump(graph_payload, tf, indent=2, sort_keys=True)
             temp_graph = Path(tf.name)
         os.replace(temp_graph, self.cache_dir / "graph.json")
 
         # Write coverage.json atomically
-        with tempfile.NamedTemporaryFile("w", dir=self.cache_dir, delete=False, encoding="utf-8") as tf:
+        with tempfile.NamedTemporaryFile(
+            "w", dir=self.cache_dir, delete=False, encoding="utf-8"
+        ) as tf:
             json.dump(coverage.model_dump(), tf, indent=2, sort_keys=True)
             temp_cov = Path(tf.name)
         os.replace(temp_cov, self.cache_dir / "coverage.json")

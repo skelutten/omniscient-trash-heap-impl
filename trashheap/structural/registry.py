@@ -16,6 +16,7 @@ from trashheap.structural.models import StructuralEdgeType, StructuralNodeType
 
 class StructuralRegistryError(Exception):
     """Raised when structural_registry.yaml fails validation."""
+
     pass
 
 
@@ -24,7 +25,10 @@ def load_structural_registry(registry_path: Optional[Union[str, Path]] = None) -
     if registry_path is None:
         candidates = [
             Path("schemas/registry/structural_registry.yaml"),
-            Path(__file__).resolve().parent.parent.parent / "schemas" / "registry" / "structural_registry.yaml",
+            Path(__file__).resolve().parent.parent.parent
+            / "schemas"
+            / "registry"
+            / "structural_registry.yaml",
         ]
         chosen = None
         for c in candidates:
@@ -63,13 +67,19 @@ def validate_structural_registry(data: Dict[str, Any]) -> None:
     expected_nodes = {t.value for t in StructuralNodeType}
     for nt in node_types:
         if nt not in expected_nodes:
-            raise StructuralRegistryError(f"Unexpected structural node type '{nt}' (expected one of {expected_nodes})")
+            raise StructuralRegistryError(
+                f"Unexpected structural node type '{nt}' (expected one of {expected_nodes})"
+            )
 
     for node_name, node_spec in data["node_types"].items():
         if not isinstance(node_spec, dict) or "identity" not in node_spec:
-            raise StructuralRegistryError(f"Node type '{node_name}' must declare 'identity' keys list")
+            raise StructuralRegistryError(
+                f"Node type '{node_name}' must declare 'identity' keys list"
+            )
         if not isinstance(node_spec["identity"], list) or len(node_spec["identity"]) == 0:
-            raise StructuralRegistryError(f"Node type '{node_name}' identity keys must be a non-empty list")
+            raise StructuralRegistryError(
+                f"Node type '{node_name}' identity keys must be a non-empty list"
+            )
 
     # Verify SG-003: edge types contract
     for edge_name, edge_spec in data["edge_types"].items():
@@ -78,18 +88,28 @@ def validate_structural_registry(data: Dict[str, Any]) -> None:
 
         for req_field in ["source_types", "target_types", "dag", "symmetric"]:
             if req_field not in edge_spec:
-                raise StructuralRegistryError(f"Edge type '{edge_name}' missing required contract field '{req_field}'")
+                raise StructuralRegistryError(
+                    f"Edge type '{edge_name}' missing required contract field '{req_field}'"
+                )
 
-        if not isinstance(edge_spec["source_types"], list) or not isinstance(edge_spec["target_types"], list):
-            raise StructuralRegistryError(f"Edge type '{edge_name}' source_types and target_types must be lists")
+        if not isinstance(edge_spec["source_types"], list) or not isinstance(
+            edge_spec["target_types"], list
+        ):
+            raise StructuralRegistryError(
+                f"Edge type '{edge_name}' source_types and target_types must be lists"
+            )
 
         for st in edge_spec["source_types"]:
             if st not in node_types:
-                raise StructuralRegistryError(f"Edge type '{edge_name}' source type '{st}' not in registered node_types")
+                raise StructuralRegistryError(
+                    f"Edge type '{edge_name}' source type '{st}' not in registered node_types"
+                )
 
         for tt in edge_spec["target_types"]:
             if tt not in node_types:
-                raise StructuralRegistryError(f"Edge type '{edge_name}' target type '{tt}' not in registered node_types")
+                raise StructuralRegistryError(
+                    f"Edge type '{edge_name}' target type '{tt}' not in registered node_types"
+                )
 
         if not isinstance(edge_spec["dag"], bool):
             raise StructuralRegistryError(f"Edge type '{edge_name}' 'dag' must be a boolean")

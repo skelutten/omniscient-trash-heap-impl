@@ -101,7 +101,9 @@ class PromotionOperation(BaseModel):
 class SemanticResolutionRecord(BaseModel):
     """Explicit audit record of semantic duplicate/match resolution decisions (G-3)."""
 
-    outcome: str = "NEW_CANDIDATE"  # EXISTING_MATCH, NEW_CANDIDATE, EVIDENCE_ONLY, CONTRADICTION, UNRESOLVED
+    outcome: str = (
+        "NEW_CANDIDATE"  # EXISTING_MATCH, NEW_CANDIDATE, EVIDENCE_ONLY, CONTRADICTION, UNRESOLVED
+    )
     method: str = "hybrid_rrf"
     candidate_ids: List[str] = Field(default_factory=list)
     decision_confidence: float = 1.0
@@ -132,4 +134,3 @@ class CandidateProposal(BaseModel):
     review_decision: Optional[ReviewDecision] = None
     supersedes: Optional[str] = None
     semantic_resolution: Optional[SemanticResolutionRecord] = None
-

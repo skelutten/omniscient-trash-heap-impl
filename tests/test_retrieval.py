@@ -159,4 +159,3 @@ Content Beta.
     # Invariant: Evidence Bundle path MUST be relative, never leaking absolute host directories
     assert winner["path"] == "ENG-CLM-2026-0001.md"
     assert not Path(winner["path"]).is_absolute()
-

@@ -104,7 +104,9 @@ class BaselineStagingBackend(StagingBackend):
             candidate_id=record.proposal_id,
             proposal_revision=record.trajectory_revision,
             created_at=record.created_at,
-            state=record.status if record.status in ("pending", "approved", "rejected") else "pending",
+            state=record.status
+            if record.status in ("pending", "approved", "rejected")
+            else "pending",
             evidence_unit_ref=record.trajectory_id,
             source_revision=f"sha256:{hashlib.sha256(record.proposal_id.encode('utf-8')).hexdigest()}",
             target_path=f"{record.inferred_scope}/01_domain_system_architecture/{record.proposal_id}.md",
@@ -181,7 +183,9 @@ class BaselineStagingBackend(StagingBackend):
                 relative_path="staging/proposals/",
                 row_count=len(proposals),
                 file_sha256=None,
-                size_bytes=sum(f.stat().st_size for f in p_dir.glob("*.yaml") if not f.name.startswith(".")),
+                size_bytes=sum(
+                    f.stat().st_size for f in p_dir.glob("*.yaml") if not f.name.startswith(".")
+                ),
                 columns=["candidate_id", "state", "proposal_hash", "target_path"],
             )
         }

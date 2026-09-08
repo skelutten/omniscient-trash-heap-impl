@@ -43,7 +43,9 @@ class LegacyParser:
         rel_path: str,
         content_bytes: bytes,
         migration_map: MigrationMap,
-    ) -> Union[Tuple[KnowledgeObject, List[LinkProposal], List[FacetProposal], List[str]], QuarantineRecord]:
+    ) -> Union[
+        Tuple[KnowledgeObject, List[LinkProposal], List[FacetProposal], List[str]], QuarantineRecord
+    ]:
         """Parse a single legacy markdown file into canonical representation or quarantine record."""
         # 1. Decode UTF-8
         try:
@@ -102,7 +104,9 @@ class LegacyParser:
                 if h1_match:
                     extracted_title = h1_match.group(1).strip()
                 else:
-                    extracted_title = Path(rel_path).stem.replace("_", " ").replace("-", " ").title()
+                    extracted_title = (
+                        Path(rel_path).stem.replace("_", " ").replace("-", " ").title()
+                    )
 
             legacy_fm = {
                 "title": extracted_title,
@@ -136,7 +140,11 @@ class LegacyParser:
         # 5. Taxonomy mapping
         taxonomy_id = None
 
-        raw_tax = legacy_fm.get("taxonomy_id") or legacy_fm.get("taxonomy_path") or legacy_fm.get("category")
+        raw_tax = (
+            legacy_fm.get("taxonomy_id")
+            or legacy_fm.get("taxonomy_path")
+            or legacy_fm.get("category")
+        )
         if raw_tax and str(raw_tax) in migration_map.taxonomy_mapping:
             taxonomy_id = migration_map.taxonomy_mapping[str(raw_tax)]
         elif raw_tax and str(raw_tax) in self.tax_by_id:
@@ -168,7 +176,11 @@ class LegacyParser:
         if mapped_type not in self.registries.object_types:
             mapped_type = "Article"
         obj_spec = self.registries.object_types.get(mapped_type)
-        type_code = getattr(obj_spec, "code", mapped_type[:3].upper()) if obj_spec else mapped_type[:3].upper()
+        type_code = (
+            getattr(obj_spec, "code", mapped_type[:3].upper())
+            if obj_spec
+            else mapped_type[:3].upper()
+        )
 
         # 7. Source refs normalization (Rule 6)
         source_refs: List[str] = []
@@ -184,14 +196,20 @@ class LegacyParser:
         # 8. Deterministic ID generation
         existing_id = legacy_fm.get("id")
         scope_prefix = "PERS" if scope == "personal" else "ENG"
-        if existing_id and re.match(ID_PATTERN, str(existing_id)) and str(existing_id).startswith(scope_prefix):
+        if (
+            existing_id
+            and re.match(ID_PATTERN, str(existing_id))
+            and str(existing_id).startswith(scope_prefix)
+        ):
             obj_id = str(existing_id)
         else:
             tag_strat = getattr(obj_spec, "tag_strategy", "domain") if obj_spec else "domain"
             if tag_strat == "year":
                 tag = str(date.today().year)
             else:
-                raw_tag = slugify_text(legacy_fm.get("title", "untitled"))[:12].upper().replace("-", "_")
+                raw_tag = (
+                    slugify_text(legacy_fm.get("title", "untitled"))[:12].upper().replace("-", "_")
+                )
                 tag = raw_tag if raw_tag else "NOTE"
             rel_hash = hashlib.sha256(rel_path.encode("utf-8")).hexdigest()
             num_suffix = f"{int(rel_hash[:4], 16) % 9000 + 1000}"
@@ -251,7 +269,9 @@ class LegacyParser:
             "last_verified": today_iso,
             "next_review": next_review_iso,
             "confidence": float(legacy_fm.get("confidence", 0.5)),
-            "validity": legacy_fm.get("validity") if isinstance(legacy_fm.get("validity"), dict) else None,
+            "validity": legacy_fm.get("validity")
+            if isinstance(legacy_fm.get("validity"), dict)
+            else None,
             "status": "draft",
             "relations": [],
         }
@@ -259,7 +279,9 @@ class LegacyParser:
         # Inject required facets if present in legacy or fallback
         FACET_DEFAULTS: Dict[str, Any] = {
             "language": ["en"],
-            "audience": migration_map.default_audience if migration_map.default_audience else "engineer",
+            "audience": migration_map.default_audience
+            if migration_map.default_audience
+            else "engineer",
             "toolchain": ["none"],
             "lifecycle": "ongoing",
             "architecture": ["none"],

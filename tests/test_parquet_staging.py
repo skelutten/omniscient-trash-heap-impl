@@ -77,7 +77,9 @@ def test_dependency_detection_and_degraded_reporting():
             status=StagingBackendStatus.DEGRADED,
             error_detail="Simulated missing DuckDB",
         )
-        with pytest.raises(RuntimeError, match="Never substitute SQLite while claiming Parquet conformance"):
+        with pytest.raises(
+            RuntimeError, match="Never substitute SQLite while claiming Parquet conformance"
+        ):
             get_staging_backend(BackendType.PARQUET, require_available=True)
 
 
@@ -113,9 +115,7 @@ def test_dual_engine_schema_migrations(workspace: Path):
 
     tables = {
         row[0]
-        for row in conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        ).fetchall()
+        for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
     }
     assert "ingestion_watermarks" in tables
     assert "promotion_journal" in tables
@@ -158,7 +158,9 @@ def test_parquet_schema_reconciliation(workspace: Path):
 
     conn = duckdb.connect()
     sql_path = _validated_sql_path(table_path)
-    res = conn.execute(f"SELECT proposal_id, status, schema_version, inferred_scope FROM parquet_scan('{sql_path}')").fetchall()
+    res = conn.execute(
+        f"SELECT proposal_id, status, schema_version, inferred_scope FROM parquet_scan('{sql_path}')"
+    ).fetchall()
     conn.close()
 
     assert len(res) == 1
@@ -226,7 +228,9 @@ def test_crash_recovery_cp1(workspace: Path):
     assert res["committed"] == 0
 
     with backend._get_state_conn() as conn:
-        status = conn.execute("SELECT status FROM commit_transactions WHERE staging_tx_id='tx_cp1'").fetchone()[0]
+        status = conn.execute(
+            "SELECT status FROM commit_transactions WHERE staging_tx_id='tx_cp1'"
+        ).fetchone()[0]
         assert status == "FAILED"
 
 
@@ -367,7 +371,11 @@ def test_dual_backend_equivalence_and_sync(workspace: Path):
         state="pending",
         source_revision="sha256:1111111111111111111111111111111111111111111111111111111111111111",
         target_path="engineering/01_arch/CAND-001.md",
-        proposed_frontmatter={"scope": "engineering", "domain": "software_engineering", "taxonomy_id": "TX-ENG-01"},
+        proposed_frontmatter={
+            "scope": "engineering",
+            "domain": "software_engineering",
+            "taxonomy_id": "TX-ENG-01",
+        },
         proposed_body="System design content",
         proposed_content="---\nscope: engineering\n---\n\nSystem design content\n",
         proposal_hash="sha256:1111111111111111111111111111111111111111111111111111111111111111",

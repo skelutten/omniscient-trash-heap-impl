@@ -32,7 +32,9 @@ def test_init_wiki_programmatic():
         assert skill_file.exists()
 
         # Check starter note
-        seed_note = target / "personal" / "07_computer_science_ai_it_security" / "PERS-DOC-WELCOME-0001.md"
+        seed_note = (
+            target / "personal" / "07_computer_science_ai_it_security" / "PERS-DOC-WELCOME-0001.md"
+        )
         assert seed_note.exists()
         assert "Welcome to Test Vault" in seed_note.read_text(encoding="utf-8")
         assert "author: human:alice" in seed_note.read_text(encoding="utf-8")

@@ -103,7 +103,11 @@ def stream_pubmed_xml(
 
             # Extract Title
             title_el = art.find(".//Article/ArticleTitle")
-            title = (title_el.text or "Untitled Article").strip() if title_el is not None and title_el.text else "Untitled Article"
+            title = (
+                (title_el.text or "Untitled Article").strip()
+                if title_el is not None and title_el.text
+                else "Untitled Article"
+            )
 
             # Extract Abstract & Sections
             sections: Dict[str, str] = {}
@@ -126,11 +130,13 @@ def stream_pubmed_xml(
                     ui = desc_el.get("UI") or ""
                     major = desc_el.get("MajorTopicYN") == "Y"
                     name = desc_el.text.strip()
-                    mesh_headings.append({
-                        "ui": ui,
-                        "name": name,
-                        "major": major,
-                    })
+                    mesh_headings.append(
+                        {
+                            "ui": ui,
+                            "name": name,
+                            "major": major,
+                        }
+                    )
 
             # Extract Citations
             citations: List[int] = []
@@ -156,11 +162,17 @@ def stream_pubmed_xml(
                 year_el = art.find(".//ArticleDate/Year")
             if year_el is None:
                 year_el = art.find(".//PubDate/Year")
-            year = int(year_el.text.strip()) if year_el is not None and year_el.text and year_el.text.strip().isdigit() else None
+            year = (
+                int(year_el.text.strip())
+                if year_el is not None and year_el.text and year_el.text.strip().isdigit()
+                else None
+            )
 
             # Extract Journal
             journal_el = art.find(".//Journal/Title")
-            journal = journal_el.text.strip() if journal_el is not None and journal_el.text else None
+            journal = (
+                journal_el.text.strip() if journal_el is not None and journal_el.text else None
+            )
 
             yield PubmedArticleRecord(
                 pmid=pmid,
@@ -235,11 +247,13 @@ class PubmedXmlAdapter(BaseAdapter):
         # Relations: CITES and retraction/errata supersession
         relations: List[Dict[str, Any]] = []
         for cited in record.citations:
-            relations.append({
-                "type": "CITES",
-                "target": f"PERS-ART-MED_{cited:08d}-0001",
-                "soft_link": True,
-            })
+            relations.append(
+                {
+                    "type": "CITES",
+                    "target": f"PERS-ART-MED_{cited:08d}-0001",
+                    "soft_link": True,
+                }
+            )
 
         for corr in record.corrections:
             rtype = corr["ref_type"].lower()
@@ -248,11 +262,13 @@ class PubmedXmlAdapter(BaseAdapter):
                 rel_type = "SUPERSEDES"
             try:
                 target_pmid = int(corr["pmid"])
-                relations.append({
-                    "type": rel_type,
-                    "target": f"PERS-ART-MED_{target_pmid:08d}-0001",
-                    "soft_link": True,
-                })
+                relations.append(
+                    {
+                        "type": rel_type,
+                        "target": f"PERS-ART-MED_{target_pmid:08d}-0001",
+                        "soft_link": True,
+                    }
+                )
             except ValueError:
                 pass
 
@@ -319,8 +335,14 @@ class PubmedXmlAdapter(BaseAdapter):
                 source_input=payload.content_bytes,
                 source_type="document",
                 workspace_root=workspace_root,
-                identity={"resource": payload.source_path, "representation_hash": payload.content_hash},
-                provenance={"resource": payload.source_path, "representation_hash": payload.content_hash},
+                identity={
+                    "resource": payload.source_path,
+                    "representation_hash": payload.content_hash,
+                },
+                provenance={
+                    "resource": payload.source_path,
+                    "representation_hash": payload.content_hash,
+                },
             )
 
         art = articles[0]

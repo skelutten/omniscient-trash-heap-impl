@@ -257,6 +257,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
         help="Enable opt-in graph-enhanced retrieval (Plan 91 / GRAPH-RETRIEVAL.md)",
     )
+    query_parser.add_argument(
+        "--enforce-structural-gates",
+        action="store_true",
+        default=False,
+        help="Enforce deterministic Stage 1 graph gates (specs/RETRIEVAL.md §9.6, RET-006)",
+    )
 
     # show (display full content of a Knowledge Object)
     show_parser = subparsers.add_parser(
@@ -496,10 +502,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--pubmed", action="store_true", help="Run PubMedQA hybrid retrieval and refusal benchmark"
     )
     bench_parser.add_argument(
-        "--pubmed-sample", type=int, default=50, help="Number of PubMedQA questions to sample (default: 50)"
+        "--pubmed-sample",
+        type=int,
+        default=50,
+        help="Number of PubMedQA questions to sample (default: 50)",
     )
     bench_parser.add_argument(
-        "--pubmed-file", type=str, default=None, help="Custom path to PubMedQA questions JSON or PubMed XML file"
+        "--pubmed-file",
+        type=str,
+        default=None,
+        help="Custom path to PubMedQA questions JSON or PubMed XML file",
     )
 
     # 16. bundle
@@ -516,8 +528,12 @@ def build_parser() -> argparse.ArgumentParser:
     b_export.add_argument("--title", type=str, default=None, help="Bundle Title")
     b_export.add_argument("--scope", type=str, default=None, help="Scope filter")
     b_export.add_argument("--output-dir", type=str, required=True, help="Target output directory")
-    b_export.add_argument("--corpus-root", type=str, default="fixtures/canonical", help="Corpus root")
-    b_export.add_argument("--registry-dir", type=str, default=None, help="Custom path to schemas/registry")
+    b_export.add_argument(
+        "--corpus-root", type=str, default="fixtures/canonical", help="Corpus root"
+    )
+    b_export.add_argument(
+        "--registry-dir", type=str, default=None, help="Custom path to schemas/registry"
+    )
     b_export.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
 
     # bundle import
@@ -533,16 +549,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     graph_subs = graph_parser.add_subparsers(dest="graph_action", required=True)
 
-    g_manifest = graph_subs.add_parser("manifest", help="Generate canonical input manifest atomically")
-    g_manifest.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    g_manifest = graph_subs.add_parser(
+        "manifest", help="Generate canonical input manifest atomically"
+    )
+    g_manifest.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
     g_manifest.add_argument("--corpus-root", type=str, default=None, help="Corpus root directory")
     g_manifest.add_argument("--output-dir", type=str, default="derived", help="Output directory")
     g_manifest.add_argument("--json", action="store_true", help="Emit JSON output")
 
     g_analyze = graph_subs.add_parser("analyze", help="Calculate graph metrics and derived edges")
-    g_analyze.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    g_analyze.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
     g_analyze.add_argument("--corpus-root", type=str, default=None, help="Corpus root directory")
-    g_analyze.add_argument("--output-dir", type=str, default="derived/graph", help="Output directory")
+    g_analyze.add_argument(
+        "--output-dir", type=str, default="derived/graph", help="Output directory"
+    )
     g_analyze.add_argument("--json", action="store_true", help="Emit JSON output")
 
     # 18. discover
@@ -555,12 +579,18 @@ def build_parser() -> argparse.ArgumentParser:
     d_scan = discover_subs.add_parser("scan", help="Run discovery scans across canonical corpus")
     d_scan.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
     d_scan.add_argument("--corpus-root", type=str, default=None, help="Corpus root directory")
-    d_scan.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
+    d_scan.add_argument(
+        "--discovery-dir", type=str, default="discovery", help="Discovery directory"
+    )
     d_scan.add_argument("--json", action="store_true", help="Emit JSON output")
 
     d_list = discover_subs.add_parser("list", help="List discovered candidates")
-    d_list.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
-    d_list.add_argument("--status", type=str, default=None, help="Filter by status (e.g. pending, approved)")
+    d_list.add_argument(
+        "--discovery-dir", type=str, default="discovery", help="Discovery directory"
+    )
+    d_list.add_argument(
+        "--status", type=str, default=None, help="Filter by status (e.g. pending, approved)"
+    )
     d_list.add_argument("--json", action="store_true", help="Emit JSON output")
 
     d_review = discover_subs.add_parser("review", help="Review a discovery candidate")
@@ -574,20 +604,34 @@ def build_parser() -> argparse.ArgumentParser:
     )
     d_review.add_argument("--actor", type=str, default="operator", help="Reviewer actor identity")
     d_review.add_argument("--reason", type=str, default="Operator review", help="Review rationale")
-    d_review.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
+    d_review.add_argument(
+        "--discovery-dir", type=str, default="discovery", help="Discovery directory"
+    )
     d_review.add_argument("--json", action="store_true", help="Emit JSON output")
 
-    d_promote = discover_subs.add_parser("promote", help="Validate and promote an approved candidate")
+    d_promote = discover_subs.add_parser(
+        "promote", help="Validate and promote an approved candidate"
+    )
     d_promote.add_argument("candidate_id", type=str, help="Candidate ID")
     d_promote.add_argument("--actor", type=str, default="operator", help="Promoting actor identity")
     d_promote.add_argument("--corpus-root", type=str, default=None, help="Corpus root directory")
-    d_promote.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
-    d_promote.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
+    d_promote.add_argument(
+        "--discovery-dir", type=str, default="discovery", help="Discovery directory"
+    )
+    d_promote.add_argument(
+        "--workspace-root", type=str, default=".", help="Workspace root directory"
+    )
     d_promote.add_argument("--json", action="store_true", help="Emit JSON output")
 
-    d_sweep = discover_subs.add_parser("sweep", help="Sweep and archive expired candidates older than 90 days")
-    d_sweep.add_argument("--discovery-dir", type=str, default="discovery", help="Discovery directory")
-    d_sweep.add_argument("--current-date", type=str, default=None, help="Optional simulated ISO UTC date")
+    d_sweep = discover_subs.add_parser(
+        "sweep", help="Sweep and archive expired candidates older than 90 days"
+    )
+    d_sweep.add_argument(
+        "--discovery-dir", type=str, default="discovery", help="Discovery directory"
+    )
+    d_sweep.add_argument(
+        "--current-date", type=str, default=None, help="Optional simulated ISO UTC date"
+    )
     d_sweep.add_argument("--json", action="store_true", help="Emit JSON output")
 
     # Structural commands (specs/STRUCTURAL-GRAPH.md, SG-001..SG-020)
@@ -598,7 +642,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     s_index = struct_subs.add_parser("index", help="Index codebase AST into structural graph")
     s_index.add_argument("--repo-root", type=str, default=".", help="Repository root path")
-    s_index.add_argument("--revision", type=str, default="HEAD", help="Source revision (git SHA or ref)")
+    s_index.add_argument(
+        "--revision", type=str, default="HEAD", help="Source revision (git SHA or ref)"
+    )
     s_index.add_argument("--incremental", action="store_true", help="Perform incremental indexing")
     s_index.add_argument("--cache-dir", type=str, default=None, help="Cache directory")
     s_index.add_argument("--json", action="store_true", help="Emit JSON output")
@@ -609,7 +655,9 @@ def build_parser() -> argparse.ArgumentParser:
     s_inspect.add_argument("--cache-dir", type=str, default=None, help="Cache directory")
     s_inspect.add_argument("--json", action="store_true", help="Emit JSON output")
 
-    s_impact = struct_subs.add_parser("impact", help="Calculate blast radius impact for a structural node")
+    s_impact = struct_subs.add_parser(
+        "impact", help="Calculate blast radius impact for a structural node"
+    )
     s_impact.add_argument("node_id", type=str, help="Target structural node ID")
     s_impact.add_argument("--max-depth", type=int, default=3, help="Max traversal depth")
     s_impact.add_argument("--node-ceiling", type=int, default=50, help="Max node ceiling")
@@ -631,21 +679,59 @@ def build_parser() -> argparse.ArgumentParser:
     )
     migrate_subs = migrate_parser.add_subparsers(dest="migrate_action", required=True)
 
-    m_plan = migrate_subs.add_parser("plan", help="Dry-run migration analysis and proposal generation")
-    m_plan.add_argument("--source-dir", type=str, required=True, help="Source legacy corpus directory")
-    m_plan.add_argument("--target-dir", type=str, required=True, help="Target canonical corpus directory")
-    m_plan.add_argument("--derived-frontmatter", action="store_true", help="Opt-in derived frontmatter mode (Rule 11, D95)")
-    m_plan.add_argument("--target-scope", type=str, default=None, choices=["engineering", "personal"], help="Verified target scope")
-    m_plan.add_argument("--registry-dir", type=str, default="schemas/registry", help="Registry directory")
+    m_plan = migrate_subs.add_parser(
+        "plan", help="Dry-run migration analysis and proposal generation"
+    )
+    m_plan.add_argument(
+        "--source-dir", type=str, required=True, help="Source legacy corpus directory"
+    )
+    m_plan.add_argument(
+        "--target-dir", type=str, required=True, help="Target canonical corpus directory"
+    )
+    m_plan.add_argument(
+        "--derived-frontmatter",
+        action="store_true",
+        help="Opt-in derived frontmatter mode (Rule 11, D95)",
+    )
+    m_plan.add_argument(
+        "--target-scope",
+        type=str,
+        default=None,
+        choices=["engineering", "personal"],
+        help="Verified target scope",
+    )
+    m_plan.add_argument(
+        "--registry-dir", type=str, default="schemas/registry", help="Registry directory"
+    )
     m_plan.add_argument("--json", action="store_true", help="Emit JSON output")
 
-    m_exec = migrate_subs.add_parser("execute", help="Execute migration with fresh-target checks and idempotency")
-    m_exec.add_argument("--source-dir", type=str, required=True, help="Source legacy corpus directory")
-    m_exec.add_argument("--target-dir", type=str, required=True, help="Target canonical corpus directory")
-    m_exec.add_argument("--derived-frontmatter", action="store_true", help="Opt-in derived frontmatter mode (Rule 11, D95)")
-    m_exec.add_argument("--target-scope", type=str, default=None, choices=["engineering", "personal"], help="Verified target scope")
-    m_exec.add_argument("--registry-dir", type=str, default="schemas/registry", help="Registry directory")
-    m_exec.add_argument("--force", action="store_true", help="Force overwrite even if source changed")
+    m_exec = migrate_subs.add_parser(
+        "execute", help="Execute migration with fresh-target checks and idempotency"
+    )
+    m_exec.add_argument(
+        "--source-dir", type=str, required=True, help="Source legacy corpus directory"
+    )
+    m_exec.add_argument(
+        "--target-dir", type=str, required=True, help="Target canonical corpus directory"
+    )
+    m_exec.add_argument(
+        "--derived-frontmatter",
+        action="store_true",
+        help="Opt-in derived frontmatter mode (Rule 11, D95)",
+    )
+    m_exec.add_argument(
+        "--target-scope",
+        type=str,
+        default=None,
+        choices=["engineering", "personal"],
+        help="Verified target scope",
+    )
+    m_exec.add_argument(
+        "--registry-dir", type=str, default="schemas/registry", help="Registry directory"
+    )
+    m_exec.add_argument(
+        "--force", action="store_true", help="Force overwrite even if source changed"
+    )
     m_exec.add_argument("--json", action="store_true", help="Emit JSON output")
 
     # Staging commands (plans/93-OPT-IN-PARQUET-STAGING.md)
@@ -654,26 +740,54 @@ def build_parser() -> argparse.ArgumentParser:
     )
     staging_subs = staging_parser.add_subparsers(dest="staging_action", required=True)
 
-    st_status = staging_subs.add_parser("status", help="Inspect staging backend status and dependencies")
-    st_status.add_argument("--backend", type=str, default="parquet", choices=["baseline", "parquet"], help="Target backend to inspect")
-    st_status.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
+    st_status = staging_subs.add_parser(
+        "status", help="Inspect staging backend status and dependencies"
+    )
+    st_status.add_argument(
+        "--backend",
+        type=str,
+        default="parquet",
+        choices=["baseline", "parquet"],
+        help="Target backend to inspect",
+    )
+    st_status.add_argument(
+        "--workspace-root", type=str, default=None, help="Path to workspace root"
+    )
     st_status.add_argument("--json", action="store_true", help="Emit JSON output")
 
-    st_sync = staging_subs.add_parser("sync", help="Sync proposals from baseline staging to Parquet staging")
+    st_sync = staging_subs.add_parser(
+        "sync", help="Sync proposals from baseline staging to Parquet staging"
+    )
     st_sync.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
     st_sync.add_argument("--json", action="store_true", help="Emit JSON output")
 
-    st_equiv = staging_subs.add_parser("verify-equivalence", help="Verify equivalence between baseline and Parquet staging")
+    st_equiv = staging_subs.add_parser(
+        "verify-equivalence", help="Verify equivalence between baseline and Parquet staging"
+    )
     st_equiv.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
     st_equiv.add_argument("--json", action="store_true", help="Emit JSON output")
 
-    st_manifest = staging_subs.add_parser("manifest", help="Emit and inspect atomic staging manifest")
-    st_manifest.add_argument("--backend", type=str, default="parquet", choices=["baseline", "parquet"], help="Target backend")
-    st_manifest.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
+    st_manifest = staging_subs.add_parser(
+        "manifest", help="Emit and inspect atomic staging manifest"
+    )
+    st_manifest.add_argument(
+        "--backend",
+        type=str,
+        default="parquet",
+        choices=["baseline", "parquet"],
+        help="Target backend",
+    )
+    st_manifest.add_argument(
+        "--workspace-root", type=str, default=None, help="Path to workspace root"
+    )
     st_manifest.add_argument("--json", action="store_true", help="Emit JSON output")
 
-    st_recover = staging_subs.add_parser("recover", help="Recover pending DSCP staging transactions and sweep orphans")
-    st_recover.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
+    st_recover = staging_subs.add_parser(
+        "recover", help="Recover pending DSCP staging transactions and sweep orphans"
+    )
+    st_recover.add_argument(
+        "--workspace-root", type=str, default=None, help="Path to workspace root"
+    )
     st_recover.add_argument("--json", action="store_true", help="Emit JSON output")
 
     return parser
@@ -968,7 +1082,9 @@ def handle_query(args: argparse.Namespace) -> int:
         "include_deprecated": getattr(args, "include_deprecated", False),
         "include_body": getattr(args, "include_body", False),
         "enable_vector": getattr(args, "vector", False),
-        "retrieval_mode": "graph_enhanced" if getattr(args, "graph_enhanced", False) else "canonical",
+        "retrieval_mode": "graph_enhanced"
+        if getattr(args, "graph_enhanced", False)
+        else "canonical",
     }
 
     bundle = retriever.retrieve(query=args.prompt, cli_params=cli_params)
@@ -1378,7 +1494,11 @@ def handle_status(args: argparse.Namespace) -> int:
     health_label = (
         "Pristine"
         if debt_index == 0.0
-        else ("Nominal" if debt_index < 0.1 else ("Attention Required" if debt_index < 0.3 else "Critical Backlog"))
+        else (
+            "Nominal"
+            if debt_index < 0.1
+            else ("Attention Required" if debt_index < 0.3 else "Critical Backlog")
+        )
     )
 
     if args.json:
@@ -1399,14 +1519,20 @@ def handle_status(args: argparse.Namespace) -> int:
         print("=== Omniscient Trash Heap Health & Operations ===")
         print(f"OS: {env_report.os_system}")
         print(f"Durability Tier: {env_report.filesystem_tier}")
-        print(f"Atomic Rename: {'✓' if env_report.atomic_rename_supported else '✗'} | Fsync Durability: {'✓' if env_report.fsync_durability_supported else '✗'}")
+        print(
+            f"Atomic Rename: {'✓' if env_report.atomic_rename_supported else '✗'} | Fsync Durability: {'✓' if env_report.fsync_durability_supported else '✗'}"
+        )
         print(
             f"Dependencies: SQLite={'✓' if env_report.sqlite_available else '✗'}, "
             f"DuckDB={'✓' if env_report.duckdb_available else '✗'}, "
             f"Git-LFS={'✓' if env_report.git_lfs_available else '✗'}"
         )
         print("\n--- Knowledge Health & Debt ---")
-        corpus_label = f"({corpus_dir.relative_to(ws_root) if corpus_dir and corpus_dir.is_relative_to(ws_root) else corpus_dir})" if corpus_dir else "(none)"
+        corpus_label = (
+            f"({corpus_dir.relative_to(ws_root) if corpus_dir and corpus_dir.is_relative_to(ws_root) else corpus_dir})"
+            if corpus_dir
+            else "(none)"
+        )
         print(f"Canonical Objects:       {canonical_count} {corpus_label}")
         print(f"Pending Backlog:         {debt_report.pending_backlog_count} item(s)")
         print(f"Quarantined Items:       {debt_report.quarantined_count} item(s)")
@@ -1499,10 +1625,16 @@ def handle_benchmark(args: argparse.Namespace) -> int:
             print(f"Top-5 Recall: {report.top_5_recall * 100:.1f}%")
             print(f"Top-10 Recall: {report.top_10_recall * 100:.1f}%")
             print(f"Conclusion Preservation Rate: {report.conclusion_preservation_rate * 100:.1f}%")
-            print(f"Negative Control Refusal Rate: {report.negative_control_refusal_rate * 100:.1f}%")
+            print(
+                f"Negative Control Refusal Rate: {report.negative_control_refusal_rate * 100:.1f}%"
+            )
             print(f"Fake Citations Stripped: {report.fake_citations_stripped}")
-            print(f"Mean Query Latency: {report.mean_query_ms:.2f} ms ({report.queries_per_sec:.1f} q/s)")
-            print(f"Corpus Materialization: {report.corpus_build_time_sec:.2f}s ({report.corpus_size} articles)")
+            print(
+                f"Mean Query Latency: {report.mean_query_ms:.2f} ms ({report.queries_per_sec:.1f} q/s)"
+            )
+            print(
+                f"Corpus Materialization: {report.corpus_build_time_sec:.2f}s ({report.corpus_size} articles)"
+            )
         return ExitCode.SUCCESS
 
     ws_root = Path(getattr(args, "workspace_root", ".") or ".").resolve()
@@ -1695,7 +1827,9 @@ def handle_discover(args: argparse.Namespace) -> int:
             }
             print(json.dumps(res, indent=2))
         else:
-            print(f"✓ Discovery scan complete: found {len(candidates)} candidates ({added} new pending)")
+            print(
+                f"✓ Discovery scan complete: found {len(candidates)} candidates ({added} new pending)"
+            )
         return ExitCode.SUCCESS
 
     elif action == "list":
@@ -1709,7 +1843,9 @@ def handle_discover(args: argparse.Namespace) -> int:
         else:
             print(f"Discovery candidates ({len(items)}):")
             for c in items:
-                print(f"  [{c.status.upper()}] {c.candidate_id} ({c.candidate_type}, conf: {c.confidence})")
+                print(
+                    f"  [{c.status.upper()}] {c.candidate_id} ({c.candidate_type}, conf: {c.confidence})"
+                )
         return ExitCode.SUCCESS
 
     elif action == "review":
@@ -1794,7 +1930,10 @@ def handle_structural(args: argparse.Namespace) -> int:
     elif action == "inspect":
         indexer = StructuralGraphIndexer(repo_root=repo_root, cache_dir=cache_dir)
         if not indexer.load_existing_index():
-            print("Error: Structural index not found. Run 'trashheap structural index' first.", file=sys.stderr)
+            print(
+                "Error: Structural index not found. Run 'trashheap structural index' first.",
+                file=sys.stderr,
+            )
             return ExitCode.NOT_FOUND
 
         node = indexer.nodes.get(args.node_id)
@@ -1813,7 +1952,10 @@ def handle_structural(args: argparse.Namespace) -> int:
     elif action == "impact":
         indexer = StructuralGraphIndexer(repo_root=repo_root, cache_dir=cache_dir)
         if not indexer.load_existing_index():
-            print("Error: Structural index not found. Run 'trashheap structural index' first.", file=sys.stderr)
+            print(
+                "Error: Structural index not found. Run 'trashheap structural index' first.",
+                file=sys.stderr,
+            )
             return ExitCode.NOT_FOUND
 
         analyzer = StructuralGraphAnalyzer(indexer.nodes, indexer.edges)
@@ -2002,9 +2144,13 @@ def handle_staging(args: argparse.Namespace) -> int:
                 print(json.dumps(report.model_dump(), indent=2))
             else:
                 if report.is_equivalent:
-                    print(f"✓ Staging backends equivalent ({report.baseline_count} baseline vs {report.parquet_count} parquet)")
+                    print(
+                        f"✓ Staging backends equivalent ({report.baseline_count} baseline vs {report.parquet_count} parquet)"
+                    )
                 else:
-                    print(f"❌ Staging backends not equivalent ({report.baseline_count} baseline vs {report.parquet_count} parquet)")
+                    print(
+                        f"❌ Staging backends not equivalent ({report.baseline_count} baseline vs {report.parquet_count} parquet)"
+                    )
                     if report.missing_in_parquet:
                         print(f"  Missing in Parquet: {report.missing_in_parquet}")
                     if report.missing_in_baseline:
@@ -2046,6 +2192,7 @@ def handle_staging(args: argparse.Namespace) -> int:
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)
             return ExitCode.VALIDATION_ERROR
+
 
 def handle_init(args: argparse.Namespace) -> int:
     """Handle init / new subcommand."""

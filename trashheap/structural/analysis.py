@@ -133,7 +133,9 @@ class StructuralGraphAnalyzer:
             ceiling_hit=ceiling_hit,
         )
 
-    def detect_cycles(self, edge_types: Optional[List[StructuralEdgeType]] = None) -> List[List[str]]:
+    def detect_cycles(
+        self, edge_types: Optional[List[StructuralEdgeType]] = None
+    ) -> List[List[str]]:
         """Detect cycles in the structural graph for DAG edge types."""
         if edge_types is None:
             edge_types = [StructuralEdgeType.DEFINES, StructuralEdgeType.INHERITS]

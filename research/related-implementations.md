@@ -16,6 +16,9 @@
 | P5 | [`axoviq-ai/synthadoc`](https://github.com/axoviq-ai/synthadoc) | Open-source LLM knowledge compilation engine; a self-contained wiki of Markdown pages maintained and cross-referenced by deterministic scripts | README + core pipeline code read |
 | P6 | **HiSkill: Empowering LLM Agents with Hierarchical Skill Graphs** (*arXiv:2607.25853*, 2026) | Research framework organizing distilled agent trajectories into a hierarchical, queryable skill graph | Full paper + methodology read |
 | P7 | **A Deterministic Control Plane for LLM Coding Agents** (*arXiv:2606.26924*, 2026 / Rel(AI)Build) | Research proposal introducing a deterministic guardrail layer above the LLM harness for auditable filesystem and tool operations | Full paper + threat model read |
+| P8 | [`langchain-ai/openwiki`](https://github.com/langchain-ai/openwiki) (David R Oliver road test) | Codebase knowledge compiler with Grounded Claims, OKF v0.2 export, durable checkpoint state machine | Full article, codebase architecture notes, run logs read |
+| P9 | [`FareedKhan-dev/agentic-knowledge-graph`](https://github.com/FareedKhan-dev/agentic-knowledge-graph) | Deterministic 929M-edge biomedical graph (0 LLM calls), CSR in RAM, constrained decoding, self-debunking benchmark | Full repo, architecture notes, benchmark code read |
+| P10 | [`FareedKhan-dev/all-agentic-architectures`](https://github.com/FareedKhan-dev/all-agentic-architectures) & [`FareedKhan-dev/production-grade-agentic-system`](https://github.com/FareedKhan-dev/production-grade-agentic-system) | 35 agentic architectures, Deterministic-Picker Pattern, and 7 enterprise production hardening layers | Full repos, patterns catalog, production layers read |
 
 Full texts not vendored (third-party, no redistribution licence — `README.md` §3).
 
@@ -217,15 +220,62 @@ A 2026 architectural proposal (*arXiv:2606.26924*) introducing a deterministic c
 
 ---
 
-## 9. Derived changes & Architectural Affirmations
+---
+
+## 9. P8 — OpenWiki & Grounded Claims (David R Oliver / LangChain OpenWiki)
+
+A 2026 codebase knowledge compiler implementation and empirical local-model road test (*"OpenWiki Turns Your Codebase Into Self-Correcting Memory"*, David R Oliver).
+
+### 9.1 Convergence
+- **The Core Epistemic Thesis:** *"Documentation fails because it is write-once. Memory works because it is overwrite-often."* Directly reflects our living compilation model.
+- **Grounded Claims & AST Hash Pinning:** Storing dual prose and JSON sidecars pinning claims to `file_path`, line intervals, and SHA-256 line hashes. When source code mutates, hash mismatches trigger targeted page invalidation. Independent industry convergence with our Structural Knowledge Graph (`STRUCTURAL-GRAPH.md`) and AST Bridge Engine (`SG-013`).
+- **OKF v0.2 Interoperability:** Emits Google Open Knowledge Format v0.2 bundles, validating our Plan 61 interop spec (`trashheap/bundle/`).
+- **Ralph Loop (Durable Checkpoints):** Proves that monolithic agent scripts crash, while state-machine retry loops over durable run journals (`.run.json`) achieve monotonic forward progress. Aligns with our Durable Staged Commit Protocol (**DSCP**).
+
+### 9.2 Divergence
+- **Epistemic Scope:** OpenWiki targets codebase architectural maps; *The Omniscient Trash Heap* generalizes across heterogeneous enterprise sources (transcripts, papers, notes, telemetry) with 5-layer validation.
+
+---
+
+## 10. P9 — Zero-LLM Biomedical Knowledge Graph (Fareed Khan)
+
+A 2026 large-scale knowledge graph implementation (`agentic-knowledge-graph`) building a 929.8M-edge citation and ontology graph across 28.3M PubMed abstracts with zero generative LLM calls, evaluated on PubMedQA.
+
+### 10.1 Convergence
+- **Topological Admissibility $\neq$ Propositional Truth:** Empirical proof that graph reachability cannot certify factual truth ($\text{AUROC} \approx 0.500$), whereas constrained softmax logit posteriors achieve $\text{AUROC} \approx 0.810$. Directly informs `RET-006`–`RET-008` and `EPI-006`.
+- **CSR Adjacency in RAM:** Bypasses graph database overhead by storing raw adjacency matrices in memory as Compressed Sparse Row (CSR) slices, executing neighborhood expansions in $<10\ \mu\text{s}$. Informs `GRAPH-INTELLIGENCE.md` §11.1.
+- **The Truncation Trap:** Hardening against arbitrary context truncation (e.g., 1,100 char clip that severed `CONCLUSIONS` in 94.2% of abstracts). Informs `RET-009`.
+
+### 10.2 Divergence
+- **Domain Specialization:** Khan focuses on NLM medical XML metadata; *The Omniscient Trash Heap* supports streaming XML invariance (`ADA-008`) alongside multi-format multimodal ingestion.
+
+---
+
+## 11. P10 — 35 Agentic Architectures & 7-Layer Production Hardening (Fareed Khan)
+
+A comprehensive taxonomy of 35 agent architectures (`all-agentic-architectures`) and a 7-layer industrial agent harness (`production-grade-agentic-system`).
+
+### 11.1 Convergence
+- **The Deterministic-Picker Pattern:** Proves that stochastic LLM routing suffers from flat-band instability. Restricting LLMs to structured categorical perception (Pydantic/constrained logits) and executing graph traversal via deterministic Python is the exact operational manifestation of **CANON-006**.
+- **The 7 Production Layers:** Validates the enterprise necessity of circuit breakers (hysteresis), prompt fencing, durable write-ahead logging (WAL), OpenTelemetry distributed tracing, and calibration drift monitoring. Mirrors our Continuous Staged Commit Coordinator (CSCC) and 5-layer epistemic validation pipeline.
+
+### 11.2 Divergence
+- **Orchestration Scope:** Khan’s patterns catalog general-purpose agent interactions; *The Omniscient Trash Heap* specializes deterministic control into a knowledge compiler and epistemic retrieval engine.
+
+---
+
+## 12. Derived changes & Architectural Affirmations
 
 | Change / Affirmation | Where |
 |---|---|
-| **CANON-006 strengthened** — cite *Deterministic Control Plane* (*arXiv:2606.26924*) as the academic foundation for forbidding direct LLM filesystem writes | `ARCHITECTURE.md` §2.2 |
+| **CANON-006 strengthened** — cite *Deterministic Control Plane* (*arXiv:2606.26924*) and *Deterministic-Picker Pattern* (Khan 2026) as proof that LLMs must never directly mutate state | `ARCHITECTURE.md` §2.2 |
 | **Ontological Triad validated** — cite *HiSkill* (2026) as quantitative proof that flat trajectory storage fails and hierarchical `Trace → Insight → Skill` compilation is load-bearing | `INGEST-CORE-004` / `ONTOLOGY.md` §4 |
+| **Grounded Claims & OKF v0.2 verified** — cite OpenWiki (2026) for AST hash-pinned claim sidecars and OKF v0.2 interop | `STRUCTURAL-GRAPH.md` (SG-013) / `OKF-INTEROP.md` |
+| **Constrained Logits & Refusal Calibration** — cite PubMed 929M graph (Khan 2026) for softmax posteriors outperforming topological path validation | `RETRIEVAL.md` (§9.6, §9.7, RET-008) / `EPI-006` |
+| **Section-Aware Truncation Trap Defenses** — cite PubMed 1100-char truncation flaw | `RETRIEVAL.md` (RET-009) |
 | **Capture UX precedent** — note `files.md` as a validated pattern for the "write-only entrance" philosophy | `README.md` deviation 21 |
 | GraphRAG maintenance-mode caveat | `GRAPH-INTELLIGENCE.md` §9.2 |
 | Threshold proliferation recorded as a simplification target | `README.md` deviation 23 |
 | Section-ownership gap now cites a working precedent | `README.md` deviation 21 |
 
-No design decision was reversed. P1, P3, P4, P5, P6, and P7 all independently corroborate existing `llm-wiki-oe` architectural choices (local-first Markdown, deterministic compilation, hierarchical typing, strict execution boundaries).
+No design decision was reversed. P1 through P10 independently corroborate existing `llm-wiki-oe` architectural choices (local-first Markdown, deterministic compilation, hierarchical typing, strict execution boundaries, constrained decoding, durable transactions).

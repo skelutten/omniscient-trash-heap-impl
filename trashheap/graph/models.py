@@ -123,9 +123,7 @@ class DiscoveryCandidate:
     """Base discovery candidate matching DISCOVERY.md §5.2 (DISC-001)."""
 
     candidate_id: str
-    candidate_type: Literal[
-        "relation_proposal", "duplicate", "knowledge_gap", "node_proposal"
-    ]
+    candidate_type: Literal["relation_proposal", "duplicate", "knowledge_gap", "node_proposal"]
     confidence: float
     status: Literal[
         "pending", "reviewed", "approved", "promoted", "rejected", "expired", "superseded"

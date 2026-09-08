@@ -74,7 +74,9 @@ class LSPMetadata(BaseModel):
 
     server: str = Field(..., description="LSP server name")
     server_version: str = Field(..., description="LSP server version")
-    resolution_status: str = Field(..., description="Resolution status, e.g. resolved | partial | failed")
+    resolution_status: str = Field(
+        ..., description="Resolution status, e.g. resolved | partial | failed"
+    )
 
 
 class StructuralNode(BaseModel):
@@ -94,7 +96,9 @@ class StructuralNode(BaseModel):
     line_end: Optional[int] = Field(default=None, description="Ending line in source file")
     source_revision: str = Field(..., description="Source git revision or resolved ref (SG-007)")
     content_hash: str = Field(..., description="SHA-256 hash of file content (SG-007, SG-008)")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Arbitrary structural metadata")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Arbitrary structural metadata"
+    )
 
 
 class StructuralEdge(BaseModel):
@@ -108,7 +112,9 @@ class StructuralEdge(BaseModel):
     target_id: str = Field(..., description="Target structural node ID")
     source_revision: str = Field(..., description="Source revision binding (SG-007)")
     derivation: DerivationMetadata = Field(..., description="Extraction provenance (SG-014)")
-    lsp_metadata: Optional[LSPMetadata] = Field(default=None, description="Optional LSP resolution info (SG-005)")
+    lsp_metadata: Optional[LSPMetadata] = Field(
+        default=None, description="Optional LSP resolution info (SG-005)"
+    )
 
 
 class BridgeEdge(BaseModel):
@@ -122,9 +128,13 @@ class BridgeEdge(BaseModel):
     bridge_id: str = Field(..., description="Deterministic bridge identifier")
     knowledge_object_id: str = Field(..., description="Knowledge Object ID (e.g. ENG-CMP-0102)")
     structural_node_id: str = Field(..., description="Target structural node ID")
-    bridge_type: str = Field(default="represented_by", description="Bridge type: represented_by | documents | tested_by")
+    bridge_type: str = Field(
+        default="represented_by", description="Bridge type: represented_by | documents | tested_by"
+    )
     derivation: DerivationMetadata = Field(..., description="Derivation provenance")
-    status: str = Field(default="pending", description="Status: pending | reviewed | approved | rejected")
+    status: str = Field(
+        default="pending", description="Status: pending | reviewed | approved | rejected"
+    )
 
 
 class ImpactReport(BaseModel):
@@ -135,8 +145,12 @@ class ImpactReport(BaseModel):
     target_node_id: str = Field(..., description="Target node analyzed")
     max_depth: int = Field(..., description="Bounded max traversal depth")
     node_ceiling: int = Field(..., description="Bounded node ceiling")
-    affected_nodes: List[str] = Field(default_factory=list, description="List of affected structural node IDs")
-    traversal_paths: List[Dict[str, Any]] = Field(default_factory=list, description="Step-by-step traversal edges")
+    affected_nodes: List[str] = Field(
+        default_factory=list, description="List of affected structural node IDs"
+    )
+    traversal_paths: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Step-by-step traversal edges"
+    )
     context_budget_tokens: int = Field(..., description="Estimated token context budget (SG-011)")
     depth_reached: int = Field(..., description="Maximum depth reached in traversal")
     ceiling_hit: bool = Field(default=False, description="Whether node ceiling stopped traversal")
@@ -151,8 +165,12 @@ class CoverageReport(BaseModel):
     indexed_files: int = Field(..., description="Files successfully indexed")
     total_nodes: int = Field(..., description="Total structural nodes extracted")
     total_edges: int = Field(..., description="Total structural edges extracted")
-    unresolved_references: List[Dict[str, str]] = Field(default_factory=list, description="Unresolved symbol references")
-    failed_files: List[Dict[str, str]] = Field(default_factory=list, description="Failed files with parse errors (SG-020)")
+    unresolved_references: List[Dict[str, str]] = Field(
+        default_factory=list, description="Unresolved symbol references"
+    )
+    failed_files: List[Dict[str, str]] = Field(
+        default_factory=list, description="Failed files with parse errors (SG-020)"
+    )
     parser: str = Field(..., description="Parser implementation name")
     parser_version: str = Field(..., description="Parser version string")
     grammar_version: str = Field(..., description="Grammar version string")
@@ -165,8 +183,12 @@ class StructuralGraphManifest(BaseModel):
 
     schema_version: str = Field(default="0.1.0", description="Manifest schema version")
     revision: str = Field(..., description="Source code revision (git SHA or ref)")
-    aggregate_hash: str = Field(..., description="SHA-256 over all indexed files and content hashes")
-    generated_at: str = Field(default_factory=current_iso_timestamp, description="Timestamp of indexing")
+    aggregate_hash: str = Field(
+        ..., description="SHA-256 over all indexed files and content hashes"
+    )
+    generated_at: str = Field(
+        default_factory=current_iso_timestamp, description="Timestamp of indexing"
+    )
     node_count: int = Field(..., description="Total nodes in graph")
     edge_count: int = Field(..., description="Total edges in graph")
     tool_version: str = Field(default="3.8.10", description="trashheap tool version")

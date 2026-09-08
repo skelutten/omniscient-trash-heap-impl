@@ -48,7 +48,9 @@ class BundleSelector:
             "include_descendants": self.include_descendants,
             "object_types": sorted(self.object_types) if self.object_types else None,
             "domains": sorted(self.domains) if self.domains else None,
-            "facets": {k: sorted(v) for k, v in sorted(self.facets.items())} if self.facets else None,
+            "facets": {k: sorted(v) for k, v in sorted(self.facets.items())}
+            if self.facets
+            else None,
             "statuses": sorted(self.statuses) if self.statuses else None,
             "min_confidence": self.min_confidence,
             "valid_at": self.valid_at,

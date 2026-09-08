@@ -27,9 +27,7 @@ def normalize_chunk_text(text: str) -> str:
     return re.sub(r"\s+", " ", normalized).strip()
 
 
-def chunk_text_deterministic(
-    text: str, chunk_size: int = 500, overlap: int = 50
-) -> List[str]:
+def chunk_text_deterministic(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
     """Deterministic character-based chunking window per GRAPH-INTELLIGENCE.md §7.1.
 
     Windows are consecutive chunk_size-codepoint windows with overlap;
@@ -101,8 +99,7 @@ class GraphAnalyzer:
         out_adj: Dict[str, Set[str]] = {nid: set() for nid in node_ids}
         in_adj: Dict[str, Set[str]] = {nid: set() for nid in node_ids}
         scope_map: Dict[str, str] = {
-            nid: (self.objects_by_id[nid].scope or "engineering")
-            for nid in node_ids
+            nid: (self.objects_by_id[nid].scope or "engineering") for nid in node_ids
         }
 
         # Build adjacency over canonical relations
@@ -173,9 +170,7 @@ class GraphAnalyzer:
 
         return out_adj, in_degree, out_degree, total_degree, component_map, communities
 
-    def compute_bounded_distances(
-        self, max_depth: int = 3
-    ) -> Dict[str, Dict[str, int]]:
+    def compute_bounded_distances(self, max_depth: int = 3) -> Dict[str, Dict[str, int]]:
         """Compute all-pairs shortest path distance up to max_depth using BFS."""
         node_ids = sorted(self.objects_by_id.keys())
         out_adj: Dict[str, Set[str]] = {nid: set() for nid in node_ids}
@@ -335,9 +330,7 @@ class GraphAnalyzer:
                 shared_chunks = chunk_hits_by_node[u] & chunk_hits_by_node[v]
                 cooc_count = len(shared_chunks)
                 cooc_score = (
-                    min(1.0, cooc_count / 10.0)
-                    if cooc_count >= min_cooccurrence_chunks
-                    else 0.0
+                    min(1.0, cooc_count / 10.0) if cooc_count >= min_cooccurrence_chunks else 0.0
                 )
 
                 final_score = min(

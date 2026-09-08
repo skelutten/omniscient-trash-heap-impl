@@ -26,7 +26,9 @@ class FrontmatterMode(str, Enum):
     """Frontmatter processing mode (Rule 11, D95)."""
 
     REQUIRED = "required"  # Strict default: requires YAML frontmatter
-    DERIVED = "derived"    # Opt-in for external docs: extracts title from macro/H1, strips privacy macros
+    DERIVED = (
+        "derived"  # Opt-in for external docs: extracts title from macro/H1, strips privacy macros
+    )
 
 
 class MigrationMode(str, Enum):
@@ -42,8 +44,12 @@ class QuarantineRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     file_path: str = Field(..., description="Repository-relative POSIX path to quarantined file")
-    reason: str = Field(..., description="Classification reason (e.g. malformed_metadata, ambiguous_scope)")
-    error_detail: Optional[str] = Field(default=None, description="Exception message or ambiguity explanation")
+    reason: str = Field(
+        ..., description="Classification reason (e.g. malformed_metadata, ambiguous_scope)"
+    )
+    error_detail: Optional[str] = Field(
+        default=None, description="Exception message or ambiguity explanation"
+    )
 
 
 class LinkProposal(BaseModel):
@@ -56,7 +62,9 @@ class LinkProposal(BaseModel):
 
     source_file: str = Field(..., description="Source legacy file path")
     raw_link: str = Field(..., description="Raw link text or markdown target")
-    inferred_target: Optional[str] = Field(default=None, description="Inferred canonical object ID or target")
+    inferred_target: Optional[str] = Field(
+        default=None, description="Inferred canonical object ID or target"
+    )
     resolved: bool = Field(default=False, description="Whether target resolved deterministically")
 
 
@@ -71,7 +79,9 @@ class FacetProposal(BaseModel):
     source_file: str = Field(..., description="Source legacy file path")
     raw_term: str = Field(..., description="Raw term or legacy tag")
     facet_name: str = Field(..., description="Target facet dimension (e.g. toolchain, language)")
-    matched_value: Optional[str] = Field(default=None, description="Matched canonical registry value")
+    matched_value: Optional[str] = Field(
+        default=None, description="Matched canonical registry value"
+    )
     accepted: bool = Field(default=False, description="Whether matched in registry vocabulary")
 
 
@@ -81,13 +91,21 @@ class MigrationManifest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     schema_version: str = Field(default="1.0.0", description="Migration manifest schema version")
-    source_corpus_hash: str = Field(..., description="Exact-byte SHA-256 over sorted source paths and bytes (Rule 3)")
-    target_corpus_hash: Optional[str] = Field(default=None, description="SHA-256 over emitted canonical files")
+    source_corpus_hash: str = Field(
+        ..., description="Exact-byte SHA-256 over sorted source paths and bytes (Rule 3)"
+    )
+    target_corpus_hash: Optional[str] = Field(
+        default=None, description="SHA-256 over emitted canonical files"
+    )
     source_location: str = Field(..., description="Source corpus directory path")
     target_location: str = Field(..., description="Target corpus directory path")
-    source_mutated: bool = Field(default=False, description="Whether source files were mutated (must be False, Rule 1)")
+    source_mutated: bool = Field(
+        default=False, description="Whether source files were mutated (must be False, Rule 1)"
+    )
     mode: str = Field(..., description="Execution mode: dry-run or execute")
-    frontmatter_mode: str = Field(default="required", description="Frontmatter mode: required or derived (Rule 11)")
+    frontmatter_mode: str = Field(
+        default="required", description="Frontmatter mode: required or derived (Rule 11)"
+    )
     counts: Dict[str, int] = Field(
         default_factory=lambda: {
             "total_source_files": 0,
@@ -99,8 +117,12 @@ class MigrationManifest(BaseModel):
         },
         description="Detailed file and ambiguity counts",
     )
-    quarantined: List[QuarantineRecord] = Field(default_factory=list, description="List of quarantined files")
-    generated_at: str = Field(default_factory=current_iso_timestamp, description="UTC ISO generation timestamp")
+    quarantined: List[QuarantineRecord] = Field(
+        default_factory=list, description="List of quarantined files"
+    )
+    generated_at: str = Field(
+        default_factory=current_iso_timestamp, description="UTC ISO generation timestamp"
+    )
 
 
 class MigrationMap(BaseModel):
@@ -128,5 +150,7 @@ class MigrationMap(BaseModel):
         default_factory=lambda: ["%docResp", "%docOwnerLineMgr", "%docApprover"],
         description="Doc macros to strip in derived mode for privacy (Rule 11, D95)",
     )
-    default_domain: str = Field(default="software_engineering", description="Default domain if not inferred")
+    default_domain: str = Field(
+        default="software_engineering", description="Default domain if not inferred"
+    )
     default_audience: str = Field(default="engineer", description="Default audience facet")

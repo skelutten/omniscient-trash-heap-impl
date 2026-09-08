@@ -34,7 +34,9 @@ class ASTExtractor:
         rel_path: str,
         content_bytes: bytes,
         source_revision: str,
-    ) -> Tuple[List[StructuralNode], List[StructuralEdge], List[Dict[str, str]], Optional[Dict[str, str]]]:
+    ) -> Tuple[
+        List[StructuralNode], List[StructuralEdge], List[Dict[str, str]], Optional[Dict[str, str]]
+    ]:
         """Extract nodes and edges from a single Python file.
 
         Returns:
@@ -234,7 +236,9 @@ class ASTExtractor:
                     if isinstance(subnode.func, ast.Name):
                         called = subnode.func.id
                         # Check if called symbol is local or external
-                        target_call_id = defined_symbols.get(called, f"repo={self.repo};symbol={called}")
+                        target_call_id = defined_symbols.get(
+                            called, f"repo={self.repo};symbol={called}"
+                        )
                         edges.append(
                             StructuralEdge(
                                 edge_id=f"{fn_id}#CALLS#{target_call_id}",
@@ -281,7 +285,9 @@ class ASTExtractor:
             elif isinstance(item, ast.Assign):
                 # Top-level constant/symbol
                 for target in item.targets:
-                    if isinstance(target, ast.Name) and (target.id.isupper() or target.id.startswith("__")):
+                    if isinstance(target, ast.Name) and (
+                        target.id.isupper() or target.id.startswith("__")
+                    ):
                         sym_name = target.id
                         sym_id = f"repo={self.repo};path={rel_path};symbol={sym_name}"
                         nodes.append(

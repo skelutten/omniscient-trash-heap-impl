@@ -114,7 +114,16 @@ def test_sg_001_to_003_registry():
     assert "edge_types" in reg_data
 
     # SG-002: Structural node types MUST NOT be mixed with ObjectTypeEnum
-    expected_node_types = {"FILE", "MODULE", "CLASS", "FUNCTION", "METHOD", "SYMBOL", "ROUTE", "TEST"}
+    expected_node_types = {
+        "FILE",
+        "MODULE",
+        "CLASS",
+        "FUNCTION",
+        "METHOD",
+        "SYMBOL",
+        "ROUTE",
+        "TEST",
+    }
     assert set(reg_data["node_types"].keys()) == expected_node_types
     for nt in expected_node_types:
         assert registry.is_valid_node_type(nt)
@@ -243,7 +252,9 @@ def test_sg_010_and_011_blast_radius_and_context_budget(sample_code_repo: Path, 
     assert report.context_budget_tokens > 0  # SG-011
 
     # Traversal hitting ceiling
-    tight_report = analyzer.compute_blast_radius(target_node_id=target_id, max_depth=5, node_ceiling=2)
+    tight_report = analyzer.compute_blast_radius(
+        target_node_id=target_id, max_depth=5, node_ceiling=2
+    )
     assert tight_report.ceiling_hit is True
     assert len(tight_report.affected_nodes) <= 2
 
@@ -337,20 +348,24 @@ def test_sg_015_and_020_coverage_and_degraded_parsing(sample_code_repo: Path, tm
     assert manifest.node_count > 0
 
 
-def test_sg_017_cli_read_only_operations(sample_code_repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture):
+def test_sg_017_cli_read_only_operations(
+    sample_code_repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture
+):
     """Verify SG-017: CLI structural subcommands execute read-only without modifying canonical files."""
     cache_dir = tmp_path / "cache"
 
     # 1. Index command
-    code = main([
-        "structural",
-        "index",
-        "--repo-root",
-        str(sample_code_repo),
-        "--cache-dir",
-        str(cache_dir),
-        "--json",
-    ])
+    code = main(
+        [
+            "structural",
+            "index",
+            "--repo-root",
+            str(sample_code_repo),
+            "--cache-dir",
+            str(cache_dir),
+            "--json",
+        ]
+    )
     assert code == ExitCode.SUCCESS
     out = capsys.readouterr().out
     data = json.loads(out)
@@ -359,32 +374,36 @@ def test_sg_017_cli_read_only_operations(sample_code_repo: Path, tmp_path: Path,
 
     # 2. Inspect command
     file_node_id = "repo=canonical;path=pkg/module_a.py"
-    code = main([
-        "structural",
-        "inspect",
-        file_node_id,
-        "--repo-root",
-        str(sample_code_repo),
-        "--cache-dir",
-        str(cache_dir),
-        "--json",
-    ])
+    code = main(
+        [
+            "structural",
+            "inspect",
+            file_node_id,
+            "--repo-root",
+            str(sample_code_repo),
+            "--cache-dir",
+            str(cache_dir),
+            "--json",
+        ]
+    )
     assert code == ExitCode.SUCCESS
     inspect_out = capsys.readouterr().out
     node_data = json.loads(inspect_out)
     assert node_data["node_id"] == file_node_id
 
     # 3. Impact command
-    code = main([
-        "structural",
-        "impact",
-        file_node_id,
-        "--repo-root",
-        str(sample_code_repo),
-        "--cache-dir",
-        str(cache_dir),
-        "--json",
-    ])
+    code = main(
+        [
+            "structural",
+            "impact",
+            file_node_id,
+            "--repo-root",
+            str(sample_code_repo),
+            "--cache-dir",
+            str(cache_dir),
+            "--json",
+        ]
+    )
     assert code == ExitCode.SUCCESS
     impact_out = capsys.readouterr().out
     impact_data = json.loads(impact_out)

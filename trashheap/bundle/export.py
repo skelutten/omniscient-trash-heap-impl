@@ -217,7 +217,9 @@ def build_bundle(
 
         # Security check (BUNDLE-007): Cross-scope personal protection
         if ko.scope == "personal":
-            if not selector.allow_personal_scope and "personal" not in (selector.redact_scopes or []):
+            if not selector.allow_personal_scope and "personal" not in (
+                selector.redact_scopes or []
+            ):
                 # Personal scope inclusion requires explicit allowance or redaction policy
                 if "personal" in selector.scopes:
                     raise CrossScopeSecurityError(
@@ -325,9 +327,7 @@ def build_bundle(
 
     # Total member objects (selected + closure)
     all_member_ids = sorted(selected_ids | closure_ids)
-    all_objects: List[KnowledgeObject] = [
-        ko for ko in corpus.objects if ko.id in all_member_ids
-    ]
+    all_objects: List[KnowledgeObject] = [ko for ko in corpus.objects if ko.id in all_member_ids]
     all_objects.sort(key=lambda ko: ko.id or "")
 
     # 3. Path Mapping & Unresolved References (BUNDLE-006)
