@@ -34,6 +34,7 @@ def chunk_markdown(
     max_words: int = 512,
 ) -> List[ChunkRecord]:
     """Split Markdown body into multi-chunk passages adhering to section boundaries."""
+    _ = target_words
     body = strip_frontmatter(raw_markdown)
     if not body:
         return [ChunkRecord(chunk_index=0, text="", word_count=0)]

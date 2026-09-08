@@ -424,8 +424,16 @@ class Linter:
                                 level="ERROR",
                             )
                         )
-                except Exception:
-                    pass
+                except Exception as exc:
+                    findings.append(
+                        Finding(
+                            code="E002",
+                            field="taxonomy_id",
+                            message=f"Failed to resolve expected slug path for node '{node_id}': {exc} (TAX-002)",
+                            file=rel_path,
+                            level="ERROR",
+                        )
+                    )
 
         return findings
 

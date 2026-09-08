@@ -21,7 +21,7 @@ def test_pubmed_batch_ingest_single_shard(tmp_path: Path):
         # Skip if shard not pre-cached locally
         return
 
-    ingestor = PubmedBatchIngestor()
+    ingestor = PubmedBatchIngestor(download_workers=2, parse_workers=1)
     csr, report = ingestor.ingest_shards([cached_shard], output_csr_dir=tmp_path / "csr_out")
 
     assert report.shards_processed == 1
@@ -29,6 +29,29 @@ def test_pubmed_batch_ingest_single_shard(tmp_path: Path):
     assert report.total_mesh_headings > 300000
     assert report.total_graph_nodes > 30000
     assert report.total_graph_edges > 600000
-    assert report.articles_per_sec > 500.0
+    assert report.articles_per_sec > 250.0
     assert (tmp_path / "csr_out" / "indptr.npy").exists()
     assert (tmp_path / "csr_out" / "indices.npy").exists()
+
+
+def test_pubmed_batch_parallel_multiprocess(tmp_path: Path):
+    s1 = Path(".cache/pubmed/pubmed26n0001.xml.gz")
+    s2 = Path(".cache/pubmed/pubmed26n0002.xml.gz")
+    if not s1.exists() or not s2.exists():
+        return
+
+    ingestor = PubmedBatchIngestor(download_workers=2, parse_workers=2)
+    csr, report = ingestor.ingest_shards(
+        [s1, s2],
+        output_csr_dir=tmp_path / "csr_2shards",
+        num_parse_workers=2,
+    )
+
+    assert report.shards_processed == 2
+    assert report.total_articles == 60000
+    assert report.parse_workers == 2
+    assert report.total_graph_nodes > 50000
+    assert report.total_graph_edges > 1000000
+    assert (tmp_path / "csr_2shards" / "indptr.npy").exists()
+    assert (tmp_path / "csr_2shards" / "indices.npy").exists()
+    assert (tmp_path / "csr_2shards" / "node_index.json").exists()

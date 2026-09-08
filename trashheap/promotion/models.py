@@ -3,6 +3,7 @@
 import hashlib
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -134,3 +135,12 @@ class CandidateProposal(BaseModel):
     review_decision: Optional[ReviewDecision] = None
     supersedes: Optional[str] = None
     semantic_resolution: Optional[SemanticResolutionRecord] = None
+
+    @field_validator("target_path")
+    @classmethod
+    def validate_target_path(cls, v: str) -> str:
+        p = Path(v)
+        if p.is_absolute() or ".." in p.parts:
+            raise ValueError(f"target_path must be relative and cannot contain traversal '..': {v}")
+        return v
+

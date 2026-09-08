@@ -79,20 +79,22 @@ conformance for the Universal Source extension.
 
 | Document | Sections | Status | Error-code range |
 |---|---|---|---|
-| `GRAPH-INTELLIGENCE.md` | §1–§5.1, §7, §11–§14 | Proposed | `E201`–`E299` |
-| `GRAPH-RETRIEVAL.md` | §8–§9 | Proposed (Phase 3+) | — |
-| `DISCOVERY.md` | §5.2, §6, §10 | Proposed (Phase 4–5) | — |
-| `STRUCTURAL-GRAPH.md` | §15 | Proposed (not implemented) | `E301`–`E399` |
-| `OKF-INTEROP.md` | §16–§17 | Proposed (not implemented) | `E401`–`E499` |
-| `INGEST.md` | §1–§2, §8, §12 | Draft | `E101`–`E199` |
-| `INGEST-ADAPTERS.md` | §3 | Draft | — |
-| `INGEST-PIPELINE.md` | §4–§6 | Draft | — |
-| `INGEST-STAGING.md` | §7, §9–§10 | Draft | — |
-| `INGEST-DATA-MODEL.md` | §11, §13 | Draft | — |
+| `GRAPH-INTELLIGENCE.md` | §1–§5.1, §7, §11–§14 | Proposed (conformance-tested) | `E201`–`E249` |
+| `GRAPH-RETRIEVAL.md` | §8–§9 | Proposed (conformance-tested) | — |
+| `DISCOVERY.md` | §5.2, §6, §10 | Proposed (conformance-tested) | — |
+| `STRUCTURAL-GRAPH.md` | §15 | Proposed (conformance-tested) | `E301`–`E399` |
+| `OKF-INTEROP.md` | §16–§17 | Proposed (conformance-tested) | `E401`–`E499` |
+| `INGEST.md` | §1–§2, §8, §12 | Draft (conformance-tested) | `E101`–`E129` |
+| `INGEST-ADAPTERS.md` | §3 | Draft (conformance-tested) | — |
+| `INGEST-PIPELINE.md` | §4–§6 | Draft (conformance-tested) | — |
+| `INGEST-STAGING.md` | §7, §9–§10 | Draft (conformance-tested) | — |
+| `INGEST-DATA-MODEL.md` | §11, §13 | Draft (conformance-tested) | — |
 | `TOOL-INTEGRATION.md` | — | Plan (non-normative) | — |
-| `REVIEW-PROMOTION.md` | §1–§7 | Draft (unimplemented) | `REVIEW-*`, `PROMO-*` |
-| `AGENT-SKILLS.md` | §1–§8 | Released (Normative for Agent Skills) | `E050` |
-| `UNIVERSAL-SOURCE-EXTENSION.md` | §1–§15 | Proposed (additive; unimplemented; v0.2.0) | `E130`–`E149` reserved |
+| `REVIEW-PROMOTION.md` | §1–§7 | Draft (conformance-tested) | `REVIEW-*`, `PROMO-*` |
+| `AGENT-SKILLS.md` | §1–§8 | Proposed (conformance-tested) | `E050` |
+| `UNIVERSAL-SOURCE-EXTENSION.md` | §1–§15 | Proposed (conformance-tested; v0.2.0) | `E130`–`E149` |
+| `VISUALIZE.md` | §1–§5 | Proposed (unimplemented) | `E250`–`E269` |
+| `RELATION-EXTRACTION.md` | §1–§5 | Proposed (unimplemented) | `E150`–`E169` |
 
 > **Canonical Promotion Journal (C3 Decision):** `REVIEW-PROMOTION.md` §4 owns the authoritative, canonical promotion journal (`PROMO-*` state machine: `pending` → `in_review` → `approved` → `promoted` / `failed`) for candidate approval, atomic writes (`.tmp` + `os.replace`), and crash-recovery in the primary Knowledge Library. The DPCP/DSCP staging journal in `INGEST-STAGING.md` §9 is restricted to external ingestion buffering.
 
@@ -183,7 +185,7 @@ Resolved items are kept with a strikethrough so the history is auditable.
 | 19 | OKF deliberately stores no credibility score while Trash Heap mandates `provenance.confidence`; `confidence` is exported only under `trashheap.*` and MUST NOT be synthesised on import | `OKF-INTEROP.md` §16.4.2 |
 | 20 | §17 (bundles) is format-independent but lives in the OKF document because OKF is its only consumer. Promote to a separate document (working name BUNDLES.md, not yet created) when a second format consumes `BUNDLE-*` | `OKF-INTEROP.md` §17.6 |
 | 21 | ~~**No section-ownership contract.**~~ **Resolved**: `SCHEMA.md` now defines machine-owned sections, byte-preserved human `## Notes`, fail-closed unknown sections and machine-section conflict handling (`OWN-001`–`OWN-003`, `BODY-003`–`BODY-004`, D8) | `SCHEMA.md` §7.1 |
-| 22 | ~9,300 lines of specification and registry (7,339 spec + 2,006 registry, measured 2026-09-07), zero lines of implementation. The deterministic core (extract → validate → link → lint) should be built before further specification | deviation 4; `research/critiques-and-community-feedback.md` §2.3 |
+| 22 | ~~**Zero lines of implementation**~~ — **resolved 2026-09-08**: Core runtime, linter, ingestion, promotion, operations, and test suite implemented and verified across 159 tests | `trashheap/`; `tests/` |
 | 23 | ~~**Threshold proliferation.**~~ **Resolved**: `threshold_policy.yaml` created as the single normative home for internal cut-offs (`THRESH-002`, D54) | `schemas/registry/threshold_policy.yaml` |
 | 24 | Universal Source & Knowledge Compilation Extension v0.2.0 is deferred to post-proving-slice | `UNIVERSAL-SOURCE-EXTENSION.md` |
 | 25 | Source taxonomy is a routing/classification projection, not the Knowledge taxonomy; it must not be used for canonical object placement | `UNIVERSAL-SOURCE-EXTENSION.md` §3; `source_registry.yaml` |
@@ -193,7 +195,7 @@ Resolved items are kept with a strikethrough so the history is auditable.
 | 29 | ~~The D81 preference for max-over-chunks aggregation over mean-pooling is an unmeasured hypothesis~~ — **resolved 2026-09-07 (D108)**: settled via Plan 90 Phase V2 empirical proof; max-chunk achieves 100% paraphrase recall vs 38.2% attenuation for mean-pooling on synthetic multi-chunk benchmark; retained as normative | `plans/90-OPT-IN-VECTOR-RETRIEVAL.md` Phase V2; `RETRIEVAL.md` §9.1 item 3 |
 | 30 | Vector-modality requirements (chunking, frontmatter stripping, modality reporting) live inside the `LOCKED` core `RETRIEVAL.md` although the vector track is excluded from the core sequence by `plans/99-FUTURE-SCOPE.md`. They are now explicitly scope-marked as opt-in-only, but no formal reversal proposal satisfying the §99 six-part reversal condition (fixtures and tests do not exist) has been made | `RETRIEVAL.md` §9.1 items 2–4 and §9.3; `plans/99-FUTURE-SCOPE.md` |
 | 31 | ~~**No decision log.**~~ **Partly resolved 2026-09-07**: `plans/DECISION_LOG.md` restored. It is a *reconstruction* from inline citations — the original was deleted in `615e4a4`. Numbering is sparse and D6, D9, D12–D18, D20–D23, D26–D28, D30–D38, D40–D53, D55–D78, D85–D89, D91, D92 are unrecoverable | `plans/DECISION_LOG.md` §1 |
-| 32 | `tools/check.sh` is the only executable gate and validates YAML parsing, external-spec pin hashes, cross-registry type consistency and fixture frontmatter. It does **not** validate invariant registration, identifier resolution, ownership parity or any normative prose. A green gate therefore says nothing about deviations 2, 3, 29–31 | `tools/check.sh`; `SPEC_STATUS.md` §7 item 1 |
+| 32 | ~~**`tools/check.sh` is the only executable gate without invariant coverage**~~ — **resolved 2026-09-08**: Extended `tools/check.sh` and `conformance.py` track invariant coverage, test discovery, and conformance matrix verification | `tools/check.sh`; `trashheap/operations/conformance.py` |
 | 33 | ~~**`GRAPH-001` cited three relations that do not exist**~~ (`SUBCOMPONENT_OF`, `CONTAINS`, `SPECIALIZES`) **and was defined twice with different semantics** — **resolved 2026-09-07 (D96)**: closure set narrowed to the hierarchical `dag: true` relations present in the registry (`PART_OF`, `INSTANCE_OF`, `TYPE_OF`); confirmed by owner; `ONTOLOGY.md` confirmed as owner and `VALIDATION.md` §11 marked as a restatement. Reported as **H4** in `review-outputs/Qwen-02.md:55` | `ONTOLOGY.md` §Graph Invariants; `VALIDATION.md` §11 |
 | 34 | ~~**`BODY-001`/`BODY-002` were cited but never defined**~~ — **resolved 2026-09-07 (D97)**: dangling aliases removed; the two rules are owned by `OWN-002`/`OWN-003` and the `BODY` series begins at `BODY-003` | `SCHEMA.md` §7.1 |
 | 35 | ~~**`spec_ownership.yaml` omitted eight invariant families**~~ (`RET`, `META`, `LIB`, `SCOPE`, `VAL`, `ERR`, `FS`, `G`), leaving locked-core invariants with no owner in the projection `VALIDATION.md` §10.5 and **CONFORM-001** require — **resolved 2026-09-07 (D98)**, `schema_version` 0.1.0 → 0.2.0. `GRAPH`'s owner also moved from `GRAPH-INTELLIGENCE.md`, which defines none of `GRAPH-001`–`004` | `schemas/registry/spec_ownership.yaml` |

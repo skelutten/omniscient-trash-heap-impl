@@ -329,10 +329,10 @@ def test_conformance_matrix_generation(tmp_path: Path):
     out_file = tmp_path / "conformance_matrix.yaml"
 
     matrix = generate_conformance_matrix(root, output_path=out_file)
-    assert matrix.summary["total_families"] == 37
+    assert matrix.summary["total_families"] == 40
     assert matrix.summary["conformance_tested"] >= 30
     assert matrix.summary["unimplemented"] <= 5
-    assert matrix.summary["total_invariants_tracked"] == 164
+    assert matrix.summary["total_invariants_tracked"] == 213
     assert matrix.summary["total_executable_tests"] > 50
     assert "corpus_hash" in matrix.summary
 
@@ -340,7 +340,7 @@ def test_conformance_matrix_generation(tmp_path: Path):
     with open(out_file, "r", encoding="utf-8") as f:
         loaded = yaml.safe_load(f)
     assert loaded["evidence_type"] == "generated_projection"
-    assert len(loaded["families"]) == 37
+    assert len(loaded["families"]) == 40
 
 
 def test_detect_spec_drift_clean_checkout():

@@ -136,6 +136,7 @@ def reconcile_parquet_schema(
     """Null-tolerant schema reconciliation across Parquet discovery tables (INGEST-CORE-009, E111)."""
     import duckdb
 
+    _ = target_version
     if table_type not in TARGET_SCHEMAS:
         raise ParquetMigrationError(f"Unknown table type '{table_type}' in schema reconciliation")
 

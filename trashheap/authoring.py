@@ -108,6 +108,18 @@ def regenerate_page(
                 f"Unrecognized non-Notes section '## {heading}' detected. Compilation aborted to prevent data loss.",
             )
 
+    # Check for manual edits to machine-owned sections (BODY-004)
+    if not allow_conflict_overwrite:
+        for heading, new_content in updated_machine_sections.items():
+            if heading in sections:
+                old_clean = sections[heading].strip()
+                new_clean = new_content.strip()
+                if old_clean and old_clean != new_clean:
+                    raise SectionOwnershipError(
+                        "E051",
+                        f"Machine-owned section '## {heading}' has been modified. Overwrite requires allow_conflict_overwrite=True (BODY-004).",
+                    )
+
     # Reassemble body
     # Preserve preamble (e.g. H1 title)
     preamble = sections.get("", "").strip()

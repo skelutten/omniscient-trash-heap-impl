@@ -199,7 +199,8 @@ def intake_source(
     fenced_text = fence_untrusted_content(text_content)
 
     # Step 5: Profile Validation against source_registry.yaml
-    registries = load_registries()
+    reg_dir = ws_root / "schemas" / "registry" if (ws_root / "schemas" / "registry").exists() else None
+    registries = load_registries(reg_dir)
     source_reg = registries.source_registry
 
     if source_type not in source_reg.source_types:
@@ -375,7 +376,31 @@ def stage_lint(staging_dir: Union[str, Path]) -> StageLintReport:
         try:
             with open(f_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
-            if not isinstance(data, dict) or "evidence_unit_ref" not in data:
+            if not isinstance(data, dict):
+                items.append(
+                    StageLintItem(
+                        evidence_unit_ref=f_path.stem,
+                        source_refs=[],
+                        representation_refs=[],
+                        suggested_object_type="error",
+                        candidate_relations=[],
+                        injections_detected=[],
+                        status="error: invalid YAML structure",
+                    )
+                )
+                continue
+            if "evidence_unit_ref" not in data:
+                items.append(
+                    StageLintItem(
+                        evidence_unit_ref=f_path.stem,
+                        source_refs=data.get("source_refs", []) if isinstance(data, dict) else [],
+                        representation_refs=data.get("representation_refs", []) if isinstance(data, dict) else [],
+                        suggested_object_type="error",
+                        candidate_relations=[],
+                        injections_detected=[],
+                        status="error: missing evidence_unit_ref",
+                    )
+                )
                 continue
 
             fenced_content = data.get("fenced_content") or ""
@@ -404,8 +429,18 @@ def stage_lint(staging_dir: Union[str, Path]) -> StageLintReport:
                     status="staged",
                 )
             )
-        except Exception:
-            continue
+        except Exception as exc:
+            items.append(
+                StageLintItem(
+                    evidence_unit_ref=f_path.stem,
+                    source_refs=[],
+                    representation_refs=[],
+                    suggested_object_type="error",
+                    candidate_relations=[],
+                    injections_detected=[],
+                    status=f"error: {exc}",
+                )
+            )
 
     return StageLintReport(
         total_count=len(items),

@@ -134,6 +134,7 @@ class BaselineStagingBackend(StagingBackend):
         proposal_id: str,
         target_table: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
+        _ = target_table
         p_dir = get_proposals_dir(self.workspace_root)
         f_path = p_dir / f"{proposal_id}.yaml"
         if not f_path.exists():
@@ -147,6 +148,7 @@ class BaselineStagingBackend(StagingBackend):
         target_table: str = "concept_proposals",
         status_filter: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
+        _ = target_table
         p_dir = get_proposals_dir(self.workspace_root)
         results = []
         for f in sorted(p_dir.glob("*.yaml")):
@@ -162,6 +164,7 @@ class BaselineStagingBackend(StagingBackend):
         return results
 
     def count_proposals(self, target_table: Optional[str] = None) -> int:
+        _ = target_table
         return len(self.list_proposals(status_filter=None))
 
     def emit_manifest(self) -> StagingManifest:
@@ -202,8 +205,12 @@ class BaselineStagingBackend(StagingBackend):
 
         manifest_path = self.workspace_root / "staging" / "staging_manifest.json"
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(manifest_path, "w", encoding="utf-8") as f:
+        tmp_manifest = self.workspace_root / "staging" / ".staging_manifest.json.tmp"
+        with open(tmp_manifest, "w", encoding="utf-8") as f:
             f.write(json.dumps(manifest.model_dump(), indent=2, sort_keys=True))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_manifest, manifest_path)
 
         return manifest
 

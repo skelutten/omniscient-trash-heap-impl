@@ -91,3 +91,30 @@ Notes 2
         regenerate_page(existing_page, updated_sections)
     assert exc.value.code == "E051"
     assert "Multiple '## Notes' sections" in exc.value.message
+
+
+def test_body_004_conflict_overwrite():
+    """BODY-004: Manually modified machine sections require explicit allow_conflict_overwrite=True."""
+    existing_page = """---
+id: ENG-SPC-CORE-0001
+---
+
+## Summary
+Original machine summary that a human modified manually.
+
+## Notes
+My notes.
+"""
+    updated_sections = {"Summary": "New compiler summary generated from data."}
+
+    # 1. Fails without overwrite flag
+    with pytest.raises(SectionOwnershipError) as exc:
+        regenerate_page(existing_page, updated_sections, allow_conflict_overwrite=False)
+    assert exc.value.code == "E051"
+    assert "BODY-004" in exc.value.message
+
+    # 2. Succeeds with explicit allow_conflict_overwrite=True
+    regenerated = regenerate_page(existing_page, updated_sections, allow_conflict_overwrite=True)
+    assert "New compiler summary generated from data." in regenerated
+    assert "My notes." in regenerated
+

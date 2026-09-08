@@ -64,20 +64,20 @@ LOCKED / UNIMPLEMENTED
 
 `Production Locked` MUST NOT be used as a synonym for
 `PRODUCTION_VERIFIED`. In the current repository, the core specifications are
-locked as design documents, while the repository does not contain a verified
-production linter/conformance implementation for the complete architecture.
+locked as design documents backed by executable conformance tests, while extensions
+such as interactive visualization and automated relation extraction remain planned.
 
 ---
 
 ## 3. Current system assessment
 
-**Assessment date:** `2026-09-07`
+**Assessment date:** `2026-09-08`
 
 > **Change since the `2026-08-23` assessment.** Following the implementation of
 > Plans 01–05 (`plans/01-REPOSITORY-FOUNDATION.md` through `plans/05-CONNECTORS-OPERATIONS-CI.md`),
 > the core knowledge compiler runtime, universal source ingestion pipeline, DPCP promotion
 > engine, operational lifecycle manager, and reproducible validation gates are fully implemented
-> and verified by 57+ automated tests in `tests/` and `tools/check.sh`.
+> and verified by 159 automated tests in `tests/` and `tools/check.sh`.
 > Conformance status is projected deterministically into `artifacts/conformance_matrix.yaml`.
 > Structural Knowledge Graph (`STRUCTURAL-GRAPH.md`), Knowledge Bundles and Google OKF v0.2 interop (`OKF-INTEROP.md`),
 > and Graph Intelligence / Discovery (`GRAPH-INTELLIGENCE.md`, `GRAPH-RETRIEVAL.md`, `DISCOVERY.md`) are fully implemented
@@ -144,8 +144,8 @@ Conformance maturity:  verified by automated test suite, check.sh gate, and conf
 | `INGEST-DATA-MODEL.md` | `DRAFT` | `CONFORMANCE_TESTED` | Trajectory models plus Universal Source Record addendum (`trashheap/ingest/models.py`) |
 | `UNIVERSAL-SOURCE-EXTENSION.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Source categories, source registry boundary and source impact map (`trashheap/ingest/`) |
 | `AGENT-SKILLS.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Standardized agent interface (agentskills.io); drift check code `E050` (`trashheap/skills.py`) |
-| `VISUALIZE.md` | `PROPOSED` | `UNIMPLEMENTED` | Offline interactive graph visualization; error range `E250–E259` (`plans/94-OPT-IN-GRAPH-VISUALIZATION.md`) |
-| `RELATION-EXTRACTION.md` | `PROPOSED` | `UNIMPLEMENTED` | Automated closed-ontology relation extraction & entity linking; error range `E150–E159` (`plans/95-RELATION-EXTRACTION-AND-LINKING.md`) |
+| `VISUALIZE.md` | `PROPOSED` | `UNIMPLEMENTED` | Offline interactive graph visualization; error range `E250–E269` (allocated `E250–E259`) (`plans/94-OPT-IN-GRAPH-VISUALIZATION.md`) |
+| `RELATION-EXTRACTION.md` | `PROPOSED` | `UNIMPLEMENTED` | Automated closed-ontology relation extraction & entity linking; error range `E150–E169` (allocated `E150–E162`) (`plans/95-RELATION-EXTRACTION-AND-LINKING.md`) |
 | `TOOL-INTEGRATION.md` | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan |
 | `REVIEW-PROMOTION.md` | `DRAFT` | `CONFORMANCE_TESTED` | Review decisions, deterministic promotion, provenance and recovery contract (`trashheap/promotion/`) |
 
@@ -187,18 +187,12 @@ review + governance
 canonical Knowledge Objects
 ```
 
-The following are specified but not implemented:
+The following extensions and production stages remain open/planned:
 
-- `Artifact`, `Event` and `Experience` source categories.
-- Source identity distinct from Representation identity.
-- Content Object identity distinct from both.
-- Content-addressable byte storage as an optional backend.
-- Append-only raw representations and `supersedes` versioning.
-- Crash-safe Source Capture Commit (`CSCC`).
-- Idempotent capture and fail-closed representation hash conflicts.
-- Connector → Adapter → Normalized Source Record → ingestion core boundary.
-- Source-aware retrieval and temporal provenance.
-- Source scope propagation through governance policy.
+- Interactive Graph Visualization (`specs/VISUALIZE.md`, offline bundle export).
+- Closed-ontology automated relation extraction & entity linking (`specs/RELATION-EXTRACTION.md`).
+- Test-Time Search & Verification harness (`plans/98-TEST-TIME-SEARCH-AND-VERIFIERS.md`).
+- Production-scale clustered deployment and production verification gates (`PRODUCTION_VERIFIED`).
 
 `raw/` is not part of the Knowledge Object structure. It is the immutable record
 of what the system received, not a workspace for editing knowledge.
@@ -235,25 +229,24 @@ or registry entries.
 
 ## 7. Open items and next gates
 
-1. Create a machine-readable `Spec → Registry → Implementation → Tests → CI`
-   conformance matrix.
-2. Implement the deterministic base validation path before claiming linter
-   conformance.
-3. Implement registry loaders and source/actor validation as separate vertical
-   slices.
-4. Implement raw capture and CSCC recovery independently from normalization and
-   canonical promotion.
-5. Add targeted tests for identity idempotency, immutable representations,
-   content-addressable deduplication and crash recovery.
-6. Reconcile or remove stale references to runtime files that are not present.
-7. Upgrade document-level implementation statuses only when executable evidence
-   exists.
+1. [COMPLETED] Create a machine-readable `Spec → Registry → Implementation → Tests → CI`
+   conformance matrix (`artifacts/conformance_matrix.yaml`).
+2. [COMPLETED] Implement the deterministic base validation path (`trashheap/linter.py`).
+3. [COMPLETED] Implement registry loaders and source/actor validation as separate vertical
+   slices (`trashheap/registry/`).
+4. [COMPLETED] Implement raw capture and CSCC recovery independently from normalization and
+   canonical promotion (`trashheap/ingest/cscc.py`).
+5. [COMPLETED] Add targeted tests for identity idempotency, immutable representations,
+   content-addressable deduplication and crash recovery (`tests/test_ingest_safety.py`).
+6. Reconcile and classify external/future test references in secondary specifications.
+7. Implement offline interactive graph visualization per `specs/VISUALIZE.md`.
+8. Implement closed-ontology relation extraction per `specs/RELATION-EXTRACTION.md`.
+9. Upgrade document-level implementation statuses to `PRODUCTION_VERIFIED` when production operational gates pass.
 
-Until these gates pass, the honest top-level claim remains:
+The top-level status claim is:
 
 ```text
-The architecture is substantially specified; the complete runtime is not yet
-implemented or conformance-verified.
+The core architecture is fully specified, implemented, and conformance-tested via automated gates; planned extensions and production verification gates remain open.
 ```
 
 ---
@@ -307,7 +300,7 @@ status_record:
   document: SPEC_STATUS.md
   specification_status: LOCKED
   implementation_status: CONFORMANCE_TESTED
-  assessment_date: 2026-09-07
+  assessment_date: 2026-09-08
   conformance_verified: true
   production_verified: false
 ```
@@ -315,5 +308,5 @@ status_record:
 This block describes the dashboard itself. It does not upgrade the status of any
 individual specification or runtime component.
 
-**End of LLM Wiki Specification Status v1.3.0**
+**End of LLM Wiki Specification Status v1.5.0**
 

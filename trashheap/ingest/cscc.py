@@ -2,6 +2,8 @@
 
 import json
 import os
+import shutil
+import time
 from pathlib import Path
 from typing import Any, Dict
 
@@ -136,8 +138,18 @@ def commit_raw_capture(
             try:
                 with open(manifest_file, "r", encoding="utf-8") as f:
                     manifest_data = json.load(f)
-            except Exception:
-                pass
+                if not isinstance(manifest_data, dict) or "representations" not in manifest_data:
+                    raise ValueError(f"Corrupt manifest schema in '{manifest_file}'")
+            except Exception as exc:
+                corrupt_backup = manifest_file.with_name(
+                    f"capture_manifest.corrupt.{int(time.time())}.json"
+                )
+                shutil.copy2(str(manifest_file), str(corrupt_backup))
+                raise IntegrityConflictError(
+                    representation_id=envelope.representation.representation_id,
+                    existing_hash="CORRUPT_MANIFEST",
+                    new_hash=f"Failed to parse manifest {manifest_file}: {exc}",
+                ) from exc
 
         rep_key = f"{envelope.source_id}/{envelope.representation.representation_id}"
         manifest_data["representations"][rep_key] = {
@@ -169,8 +181,6 @@ def commit_raw_capture(
         # Cleanup temporary directory if still exists
         if tmp_rep_dir.exists():
             try:
-                import shutil
-
                 shutil.rmtree(tmp_rep_dir)
             except Exception:
                 pass

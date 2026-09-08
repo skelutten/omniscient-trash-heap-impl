@@ -3,7 +3,7 @@
 > **Part of**: LLM Wiki Knowledge Architecture v3.8.10
 > **Document ID**: `LLM-WIKI-VALIDATION-001`
 > **Version**: `3.8.10`
-> **Updated**: `2026-08-17`
+> **Updated**: `2026-09-08`
 > **Source**: Extracted from `spec.md` §10–11; extended by current registry and source contracts
 > **Status**: `LOCKED`
 > **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
@@ -60,10 +60,11 @@ cost by five.
 
 ### 10.2 Formal Error and Warning Codes
 
-#### ERROR Codes (E001-E030)
+#### ERROR Codes (E000-E031, E050-E052)
 
 | Error code | Linter class | Triggering condition |
 |---|---|---|
+| **E000** | FileReadError | File cannot be read from disk or frontmatter YAML is malformed |
 | **E001** | DuplicateNodeIdError | The same id occurs in more than one source file (ID-004) |
 | **E002** | PathScopeMismatchError | The disk path does not match the computed slug (TAX-002) |
 | **E003** | TaxonomySlugCollisionError | Two different taxonomy_path strings normalize to the same disk path (TAX-003) |
@@ -99,6 +100,18 @@ cost by five.
 | **E051** | SectionOwnershipError | Regeneration or compiler pass encountered an unrecognized non-Notes section or multiple `## Notes` sections; compilation aborted to prevent data loss (BODY-003, OWN-002) |
 | **E052** | RunawayLoopError | Agent or tool execution harness detected repeated identical tool call signatures >= 5 times without state mutation (The 40% Rule circuit breaker) (VAL-014) |
 
+#### Registry ERROR Codes (E080-E086)
+
+| Error code | Linter class | Triggering condition |
+|---|---|---|
+| **E080** | DuplicateFamilyOwnerError | Duplicate invariant family owner in `spec_ownership.yaml` |
+| **E081** | UnknownOwnerPathError | Owner file specified in `spec_ownership.yaml` does not exist |
+| **E082** | DuplicateThresholdIdError | Duplicate threshold ID in `threshold_policy.yaml` |
+| **E083** | UnknownThresholdOwnerPathError | Owner file specified in `threshold_policy.yaml` does not exist |
+| **E084** | EmptySourceTaxonomyError | `source_taxonomy` path is empty in `source_registry.yaml` |
+| **E085** | UnknownSourceTaxonomyRootError | Root element of `source_taxonomy` not found in `source_registry.yaml` |
+| **E086** | UnknownSourceTaxonomyChildError | Child element of `source_taxonomy` not found under its root in `source_registry.yaml` |
+
 #### WARNING Codes (W001-W015)
 
 | Warning code | Linter class | Triggering condition |
@@ -123,17 +136,21 @@ cost by five.
 
 ### 10.3 Error Code Allocation (Normative Registry)
 
-The base linter (`linter.py`) owns the range `E001`–`E052` and `W001`–`W015`. Every
+The base linter (`linter.py`) owns the range `E000`–`E052`, registry validation owns
+`E080`–`E086`, and the base warning framework owns `W001`–`W015`. Every
 additive pipeline SHALL implement its errors in its own validator/pipeline
 namespace and SHALL NOT mix them into the base linter's error code contract.
 
 | Range | Owner | Document | Allocated in this version |
 |---|---|---|---|
-| `E001`–`E031`, `E050`–`E052` | Base linter & Agent Skills | `VALIDATION.md` §10.2, `AGENT-SKILLS.md` | `E001`–`E031`, `E050`, `E051`, `E052` |
-| `E053`–`E099` | Reserved for the base linter | `VALIDATION.md` | — |
-| `E101`–`E199` | Ingestion Engine (trajectory specialization and future Source validation) | `INGEST.md` §2; `UNIVERSAL-SOURCE-EXTENSION.md` §12 | `E101`–`E125` (`E106`–`E107` reserved, not allocated) |
-| `E130`–`E149` | Universal Source Extension | `UNIVERSAL-SOURCE-EXTENSION.md` §12 | Reserved; no implementation |
-| `E201`–`E299` | Graph Intelligence Delta | `GRAPH-INTELLIGENCE.md` §3 | `E201`–`E207` |
+| `E000`–`E031`, `E050`–`E052` | Base linter & Agent Skills | `VALIDATION.md` §10.2, `AGENT-SKILLS.md` | `E000`–`E031`, `E050`, `E051`, `E052` |
+| `E053`–`E079`, `E087`–`E099` | Reserved for the base linter | `VALIDATION.md` | — |
+| `E080`–`E086` | YAML Registry Validation | `VALIDATION.md` §10.2, `trashheap/registry/validator.py` | `E080`–`E086` |
+| `E101`–`E129` | Ingestion Engine (trajectory specialization and raw capture) | `INGEST.md` §2, `INGEST-CORE.md` | `E101`–`E125`, `E102A` (`E106`–`E107` reserved) |
+| `E130`–`E149` | Universal Source Extension | `UNIVERSAL-SOURCE-EXTENSION.md` §12 | `E130`–`E134`, `E141` |
+| `E150`–`E169` | Relation Extraction & Entity Linking | `RELATION-EXTRACTION.md` §2 | `E150`–`E162` |
+| `E201`–`E249` | Graph Intelligence Delta | `GRAPH-INTELLIGENCE.md` §3 | `E201`–`E207` |
+| `E250`–`E269` | Interactive Graph Visualization | `VISUALIZE.md` §2 | `E250`–`E259` |
 | `E301`–`E399` | Structural Knowledge Graph | `STRUCTURAL-GRAPH.md` §15.6 | — (none in v0.1.0) |
 | `E401`–`E499` | OKF interoperability adapter | `OKF-INTEROP.md` §16.8 | — (none in v0.1.0) |
 | `W001`–`W015` | Base linter | `VALIDATION.md` §10.2 | `W001`–`W015` (all) |
@@ -148,7 +165,7 @@ namespace and SHALL NOT mix them into the base linter's error code contract.
 - **ERR-003**: Each new code SHALL be registered in the table above in the same change
   as it is introduced.
 - **ERR-004**: Warning codes SHALL NOT be introduced by extensions before
-  the base system's warning framework (`W001`–`W013`) is implemented
+  the base system's warning framework (`W001`–`W015`) is implemented
   (cf. `GRAPH-INTELLIGENCE.md` §14).
 
 ### 10.4 Specification status versus implementation status
@@ -358,7 +375,7 @@ Owning document: `ARCHITECTURE.md` §2.2–§2.3.
 | Invariant ID | Domain | Rule | Code |
 |---|---|---|---|
 | **OWN-001** | Authoring | Headings matching the normative Type A–D templates are machine-owned and regenerated on update | - |
-| **OWN-002** | Authoring | At most ONE `## Notes` section is permitted per page. It is human-owned, append-only, and MUST be preserved byte-for-byte during regeneration | W014 |
+| **OWN-002** | Authoring | At most ONE `## Notes` section is permitted per page. It is human-owned, append-only, and MUST be preserved byte-for-byte during regeneration | E051 |
 | **OWN-003** | Authoring | Regenerating an unmodified page with an existing `## Notes` section MUST produce byte-identical file contents | - |
 | **BODY-003** | Authoring | Unknown non-Notes sections MUST fail closed with E051 rather than be silently overwritten | E051 |
 | **BODY-004** | Authoring | A manually changed machine-owned section MUST produce a reviewable conflict and MUST NOT be overwritten automatically | - |

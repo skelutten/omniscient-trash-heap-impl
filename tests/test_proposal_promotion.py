@@ -308,3 +308,33 @@ def test_cli_review_and_promote(temp_workspace):
         ["review", "recover", "--workspace-root", str(temp_workspace), "--json"]
     )
     assert code_recover == ExitCode.SUCCESS
+
+
+def test_k3_promotion_path_traversal_rejection(temp_workspace):
+    """K3: Path sandboxing rejects traversal ('..') and absolute paths in promotion."""
+    from pydantic import ValidationError
+
+    from trashheap.promotion.models import CandidateProposal
+
+    with pytest.raises(ValidationError):
+        CandidateProposal(
+            candidate_id="CAND-ATTACK-001",
+            source_revision="sha256:" + "a" * 64,
+            target_path="../outside.md",
+            proposed_frontmatter={"id": "ENG-TRV-0001", "object_type": "Concept"},
+            proposed_body="Content",
+            proposed_content="---\nid: ENG-TRV-0001\n---\nContent",
+            proposal_hash="sha256:" + "b" * 64,
+        )
+
+    with pytest.raises(ValidationError):
+        CandidateProposal(
+            candidate_id="CAND-ATTACK-002",
+            source_revision="sha256:" + "a" * 64,
+            target_path="/etc/evil.md",
+            proposed_frontmatter={"id": "ENG-TRV-0002", "object_type": "Concept"},
+            proposed_body="Content",
+            proposed_content="---\nid: ENG-TRV-0002\n---\nContent",
+            proposal_hash="sha256:" + "b" * 64,
+        )
+

@@ -1,17 +1,17 @@
 schema_version: 1.0.0
 matrix_id: conformance_matrix
-generated_at: '2026-09-08T21:18:20.641550+00:00'
+generated_at: '2026-09-08T21:29:34.853707+00:00'
 evidence_type: generated_projection
 note: "Generated evidence per VALIDATION.md \xA710.5 and CONFORM-001. Not a normative\
   \ specification."
 summary:
-  total_families: 37
-  conformance_tested: 37
+  total_families: 40
+  conformance_tested: 38
   implemented: 0
-  unimplemented: 0
-  total_invariants_tracked: 164
-  total_executable_tests: 80
-  corpus_hash: sha256:3ffa6afff923a022236c525ec854409754a340841c0846b000c74bf8d2c92ea3
+  unimplemented: 2
+  total_invariants_tracked: 213
+  total_executable_tests: 87
+  corpus_hash: sha256:1e4a9ae442556e400bfecbc9ead6915be967e793e3f000a005f4b2a3e4b6c93c
 families:
 - family_id: CANON
   owner: specs/ARCHITECTURE.md
@@ -93,7 +93,7 @@ families:
   - REL-008
 - family_id: EPI
   owner: specs/EPISTEMOLOGY.md
-  invariant_id: EPI-001..EPI-008
+  invariant_id: EPI-001..EPI-007
   implementation: trashheap/linter.py
   test: tests/test_linter.py
   verification: tools/check.sh
@@ -106,7 +106,6 @@ families:
   - EPI-005
   - EPI-006
   - EPI-007
-  - EPI-008
 - family_id: PROV
   owner: specs/EPISTEMOLOGY.md
   invariant_id: PROV-001..PROV-004
@@ -220,7 +219,7 @@ families:
   - DPCP-010
 - family_id: DISC
   owner: specs/DISCOVERY.md
-  invariant_id: DISC-001..DISC-005
+  invariant_id: DISC-001..DISC-009
   implementation: trashheap/graph/discovery.py, trashheap/graph/analysis.py
   test: tests/test_graph_intelligence.py
   verification: tools/check.sh
@@ -231,9 +230,10 @@ families:
   - DISC-003
   - DISC-004
   - DISC-005
+  - DISC-009
 - family_id: GRAPH
   owner: specs/ONTOLOGY.md
-  invariant_id: GRAPH-001..GRAPH-003
+  invariant_id: GRAPH-001..GRAPH-004
   implementation: trashheap/linter.py
   test: tests/test_linter.py
   verification: tools/check.sh
@@ -242,6 +242,7 @@ families:
   - GRAPH-001
   - GRAPH-002
   - GRAPH-003
+  - GRAPH-004
 - family_id: SG
   owner: specs/STRUCTURAL-GRAPH.md
   invariant_id: SG-001..SG-020
@@ -304,13 +305,14 @@ families:
   - OWN-003
 - family_id: BODY
   owner: specs/SCHEMA.md
-  invariant_id: BODY-003
-  implementation: trashheap/linter.py
-  test: tests/test_linter.py
+  invariant_id: BODY-003..BODY-004
+  implementation: trashheap/linter.py, trashheap/authoring.py
+  test: tests/test_linter.py, tests/test_section_ownership.py
   verification: tools/check.sh
   status: CONFORMANCE_TESTED
   invariants:
   - BODY-003
+  - BODY-004
 - family_id: W
   owner: specs/VALIDATION.md
   invariant_id: W001..W015
@@ -333,9 +335,9 @@ families:
   - THRESH-002
   - THRESH-003
 - family_id: REVIEW
-  owner: specs/INGEST-STAGING.md
-  invariant_id: REVIEW-001..REVIEW-004
-  implementation: trashheap/promotion/engine.py
+  owner: specs/REVIEW-PROMOTION.md
+  invariant_id: REVIEW-001..REVIEW-011
+  implementation: trashheap/promotion/engine.py, trashheap/promotion/models.py
   test: tests/test_proposal_promotion.py
   verification: tools/check.sh
   status: CONFORMANCE_TESTED
@@ -344,6 +346,70 @@ families:
   - REVIEW-002
   - REVIEW-003
   - REVIEW-004
+  - REVIEW-005
+  - REVIEW-006
+  - REVIEW-007
+  - REVIEW-008
+  - REVIEW-009
+  - REVIEW-010
+  - REVIEW-011
+- family_id: PROMO
+  owner: specs/REVIEW-PROMOTION.md
+  invariant_id: PROMO-001..PROMO-010
+  implementation: trashheap/promotion/engine.py
+  test: tests/test_proposal_promotion.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
+  invariants:
+  - PROMO-001
+  - PROMO-002
+  - PROMO-003
+  - PROMO-004
+  - PROMO-005
+  - PROMO-006
+  - PROMO-007
+  - PROMO-008
+  - PROMO-009
+  - PROMO-010
+- family_id: REX
+  owner: specs/RELATION-EXTRACTION.md
+  invariant_id: REX-001..REX-013
+  implementation: UNIMPLEMENTED
+  test: planned
+  verification: planned
+  status: UNIMPLEMENTED
+  invariants:
+  - REX-001
+  - REX-002
+  - REX-003
+  - REX-004
+  - REX-005
+  - REX-006
+  - REX-007
+  - REX-008
+  - REX-009
+  - REX-010
+  - REX-011
+  - REX-012
+  - REX-013
+- family_id: VIS
+  owner: specs/VISUALIZE.md
+  invariant_id: VIS-001..VIS-010
+  implementation: UNIMPLEMENTED
+  test: planned
+  verification: planned
+  status: UNIMPLEMENTED
+  invariants:
+  - VIS-001
+  - VIS-002
+  - VIS-003
+  - VIS-004
+  - VIS-005
+  - VIS-006
+  - VIS-007
+  - VIS-008
+  - VIS-009
+  - VIS-010
 - family_id: RES
   owner: specs/INGEST.md
   invariant_id: RES-001..RES-005
@@ -387,7 +453,7 @@ families:
   - CONFORM-001
 - family_id: RET
   owner: specs/RETRIEVAL.md
-  invariant_id: RET-001..RET-005
+  invariant_id: RET-001..RET-011
   implementation: trashheap/retrieval.py, trashheap/vector/
   test: tests/test_retrieval.py, tests/test_vector_retrieval.py
   verification: tools/check.sh
@@ -398,6 +464,12 @@ families:
   - RET-003
   - RET-004
   - RET-005
+  - RET-006
+  - RET-007
+  - RET-008
+  - RET-009
+  - RET-010
+  - RET-011
 - family_id: META
   owner: specs/ARCHITECTURE.md
   invariant_id: META-001..META-002
@@ -432,16 +504,17 @@ families:
   - SCOPE-003
 - family_id: VAL
   owner: specs/EPISTEMOLOGY.md
-  invariant_id: VAL-001..VAL-004
+  invariant_id: VAL-001..VAL-014
   implementation: trashheap/linter.py
   test: tests/test_linter.py
   verification: tools/check.sh
   status: CONFORMANCE_TESTED
   invariants:
   - VAL-001
-  - VAL-002
-  - VAL-003
-  - VAL-004
+  - VAL-011
+  - VAL-012
+  - VAL-013
+  - VAL-014
 - family_id: ERR
   owner: specs/VALIDATION.md
   invariant_id: ERR-001..ERR-003

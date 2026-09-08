@@ -48,8 +48,8 @@ The generated skill MUST specify the following 6 core operations:
 
 ### 3.1 `/lint` — Whole Repository Integrity Check
 - **Command:** `python3 -m trashheap.cli lint` (or `tools/check.sh`)
-- **Flags:** `--warnings-as-errors`, `--scope {personal|engineering}`
-- **Behavior:** Validates all system invariants (`E001`–`E099`), YAML registry adherence, DAG acyclicity, and broken `[[wiki-link]]` targets.
+- **Flags:** `--warnings-as-errors`, `--strict`, `--scope {personal|engineering}`, `--now YYYY-MM-DD`, `--registry-dir <path>`, `--no-check-skills`, `--json`
+- **Behavior:** Validates all system invariants (`E001`–`E051`, `W001`–`W015`), YAML registry adherence, DAG acyclicity, and broken `[[wiki-link]]` targets.
 
 ### 3.2 `/validate <file>` — Single File Conformance Check
 - **Command:** `python3 -m trashheap.cli validate <file_path>`
@@ -60,12 +60,13 @@ The generated skill MUST specify the following 6 core operations:
 - **Behavior:** Scans `staging/`, analyzes raw content, drafts suggested frontmatter, and detects candidate relations.
 
 ### 3.4 `/ingest <file>` — Governed Source Intake
-- **Command:** `python3 -m trashheap.cli ingest <file_path> [--source-type {web|pdf|note|transcript}]`
-- **Behavior:** Calculates SHA-256 content hash, places normalized raw representation into `staging/`, and registers source reference.
+- **Command:** `python3 -m trashheap.cli ingest <file_path> [--source-type <type>]`
+- **Flags:** `--source-type <type>`, `--staging-dir <dir>`, `--workspace-root <path>`, `--json`
+- **Behavior:** Calculates SHA-256 content hash, places normalized raw representation into `staging/`, and registers source reference. `--source-type` defaults to `document` and must be a registered type from `source_registry.yaml` (e.g. `document`, `web_resource`).
 
 ### 3.5 `/query <prompt>` — Evidence-Based Query Synthesis
 - **Command:** `python3 -m trashheap.cli query "<prompt>"`
-- **Flags:** `--corpus-root <path>`, `--include-drafts`, `--include-body`, `--vector`, `--graph-enhanced`, `--scope {personal|engineering}`, `--json`
+- **Flags:** `--corpus-root <path>`, `--registry-dir <path>`, `--scope {personal|engineering}`, `--seed-top-k <int>`, `--max-depth <int>`, `--max-results <int>`, `--min-confidence <float>`, `--min-relevance <float>`, `--include-drafts`, `--include-deprecated`, `--include-body`, `--vector`, `--graph-enhanced`, `--enforce-structural-gates`, `--json`
 - **Behavior:** Executes hybrid RRF retrieval across lexical index, structural graph, and dense vector embeddings, synthesizing answers with verified note citation links (`[[note-slug]]`). Returns bounded `body_excerpt` ($\le 250$ chars) and file `path`.
 
 ### 3.6 `/show <target>` — Full Knowledge Object Display

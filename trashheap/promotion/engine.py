@@ -10,7 +10,9 @@ from typing import Any, Dict, List, Optional
 import yaml
 
 from trashheap.corpus import load_single_file
+from trashheap.ingest.exceptions import AccessDeniedError
 from trashheap.ingest.models import EvidenceUnit
+from trashheap.ingest.security import sandbox_path
 from trashheap.linter import Linter
 from trashheap.promotion.exceptions import (
     ApprovalBindingError,
@@ -386,7 +388,12 @@ def promote_candidate(
     """
     ws = workspace_root.resolve()
     proposal = load_candidate(candidate_id, ws)
-    target_file = ws / proposal.target_path
+    try:
+        target_file = sandbox_path(ws / proposal.target_path, ws)
+    except AccessDeniedError as exc:
+        raise PromotionError(
+            f"Path traversal detected in proposal target_path '{proposal.target_path}': {exc}"
+        ) from exc
     operation_id = f"OP-{uuid.uuid4().hex[:12].upper()}"
     idem_key = idempotency_key or compute_content_sha256(
         f"{proposal.candidate_id}:{proposal.proposal_revision}:{proposal.proposal_hash}"
@@ -498,7 +505,8 @@ def promote_candidate(
             # Validate against intended canonical target location (TAX-002, E002)
             ko.path = target_file
 
-            registries = load_registries()
+            reg_dir = ws / "schemas" / "registry" if (ws / "schemas" / "registry").exists() else None
+            registries = load_registries(reg_dir)
             linter = Linter(registries)
             findings = []
             findings.extend(linter._check_layer1_schema(ko))

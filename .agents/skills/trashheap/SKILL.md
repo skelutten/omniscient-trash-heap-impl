@@ -35,7 +35,7 @@ The Omniscient Trash Heap is an offline, deterministic, plain-text knowledge com
 
 ### 2.1 `/lint` — Whole Repository Integrity Check
 - **Command:** `trashheap lint` (or `python3 -m trashheap.cli lint`, `tools/check.sh`)
-- **Flags:** `--warnings-as-errors`, `--scope {personal|engineering}`, `--strict`, `--now YYYY-MM-DD`, `--json`
+- **Flags:** `--warnings-as-errors`, `--strict`, `--scope {personal|engineering}`, `--now YYYY-MM-DD`, `--registry-dir <path>`, `--no-check-skills`, `--json`
 - **Behavior:** Validates all system invariants (`E001`–`E051`, `W001`–`W015`), YAML registry adherence, DAG acyclicity, taxonomy hierarchy, and link integrity.
 
 ### 2.2 `/validate <file>` — Single File Conformance Check
@@ -49,13 +49,13 @@ The Omniscient Trash Heap is an offline, deterministic, plain-text knowledge com
 - **Behavior:** Scans `staging/`, analyzes raw content, drafts suggested frontmatter, and detects candidate relations.
 
 ### 2.4 `/ingest <file>` — Governed Source Intake
-- **Command:** `trashheap ingest <file_path> [--source-type {web|pdf|note|transcript}]` (or `python3 -m trashheap.cli ingest <file_path>`)
-- **Flags:** `--source-type`, `--json`
-- **Behavior:** Calculates SHA-256 content hash, places normalized raw representation into `staging/`, and registers source reference.
+- **Command:** `trashheap ingest <file_path> [--source-type <type>]` (or `python3 -m trashheap.cli ingest <file_path>`)
+- **Flags:** `--source-type <type>`, `--staging-dir <dir>`, `--workspace-root <path>`, `--json`
+- **Behavior:** Calculates SHA-256 content hash, places normalized raw representation into `staging/`, and registers source reference. `--source-type` defaults to `document` and must be a registered type from `source_registry.yaml` (e.g. `document`, `web_resource`).
 
 ### 2.5 `/query <prompt>` — Evidence-Based Query Synthesis
 - **Command:** `trashheap query "<prompt>"` (or `python3 -m trashheap.cli query "<prompt>"`)
-- **Flags:** `--corpus-root <path>`, `--include-drafts`, `--include-body`, `--vector`, `--graph-enhanced`, `--scope {personal|engineering}`, `--max-results <int>`, `--min-confidence <float>`, `--min-relevance <float>`, `--json`
+- **Flags:** `--corpus-root <path>`, `--registry-dir <path>`, `--scope {personal|engineering}`, `--seed-top-k <int>`, `--max-depth <int>`, `--max-results <int>`, `--min-confidence <float>`, `--min-relevance <float>`, `--include-drafts`, `--include-deprecated`, `--include-body`, `--vector`, `--graph-enhanced`, `--enforce-structural-gates`, `--json`
 - **Behavior:** Executes hybrid RRF retrieval across lexical index, structural graph, and dense vector embeddings, synthesizing answers with verified note citation links (`[[note-slug]]`). Returns bounded `body_excerpt` (<= 250 chars) and file `path`.
 
 ### 2.6 `/show <target>` — Full Knowledge Object Display

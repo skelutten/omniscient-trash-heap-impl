@@ -150,49 +150,55 @@ Evaluated using [`trashheap.retrieval.BM25Index`](file:///home/$USER/omniscient-
 
 ---
 
-## 7. Benchmark Suite 5: Multi-Shard Batch Ingestion (10 Shards, 300,000 Articles)
+## 7. Benchmark Suite 5: Multi-Shard Batch Ingestion & Parallel Acceleration
 
 Evaluated via:
 ```bash
-trashheap benchmark --pubmed-shards 10 --pubmed-output-csr .cache/pubmed/csr_10shards
+# 10 Shards (Single Worker vs 4 Parallel Workers)
+trashheap benchmark --pubmed-shards 10 --download-workers 4 --parse-workers 4 --pubmed-output-csr .cache/pubmed/csr_10shards_parallel
+
+# 20 Shards Scale Evaluation (600,000 Articles, 12.5M Edges)
+trashheap benchmark --pubmed-shards 20 --shard-start 1 --download-workers 4 --parse-workers 4 --pubmed-output-csr .cache/pubmed/csr_20shards
 ```
 
-### Empirical 10-Shard Ingestion & CSR Telemetry
+### Empirical 10-Shard and 20-Shard Telemetry
 
-| Metric | Measured Result | Analysis |
-| :--- | :--- | :--- |
-| **Shards Ingested** | **10 shards** (`pubmed26n0001` .. `0010`) | ~190 MB compressed XML.gz |
-| **Total Articles Processed** | **300,000** | 100% sequential $O(1)$ streaming |
-| **Total MeSH Headings** | **2,998,177** | 14,155 unique MeSH descriptors |
-| **Total Citation Links** | **556,418** | Canonical `CITES` relations |
-| **Total Graph Nodes** | **555,200** | Articles + MeSH concepts + cited entities |
-| **Total Graph Edges** | **6,552,772** | Over 6.55 million directed graph edges |
-| **Parse & Ingestion Time** | **206.28 seconds** | **1,454.3 articles / second** |
-| **CSR Matrix Build Time** | **3.27 seconds** | Encoded 6.55M edges in ~3.3s |
-| **CSR Memory Footprint** | **54.23 MB** | `indptr`: 4.3 MB, `indices`: 50.0 MB |
-| **Zero-Copy Memmap Load Time** | **390.64 ms** | Instantaneous cold-start from disk |
-| **Single-Hop Slicing Latency** | **1.222 µs** (in-memory) / **4.472 µs** (memmap) | > 220,000 traversals / second |
+| Metric | 10 Shards (1 Worker) | 10 Shards (4 CPU Workers) | 20 Shards (4 CPU Workers) |
+| :--- | :--- | :--- | :--- |
+| **Shards Range** | Shards 1..10 | Shards 1..10 | **Shards 1..20** |
+| **Total Articles Processed** | 300,000 | 300,000 | **600,000** |
+| **Total MeSH Headings** | 2,998,177 | 2,998,177 | **5,746,805** (14,623 unique) |
+| **Total Citation Links** | 556,418 | 556,418 | **1,024,178** |
+| **Total Graph Nodes** | 555,200 | 555,200 | **1,000,804** (1.0M nodes) |
+| **Total Graph Edges** | 6,552,772 | 6,552,772 | **12,517,788** (12.52M edges) |
+| **Parse & Ingestion Time** | 206.28 s | **119.59 s** | **276.82 s** |
+| **Throughput** | 1,454.3 arts/s | **2,508.5 arts/s** (+72.5%) | **2,167.5 arts/s** |
+| **CSR Build Time** | 3.27 s | 3.91 s | **13.15 s** |
+| **CSR Working Memory** | 54.23 MB | 54.23 MB | **103.14 MB** |
+| **Single-Hop Traversal Latency** | 1.222 µs | 2.081 µs | **3.647 µs** |
+| **Total Elapsed Time** | 210.6 s | **124.05 s** | **296.08 s** (~4.9 min) |
 
 ---
 
 ## 8. Benchmark Suite 6: Full PubMed Knowledge Graph (40 Million Articles) Extrapolation Model
 
-Based on our observed empirical constants (1,454 articles/sec ingestion, ~11.8 edges per article/MeSH association, and 8 bytes per CSR index pointer and index entry), the architectural requirements for ingesting and serving the **entire PubMed collection** (all 1,334 baseline shards, ~38–40 million articles) are:
+Based on our empirical multi-worker throughput (**2,167 – 2,508 articles/sec** across 4 CPU cores, ~20.8 edges per article/MeSH association, and 8 bytes per CSR index pointer and index entry), the architectural requirements for ingesting and serving the **entire PubMed collection** (all 1,334 baseline shards, ~38–40 million articles) are:
 
 ### Hardware & Resource Extrapolation for Full PubMed (40M Docs)
 
-| Dimension | 10 Shards (Empirical) | Full PubMed (1,334 Shards Extrapolated) | Feasibility on Single Server |
+| Dimension | 20 Shards (Empirical) | Full PubMed (1,334 Shards Extrapolated) | Feasibility on Single Server |
 | :--- | :--- | :--- | :--- |
-| **Raw Archive Size (gz)** | 190 MB | ~25.3 GB | Readily fits on standard NVMe SSD |
-| **Article Count** | 300,000 | ~38,500,000 – 40,000,000 | Streamed in $O(1)$ memory |
-| **Total Graph Nodes** | 555,200 | ~42,000,000 (articles + 30k MeSH descriptors) | Fits in 64-bit address space |
-| **Total Graph Edges** | 6,552,772 | ~850,000,000 – 900,000,000 | Matches Fareed Khan's 929M edges |
-| **CSR Memory (`indptr.npy`)** | 4.3 MB | ~336 MB ($42\text{M} \times 8\text{B}$) | Fits in RAM |
-| **CSR Memory (`indices.npy`)** | 50.0 MB | ~7.2 GB ($900\text{M} \times 8\text{B}$) | Fits in standard 16GB / 32GB RAM |
-| **Total CSR RAM Footprint** | **54.2 MB** | **~7.54 GB** | **100% in-memory on standard laptop / workstation** |
-| **Cold-Start Startup Time** | 390 ms | **< 2.5 seconds** via `mmap_mode="r"` | No long database warmup needed |
-| **Single-Hop Traversal** | 1.22 µs | **< 5 µs** | Instantaneous graph gating |
-| **Ingestion Time (1 Core)** | 3.4 minutes | ~7.6 hours (or ~1.5 hours on 8 CPU cores) | Unattended overnight batch |
+| **Raw Archive Size (gz)** | 350 MB | ~25.3 GB | Readily fits on standard NVMe SSD (894 GB free) |
+| **Article Count** | 600,000 | ~38,500,000 – 40,000,000 | Streamed in $O(1)$ memory |
+| **Total Graph Nodes** | 1,000,804 | ~42,000,000 (articles + 30k MeSH descriptors) | Fits in 64-bit address space |
+| **Total Graph Edges** | 12,517,788 | ~850,000,000 – 900,000,000 | Matches Fareed Khan's 929M edges |
+| **CSR Memory (`indptr.npy`)** | 8.0 MB | ~336 MB ($42\text{M} \times 8\text{B}$) | Fits in RAM |
+| **CSR Memory (`indices.npy`)** | 95.1 MB | ~7.2 GB ($900\text{M} \times 8\text{B}$) | Fits in standard 16GB / 32GB RAM |
+| **Total CSR RAM Footprint** | **103.1 MB** | **~7.54 GB** | **100% in-memory on standard workstation** |
+| **Cold-Start Startup Time** | 720 ms | **< 2.5 seconds** via `mmap_mode="r"` | No database daemon warmup |
+| **Single-Hop Traversal** | 3.65 µs | **< 5 µs** | Instantaneous graph gating |
+| **Ingestion Time (4 Cores)** | 4.6 minutes | **~4.4 hours** | Unattended background batch |
+| **Ingestion Time (8 Cores)** | ~2.5 minutes | **~2.3 hours** | High-throughput batch |
 
 ---
 

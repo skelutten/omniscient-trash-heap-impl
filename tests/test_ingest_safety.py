@@ -345,3 +345,26 @@ def test_cli_ingest_and_stage_lint(temp_workspace):
         ]
     )
     assert code_stage == ExitCode.SUCCESS
+
+
+def test_k4_corrupt_manifest_fail_closed(temp_workspace):
+    """K4: Corrupt capture_manifest.json fails closed and backs up corrupted manifest."""
+    from trashheap.ingest.exceptions import IntegrityConflictError
+
+    manifest_file = temp_workspace / "raw" / "manifests" / "capture_manifest.json"
+    manifest_file.parent.mkdir(parents=True, exist_ok=True)
+    manifest_file.write_text("{corrupt: json truncated", encoding="utf-8")
+
+    test_file = temp_workspace / "test_doc.txt"
+    test_file.write_text("Hello world", encoding="utf-8")
+
+    with pytest.raises(IntegrityConflictError):
+        intake_source(
+            source_input=test_file,
+            source_type="document",
+            workspace_root=temp_workspace,
+        )
+
+    backups = list((temp_workspace / "raw" / "manifests").glob("capture_manifest.corrupt.*.json"))
+    assert len(backups) >= 1
+

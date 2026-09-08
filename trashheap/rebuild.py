@@ -20,6 +20,7 @@ def rebuild_indexes(
     - CANON-003: Derived indexes can be wiped and re-created at any time without information loss.
     - Deterministic output: Keys and node lists are ordered deterministically.
     """
+    _ = registries
     corpus = load_corpus(corpus_root)
     out_path = output_dir or (corpus_root / ".cache")
     out_path.mkdir(parents=True, exist_ok=True)

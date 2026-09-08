@@ -56,7 +56,13 @@ invariant_families:
   - family_id: THRESH
     owner: schemas/registry/threshold_policy.yaml
   - family_id: REVIEW
-    owner: specs/INGEST-STAGING.md
+    owner: specs/REVIEW-PROMOTION.md
+  - family_id: PROMO
+    owner: specs/REVIEW-PROMOTION.md
+  - family_id: REX
+    owner: specs/RELATION-EXTRACTION.md
+  - family_id: VIS
+    owner: specs/VISUALIZE.md
   - family_id: RES
     owner: specs/INGEST.md
   - family_id: SCALE

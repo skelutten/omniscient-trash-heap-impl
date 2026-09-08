@@ -41,7 +41,7 @@ assert len(fixtures) >= 20, f'Expected >= 20 fixtures, found {len(fixtures)}'
 for p in fixtures:
     with open(p) as f:
         content = f.read()
-    parts = content.split('---')
+    parts = content.split('---', 2)
     assert len(parts) >= 3, f'{p} missing frontmatter fence'
     fm = yaml.safe_load(parts[1])
     assert 'id' in fm and 'title' in fm and 'object_type' in fm

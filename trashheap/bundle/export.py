@@ -20,6 +20,7 @@ import hashlib
 import json
 import os
 import shutil
+import uuid
 from collections import deque
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -207,6 +208,7 @@ def build_bundle(
     architecture_version: str = "3.8.10",
 ) -> BundleManifest:
     """Compute and materialize an idempotent Knowledge Bundle (BUNDLE-001..BUNDLE-009)."""
+    _ = registries
     # 1. Selection: Evaluate Selector Over Corpus (BUNDLE-001)
     selected_ids: Set[str] = set()
 
@@ -451,8 +453,18 @@ def build_bundle(
         json.dump(manifest.to_dict(), f, indent=2, sort_keys=True)
 
     # Atomic swap into target directory
+    backup_dir = None
     if output_dir.exists():
-        shutil.rmtree(output_dir)
-    os.rename(tmp_output_dir, output_dir)
+        backup_dir = output_dir.with_name(f".{output_dir.name}.old.{uuid.uuid4().hex[:8]}")
+        os.rename(output_dir, backup_dir)
+    try:
+        os.rename(tmp_output_dir, output_dir)
+    except Exception:
+        if backup_dir and backup_dir.exists():
+            os.rename(backup_dir, output_dir)
+        raise
+    finally:
+        if backup_dir and backup_dir.exists():
+            shutil.rmtree(backup_dir, ignore_errors=True)
 
     return manifest

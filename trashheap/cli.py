@@ -517,7 +517,25 @@ def build_parser() -> argparse.ArgumentParser:
         "--pubmed-shards",
         type=int,
         default=None,
-        help="Download and ingest N official PubMed baseline shards (e.g. 10 or 1218)",
+        help="Download and ingest N official PubMed baseline shards (e.g. 10 or 1334)",
+    )
+    bench_parser.add_argument(
+        "--shard-start",
+        type=int,
+        default=1,
+        help="Starting shard index (default: 1)",
+    )
+    bench_parser.add_argument(
+        "--download-workers",
+        type=int,
+        default=4,
+        help="Number of concurrent download worker threads for PubMed shards (default: 4)",
+    )
+    bench_parser.add_argument(
+        "--parse-workers",
+        type=int,
+        default=None,
+        help="Number of parallel multiprocessing workers for shard parsing (default: CPU count)",
     )
     bench_parser.add_argument(
         "--pubmed-output-csr",
@@ -1653,16 +1671,28 @@ def handle_benchmark(args: argparse.Namespace) -> int:
         from trashheap.operations.pubmed_batch import PubmedBatchIngestor
 
         num_shards = getattr(args, "pubmed_shards", 1)
-        ingestor = PubmedBatchIngestor()
-        print(f"Downloading/verifying {num_shards} PubMed baseline shards from NCBI...")
-        shard_paths = ingestor.download_shards(range(1, num_shards + 1))
+        shard_start = getattr(args, "shard_start", 1) or 1
+        dl_workers = getattr(args, "download_workers", 4) or 4
+        parse_workers = getattr(args, "parse_workers", None)
+
+        shard_range = range(shard_start, shard_start + num_shards)
+        ingestor = PubmedBatchIngestor(download_workers=dl_workers, parse_workers=parse_workers)
+        print(
+            f"Downloading/verifying {num_shards} PubMed baseline shards ({shard_start}..{shard_start + num_shards - 1}) from NCBI with {dl_workers} download workers..."
+        )
+        shard_paths = ingestor.download_shards(shard_range)
         out_csr = Path(args.pubmed_output_csr) if getattr(args, "pubmed_output_csr", None) else None
-        print(f"Ingesting {len(shard_paths)} shards and compiling CSR knowledge graph...")
+        pw_count = parse_workers if parse_workers is not None else ingestor.parse_workers
+        print(
+            f"Ingesting {len(shard_paths)} shards concurrently across {pw_count} CPU workers and compiling CSR knowledge graph..."
+        )
         _, s_report = ingestor.ingest_shards(shard_paths, output_csr_dir=out_csr)
         if args.json:
             print(json.dumps(s_report.to_dict(), indent=2))
         else:
             print(f"=== PubMed Baseline Batch Ingestion Report ({num_shards} Shards) ===")
+            print(f"Shard Range: {shard_start}..{shard_start + num_shards - 1} ({len(shard_paths)} shards)")
+            print(f"Workers: {s_report.download_workers} download threads, {s_report.parse_workers} CPU parse processes")
             print(f"Total Articles Processed: {s_report.total_articles:,}")
             print(
                 f"Total MeSH Headings: {s_report.total_mesh_headings:,} ({s_report.unique_mesh_concepts:,} unique)"

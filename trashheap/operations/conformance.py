@@ -1,5 +1,6 @@
 import ast
 import hashlib
+import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -26,8 +27,10 @@ def count_executable_tests(test_path: Path) -> int:
                 if isinstance(n, ast.FunctionDef) and n.name.startswith("test_")
             ]
         )
-    except Exception:
-        return 0
+    except Exception as exc:
+        raise SyntaxError(
+            f"Failed to parse test file '{test_path}' for executable test counting: {exc}"
+        ) from exc
 
 
 # Mapping of invariant families to owners, invariant IDs, implementations, tests, and verifications.
@@ -108,7 +111,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
             "EPI-005",
             "EPI-006",
             "EPI-007",
-            "EPI-008",
         ],
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
@@ -212,7 +214,7 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "DISC": {
         "owner": "specs/DISCOVERY.md",
-        "invariants": ["DISC-001", "DISC-002", "DISC-003", "DISC-004", "DISC-005"],
+        "invariants": ["DISC-001", "DISC-002", "DISC-003", "DISC-004", "DISC-005", "DISC-009"],
         "implementation": "trashheap/graph/discovery.py, trashheap/graph/analysis.py",
         "test": "tests/test_graph_intelligence.py",
         "verification": "tools/check.sh",
@@ -220,7 +222,7 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "GRAPH": {
         "owner": "specs/ONTOLOGY.md",
-        "invariants": ["GRAPH-001", "GRAPH-002", "GRAPH-003"],
+        "invariants": ["GRAPH-001", "GRAPH-002", "GRAPH-003", "GRAPH-004"],
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
@@ -281,9 +283,9 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "BODY": {
         "owner": "specs/SCHEMA.md",
-        "invariants": ["BODY-003"],
-        "implementation": "trashheap/linter.py",
-        "test": "tests/test_linter.py",
+        "invariants": ["BODY-003", "BODY-004"],
+        "implementation": "trashheap/linter.py, trashheap/authoring.py",
+        "test": "tests/test_linter.py, tests/test_section_ownership.py",
         "verification": "tools/check.sh",
         "status": "CONFORMANCE_TESTED",
     },
@@ -304,12 +306,84 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "status": "CONFORMANCE_TESTED",
     },
     "REVIEW": {
-        "owner": "specs/INGEST-STAGING.md",
-        "invariants": ["REVIEW-001", "REVIEW-002", "REVIEW-003", "REVIEW-004"],
+        "owner": "specs/REVIEW-PROMOTION.md",
+        "invariants": [
+            "REVIEW-001",
+            "REVIEW-002",
+            "REVIEW-003",
+            "REVIEW-004",
+            "REVIEW-005",
+            "REVIEW-006",
+            "REVIEW-007",
+            "REVIEW-008",
+            "REVIEW-009",
+            "REVIEW-010",
+            "REVIEW-011",
+        ],
+        "implementation": "trashheap/promotion/engine.py, trashheap/promotion/models.py",
+        "test": "tests/test_proposal_promotion.py",
+        "verification": "tools/check.sh",
+        "status": "CONFORMANCE_TESTED",
+    },
+    "PROMO": {
+        "owner": "specs/REVIEW-PROMOTION.md",
+        "invariants": [
+            "PROMO-001",
+            "PROMO-002",
+            "PROMO-003",
+            "PROMO-004",
+            "PROMO-005",
+            "PROMO-006",
+            "PROMO-007",
+            "PROMO-008",
+            "PROMO-009",
+            "PROMO-010",
+        ],
         "implementation": "trashheap/promotion/engine.py",
         "test": "tests/test_proposal_promotion.py",
         "verification": "tools/check.sh",
         "status": "CONFORMANCE_TESTED",
+    },
+    "REX": {
+        "owner": "specs/RELATION-EXTRACTION.md",
+        "invariants": [
+            "REX-001",
+            "REX-002",
+            "REX-003",
+            "REX-004",
+            "REX-005",
+            "REX-006",
+            "REX-007",
+            "REX-008",
+            "REX-009",
+            "REX-010",
+            "REX-011",
+            "REX-012",
+            "REX-013",
+        ],
+        "implementation": "UNIMPLEMENTED",
+        "test": "planned",
+        "verification": "planned",
+        "status": "UNIMPLEMENTED",
+    },
+    "VIS": {
+        "owner": "specs/VISUALIZE.md",
+        "invariants": [
+            "VIS-001",
+            "VIS-002",
+            "VIS-003",
+            "VIS-004",
+            "VIS-005",
+            "VIS-006",
+            "VIS-007",
+            "VIS-008",
+            "VIS-009",
+            "VIS-010",
+        ],
+        "implementation": "UNIMPLEMENTED",
+        "test": "planned",
+        "verification": "planned",
+        "status": "UNIMPLEMENTED",
     },
     "RES": {
         "owner": "specs/INGEST.md",
@@ -345,7 +419,19 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "RET": {
         "owner": "specs/RETRIEVAL.md",
-        "invariants": ["RET-001", "RET-002", "RET-003", "RET-004", "RET-005"],
+        "invariants": [
+            "RET-001",
+            "RET-002",
+            "RET-003",
+            "RET-004",
+            "RET-005",
+            "RET-006",
+            "RET-007",
+            "RET-008",
+            "RET-009",
+            "RET-010",
+            "RET-011",
+        ],
         "implementation": "trashheap/retrieval.py, trashheap/vector/",
         "test": "tests/test_retrieval.py, tests/test_vector_retrieval.py",
         "verification": "tools/check.sh",
@@ -377,7 +463,7 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "VAL": {
         "owner": "specs/EPISTEMOLOGY.md",
-        "invariants": ["VAL-001", "VAL-002", "VAL-003", "VAL-004"],
+        "invariants": ["VAL-001", "VAL-011", "VAL-012", "VAL-013", "VAL-014"],
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
@@ -625,8 +711,9 @@ def generate_conformance_matrix(
                     f.to_dict() for f in entries
                 ]:
                     existing_generated_at = old_data.get("generated_at")
-        except Exception:
-            pass
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("Failed to parse existing matrix at %s: %s", output_path, exc)
 
     matrix = ConformanceMatrix(
         schema_version="1.0.0",
@@ -640,8 +727,12 @@ def generate_conformance_matrix(
 
     if output_path is not None:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, "w", encoding="utf-8") as f:
+        tmp_output_path = output_path.with_name(f".{output_path.name}.tmp")
+        with open(tmp_output_path, "w", encoding="utf-8") as f:
             yaml.dump(matrix.to_dict(), f, sort_keys=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_output_path, output_path)
 
     return matrix
 
