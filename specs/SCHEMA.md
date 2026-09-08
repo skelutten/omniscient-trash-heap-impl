@@ -335,6 +335,24 @@ To prevent automated compilers and daemons from clobbering human knowledge durin
 
 ---
 
+## 7.2 Section Map & Token-Budget Invariant (SCHEMA-005 / RET-010)
+
+For any Knowledge Object exceeding 1,000 words or 100 lines of body content, the document structure MUST maintain or generate an explicit **Section Map** (the *Document Card* pattern) immediately preceding the core sections:
+
+```markdown
+| Section | Lines | ~Tokens |
+|---|---|---|
+| Summary | 20–35 | ~120 |
+| Core Content | 36–180 | ~950 |
+| Methodology | 181–310 | ~850 |
+| Notes | 311–340 | ~180 |
+```
+
+* **SCHEMA-005 (Document Card & Section Map Invariant):** Long-form Knowledge Objects ($> 1,000$ words or $> 100$ lines) SHALL incorporate a structured Section Map header mapping section titles to 1-indexed line numbers and approximate token counts.
+* **RET-010 (Section-Targeted Retrieval):** Retrieval and ingestion tools (`trashheap show`, `trashheap search`) MUST support line-bounded and section-bounded extraction (`--section <heading>`, `--lines <start>-<end>`) using the document's Section Map, preventing context window dilution during LLM agent synthesis.
+
+---
+
 ## 8. Build & Validation Pipeline
 
 ```bash

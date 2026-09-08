@@ -60,6 +60,13 @@ Raw Text / High-Confidence Discovery Pair
 | **REX-010** | Deduplication Gate | If an identical edge `(source, relation, target)` already exists in canonical storage, the extraction worker SHALL discard it as a redundant candidate. | `E159` |
 | **REX-011** | Deterministic Precedence | Where structured metadata or citations exist, relations SHALL be constructed deterministically with zero LLM extraction calls. | `E160` |
 | **REX-012** | Constrained Logit Extraction | Where LLM relation classification is performed, extractors SHOULD use constrained token logit filtering over valid predicate tokens. | `E161` |
+| **REX-013** | Asserted vs. Augmented Boundary | Candidate relations SHALL be partitioned into *Asserted* vs *Augmented*. Asserted relations require verbatim source text span offsets. Inferred or ungrounded relations MUST be quarantined in `staging/discovery/` as augmented; asserting an ungrounded relation fails with `E162`. | `E162` |
+
+### 2.1 Asserted vs. Augmented Graph Boundary (The 50.4% Cascade Rule)
+
+To prevent cascading error traps where speculative LLM associations pollute factual ground truth, the knowledge architecture enforces a hard boundary between:
+1. **Asserted Relations:** Edges backed by exact, verbatim text spans within the source document (`source_ref`, `start_char`, `end_char` or line ranges). Only Asserted relations are eligible for human review and canonical promotion into Knowledge Object frontmatter (`relations:`).
+2. **Augmented Relations:** Edges derived via structural graph intelligence, community clustering, ontology rules, or vector embeddings. These relations MUST be quarantined in `staging/discovery/` as candidate discoveries or stored in derived graph layers (`artifacts/derived_edges.json`). Proposing or promoting an ungrounded relation as Asserted without exact verbatim textual support SHALL fail closed with `E162: UngroundedAssertedRelationError`.
 
 ---
 
@@ -112,3 +119,10 @@ trashheap discover extract-relations [OPTIONS]
 - `E153: VirtualInverseProposalError` — Proposed edge is an inverse view that must not be persisted directly.
 - `E154: QuarantineBypassError` — Attempted write to canonical note bypassing review staging.
 - `E155: UnresolvedEntityLinkingError` — Text mention could not be resolved to any known canonical ID or alias.
+- `E156: EpistemicProvenanceMissingError` — Missing required extraction metadata (model, version, confidence, excerpt).
+- `E157: SelfReferentialRelationError` — Extracted relation links an entity ID to itself (`REL-004`).
+- `E158: CrossScopeIsolationViolationError` — Unauthorized cross-scope candidate edge without boundary grant.
+- `E159: RedundantCanonicalRelationError` — Candidate edge already exists identically in canonical storage.
+- `E160: DeterministicPrecedenceBypassError` — Proposing neural extraction where deterministic metadata citations exist.
+- `E161: LogitConstraintViolationError` — Extracted relation predicate violates discrete vocabulary token constraints.
+- `E162: UngroundedAssertedRelationError` — Proposed Asserted relation lacks exact verbatim text span / character offsets in source document.

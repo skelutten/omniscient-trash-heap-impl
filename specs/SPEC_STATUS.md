@@ -1,7 +1,7 @@
 # LLM Wiki Specification Status
 
 > **Document ID**: `LLM-WIKI-SPEC-STATUS-001`
-> **Version**: `1.4.0`
+> **Version**: `1.5.0`
 > **Updated**: `2026-09-08`
 > **Status**: `LOCKED` as a status vocabulary and reporting contract
 > **Implementation status**: `CONFORMANCE_TESTED` — specifications and registries are backed by runtime implementation, automated tests, and gate tools/check.sh
@@ -98,7 +98,7 @@ production linter/conformance implementation for the complete architecture.
 | Relation Extraction & Linking | `PROPOSED` | `UNIMPLEMENTED` | Closed-ontology automated relation extraction & entity linking (`specs/RELATION-EXTRACTION.md`, `plans/95-RELATION-EXTRACTION-AND-LINKING.md`). |
 | PubMed & MeSH Benchmark | `PROPOSED` | `CONFORMANCE_TESTED` | Streaming XML adapter, CSR projections, adversarial controls, and PubMedQA benchmark harness (`plans/96-OPT-IN-PUBMED-BENCHMARK.md`, `trashheap benchmark --pubmed`). |
 | Constrained Logit Calibration | `PROPOSED` | `CONFORMANCE_TESTED` | Discrete logit decoding, class calibration, and epistemic abstention gates (`plans/97-CONSTRAINED-DECODING-CALIBRATION.md`, `trashheap/calibration/`, `tests/test_calibration.py`). |
-| Test-Time Search & Verifiers | `PROPOSED` | `UNIMPLEMENTED` | Test-time compute search, RAM CSR MCTS, Best-of-N, PRM verification (`plans/98-TEST-TIME-SEARCH-AND-VERIFIERS.md`). |
+| Test-Time Search & Verifiers | `PROPOSED` | `UNIMPLEMENTED` | Test-time compute search, RAM CSR MCTS, Best-of-N, PRM verification, RCVA protocol, section-targeted retrieval (`plans/98-TEST-TIME-SEARCH-AND-VERIFIERS.md`). |
 | Tool integration | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan. |
 
 ### Overall conclusion

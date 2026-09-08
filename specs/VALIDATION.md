@@ -97,6 +97,7 @@ cost by five.
 | **E031** | OpposedRelationDirectionError | Relation declared in non-canonical direction (e.g. `A --DESCRIBES--> B` where B is in corpus; should be `B --DOCUMENTED_BY--> A`) (REL-009) |
 | **E050** | GeneratedSkillDriftError | Emitted `.agents/skills/trashheap/SKILL.md` diverges from code and schemas/registry (AGENT-SKILLS.md §7) |
 | **E051** | SectionOwnershipError | Regeneration or compiler pass encountered an unrecognized non-Notes section or multiple `## Notes` sections; compilation aborted to prevent data loss (BODY-003, OWN-002) |
+| **E052** | RunawayLoopError | Agent or tool execution harness detected repeated identical tool call signatures >= 5 times without state mutation (The 40% Rule circuit breaker) (VAL-014) |
 
 #### WARNING Codes (W001-W015)
 
@@ -122,14 +123,14 @@ cost by five.
 
 ### 10.3 Error Code Allocation (Normative Registry)
 
-The base linter (`linter.py`) owns the range `E001`–`E051` and `W001`–`W015`. Every
+The base linter (`linter.py`) owns the range `E001`–`E052` and `W001`–`W015`. Every
 additive pipeline SHALL implement its errors in its own validator/pipeline
 namespace and SHALL NOT mix them into the base linter's error code contract.
 
 | Range | Owner | Document | Allocated in this version |
 |---|---|---|---|
-| `E001`–`E031`, `E050`–`E051` | Base linter & Agent Skills | `VALIDATION.md` §10.2, `AGENT-SKILLS.md` | `E001`–`E031`, `E050`, `E051` |
-| `E052`–`E099` | Reserved for the base linter | `VALIDATION.md` | — |
+| `E001`–`E031`, `E050`–`E052` | Base linter & Agent Skills | `VALIDATION.md` §10.2, `AGENT-SKILLS.md` | `E001`–`E031`, `E050`, `E051`, `E052` |
+| `E053`–`E099` | Reserved for the base linter | `VALIDATION.md` | — |
 | `E101`–`E199` | Ingestion Engine (trajectory specialization and future Source validation) | `INGEST.md` §2; `UNIVERSAL-SOURCE-EXTENSION.md` §12 | `E101`–`E125` (`E106`–`E107` reserved, not allocated) |
 | `E130`–`E149` | Universal Source Extension | `UNIVERSAL-SOURCE-EXTENSION.md` §12 | Reserved; no implementation |
 | `E201`–`E299` | Graph Intelligence Delta | `GRAPH-INTELLIGENCE.md` §3 | `E201`–`E207` |
@@ -208,6 +209,9 @@ To ensure resilient knowledge representation across diverse consumer runtimes an
 
 3. **Uncheatable Non-Neural Verifier Mandate (VAL-013)**:
    Promotion of candidates to `status: canonical` and assignment of verification stamps (`verified: {by: ...}`) SHALL NEVER be granted solely by a generative LLM self-evaluation ("I have verified this and it is correct"). All promotion and verification transitions require passing the deterministic, non-neural 5-layer validation pipeline (`VALIDATION.md` Layers 1–5). Neural models propose; deterministic non-neural verifiers validate and commit.
+
+4. **Anti-Runaway Loop Fence (The 40% Rule / VAL-014)**:
+   Agent execution harnesses and tool orchestrators MUST maintain an in-memory sliding hash ring of recent tool calls (tool name + canonicalized arguments). If identical tool call signatures repeat $\ge 5$ times without state mutation, or if repeated identical failures consume $\ge 40\%$ of the agent's allocated token/turn budget, the execution harness MUST immediately trip the circuit breaker, abort execution, and emit `E052: RunawayLoopError` rather than burn compute in a degenerate loop.
 
 ---
 
@@ -323,6 +327,7 @@ Owning document: `ARCHITECTURE.md` §2.2–§2.3.
 | **VAL-011** | Links | Every semantic relationship in frontmatter MUST also be mirrored as a valid Markdown link in body prose (Redundancy Rule) | - |
 | **VAL-012** | Rendering | Generated Mermaid diagrams failing AST/syntax validation MUST degrade in place to text blocks with error comment markers and trigger auto-heal | - |
 | **VAL-013** | Verification | Canonical promotion and `verified:` stamps SHALL NEVER be granted by generative LLM self-evaluation; requires deterministic 5-layer non-neural verifiers | - |
+| **VAL-014** | Agent Harness | Repetition of identical tool call signatures >= 5 times without state mutation MUST trip the circuit breaker with E052 (The 40% Rule) | E052 |
 | **EPI-001** | Epistemology | Epistemic dimensions (evidence, verification, authority, consensus) are orthogonal and SHALL NOT be automatically derived from one another | - |
 | **EPI-002** | Epistemology | provenance.source_type SHALL describe the provenance source, never the claim's epistemic state | - |
 | **EPI-003** | Epistemology | Epistemic ranking SHALL follow the formal algorithm in `EPISTEMOLOGY.md` §5.3 | - |

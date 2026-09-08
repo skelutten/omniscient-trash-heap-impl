@@ -8,7 +8,7 @@
 > **Status**: `DRAFT`
 > **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Additive contract for staged Source-derived candidates; no change to baseline Knowledge Object schema
-> **Normative owner**: This document owns REVIEW-001..REVIEW-010 and PROMO-001..PROMO-010
+> **Normative owner**: This document owns REVIEW-001..REVIEW-011 and PROMO-001..PROMO-010
 > **Related documents**: `DISCOVERY.md`, `INGEST-STAGING.md`, `EPISTEMOLOGY.md`, `VALIDATION.md`, `SCHEMA.md`
 
 This document turns the stated capture → review → approval → canonical-write boundary into a deterministic contract. It specifies design obligations only; no runtime, fixture test suite or CLI implementation is implied by its examples.
@@ -63,6 +63,14 @@ review_decision:
 **REVIEW-003:** `approve` is administrative admissibility, not epistemic truth. It MUST NOT upgrade `evidence`, `verification`, `authority` or `consensus` without the separate rules of `EPISTEMOLOGY.md`.
 
 **REVIEW-004:** Reviewer identity MUST use the actor/provenance contract. An absent or malformed reviewer, missing decision time, missing proposal hash or missing validation result is a failed-closed approval.
+
+### 2.1 Moderator Agent Pre-Scoring Pass (REVIEW-011 / PROMO-005 Pre-Pass)
+
+Prior to human operator review in the CLI or triage queue (`trashheap discover review`), a candidate proposal containing claims or extracted relations MUST undergo an automated evaluation pass (the **Moderator Agent Pre-Pass**):
+
+**REVIEW-011 (Moderator Agent Pre-Scoring):** Staged proposals MUST be pre-scored for factual alignment against their cited `source_ref` text spans before presentation to a human operator. The evaluation pass SHALL compute:
+1. **Span Entailment Score ($0.0 \le s \le 1.0$):** Entailment probability that the exact cited text span supports the proposed claim or relation.
+2. **Hallucination Fence:** If $s < \tau_{\text{pre\_score}}$ (default 0.70), the candidate is flagged with `PRE_SCORE_FAILED` and prioritized for operator rejection or automated culling, preventing ungrounded candidates from consuming human attention.
 
 ## 3. Promotion operation
 

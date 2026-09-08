@@ -356,6 +356,42 @@ To maintain epistemic rigour:
 
 ---
 
+## 9.8 The RCVA Protocol (Retrieve, Constrain, Verify, Abstain)
+
+Grounded question answering, multi-hop reasoning, and automated knowledge synthesis workflows SHALL strictly adhere to the four-phase **RCVA Protocol**:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ 1. RETRIEVE                                                 │
+│    Hybrid Dense + BM25 Lexical + Graph BFS (RRF Fusion)     │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. CONSTRAIN                                                │
+│    Metadata Domain Filtering + Document Card Line Budgeting │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 3. VERIFY                                                   │
+│    Deterministic Claim Entailment + Exact Bracket Citations │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 4. ABSTAIN                                                  │
+│    Posterior Mass Check (max P(y) < tau) -> Refusal         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+1. **Phase 1 — Retrieve:** Candidate evidence nodes are retrieved using deterministic hybrid fusion (dense vector search + BM25 lexical search + graph BFS traversal) combined via Reciprocal Rank Fusion (§9.1–§9.3).
+2. **Phase 2 — Constrain:** Candidate contexts are strictly bounded against allocated token budgets. Non-relevant peripheral sections are pruned using Document Card line intervals (`RET-010`), and nodes outside valid temporal or domain boundaries are filtered.
+3. **Phase 3 — Verify:** Every generated factual claim or relation MUST be verified against the cited source passage. Citations MUST use explicit bracketed provenance references (`[source:node_id#lines]`). If an atomic proposition cannot be entailed by the cited source text, the claim is rejected.
+4. **Phase 4 — Abstain:** If the calibrated posterior mass clears below the confidence threshold ($\max_y P(y) < \tau_{\text{abstain}}$) or if verification fails to substantiate the core query, the system MUST halt generation and emit an `EPISTEMIC_ABSTENTION` refusal rather than speculative text (**RET-011**).
+
+---
+
 ## Retrieval Invariants
 
 Source-aware retrieval MUST distinguish `captured_at`, `observed_at`,
@@ -375,6 +411,8 @@ silently returning the latest source revision.
 | **RET-007** | A non-empty graph path SHALL NOT be treated as verification of propositional claim truth; Stage 2 verification evaluates individual passage entailment | - |
 | **RET-008** | Bounded decision gates over discrete classes SHALL use constrained logit decoding and normalized softmax posteriors rather than regex-parsed free text | - |
 | **RET-009** | Text chunking and reranker scoring windows MUST NOT truncate trailing conclusion, hedging, or findings sections (Truncation Trap defense) | - |
+| **RET-010** | For Knowledge Objects exceeding 1,000 words or 100 lines, retrieval tools MUST support section-targeted and line-interval reading (`--section`, `--lines`) using Document Cards to prevent context dilution | - |
+| **RET-011** | Grounded question-answering and synthesis workflows SHALL strictly execute the four-phase Retrieve, Constrain, Verify, Abstain (RCVA) protocol in §9.8. Systems MUST abstain with `EPISTEMIC_ABSTENTION` if verification fails or confidence clears below $\tau_{\text{abstain}}$ | - |
 
 ---
 
