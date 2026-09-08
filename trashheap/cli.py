@@ -492,6 +492,15 @@ def build_parser() -> argparse.ArgumentParser:
     bench_parser.add_argument(
         "--json", action="store_true", help="Emit machine-readable JSON output"
     )
+    bench_parser.add_argument(
+        "--pubmed", action="store_true", help="Run PubMedQA hybrid retrieval and refusal benchmark"
+    )
+    bench_parser.add_argument(
+        "--pubmed-sample", type=int, default=50, help="Number of PubMedQA questions to sample (default: 50)"
+    )
+    bench_parser.add_argument(
+        "--pubmed-file", type=str, default=None, help="Custom path to PubMedQA questions JSON or PubMed XML file"
+    )
 
     # 16. bundle
     bundle_parser = subparsers.add_parser(
@@ -1472,7 +1481,30 @@ def handle_conformance(args: argparse.Namespace) -> int:
 
 
 def handle_benchmark(args: argparse.Namespace) -> int:
-    """Handle performance baseline benchmark (SCALE-001)."""
+    """Handle performance baseline benchmark (SCALE-001) or PubMed benchmark."""
+    if getattr(args, "pubmed", False):
+        from trashheap.operations.pubmed_benchmark import PubmedBenchmarkHarness
+
+        harness = PubmedBenchmarkHarness(
+            pubmed_file=getattr(args, "pubmed_file", None),
+            sample_size=getattr(args, "pubmed_sample", 50),
+        )
+        report = harness.run()
+        if args.json:
+            print(json.dumps(report.to_dict(), indent=2))
+        else:
+            print("=== PubMedQA Hybrid Retrieval & Refusal Benchmark (Plan 96) ===")
+            print(f"Total Questions Evaluated: {report.total_questions}")
+            print(f"Direct Top-1 Recall: {report.top_1_recall * 100:.1f}%")
+            print(f"Top-5 Recall: {report.top_5_recall * 100:.1f}%")
+            print(f"Top-10 Recall: {report.top_10_recall * 100:.1f}%")
+            print(f"Conclusion Preservation Rate: {report.conclusion_preservation_rate * 100:.1f}%")
+            print(f"Negative Control Refusal Rate: {report.negative_control_refusal_rate * 100:.1f}%")
+            print(f"Fake Citations Stripped: {report.fake_citations_stripped}")
+            print(f"Mean Query Latency: {report.mean_query_ms:.2f} ms ({report.queries_per_sec:.1f} q/s)")
+            print(f"Corpus Materialization: {report.corpus_build_time_sec:.2f}s ({report.corpus_size} articles)")
+        return ExitCode.SUCCESS
+
     ws_root = Path(getattr(args, "workspace_root", ".") or ".").resolve()
     fx_dir = Path(args.fixtures_dir).resolve() if getattr(args, "fixtures_dir", None) else None
 

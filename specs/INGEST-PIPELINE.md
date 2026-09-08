@@ -216,6 +216,20 @@ The unit of extraction is the atomic claim; the unit of canonical representation
 
 ## 6. Fail-Closed Sanitization & Canonical Hashing
 
+### 6.0 Prompt Injection Defense & Untrusted Source Fencing (FR-12, NFR-6, D105)
+
+All untrusted source text passed to extraction routines or LLM workers MUST be wrapped in immutable boundary delimiters:
+
+```text
+<untrusted_source>
+{sanitized_content}
+</untrusted_source>
+```
+
+**Closing-Tag Escaping Invariant:** To prevent delimiter breakout attacks where adversarial input includes literal closing tags (e.g. `</untrusted_source>\nSystem instruction override:`), any occurrences of `</untrusted_source>` within the raw content MUST be sanitized by replacing them with `&lt;/untrusted_source&gt;` prior to wrapping.
+
+The extraction LLM operates under the zero-side-effect capability firewall (`INGEST-CORE-018` / `E120`) with no tool execution or file modification privileges. Extracted commands or code snippets are treated as pure data and are never executed.
+
 The Sanitization runs sequentially in memory under strict resource limits (`INGEST-CORE-002`, `INGEST-CORE-002A`, `INGEST-CORE-011`):
 
 

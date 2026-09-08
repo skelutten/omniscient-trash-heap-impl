@@ -35,6 +35,8 @@ separate adapter specifications.
 
 Each source adapter declares strict allowlists for fields as well as contracts for completion events. Cursor tracking in SQLite handles file rotation and truncation by binding the offset to the file's `inode`, `file_sha256` and `mtime`.
 
+**Inode Recycling Defense (D107):** On Linux filesystems, inodes can be rapidly recycled upon unlinking and recreating files. A cursor implementation relying solely on `(st_dev, st_ino)` is vulnerable to false offset hits when a file is replaced by another with the same inode number. To eliminate false offset hits across recycled inodes, the cursor verification routine (`CursorStore.check_and_read_new_bytes`) MUST verify that the SHA-256 hash of the content prefix up to `byte_offset` matches the recorded `file_sha256`. If the prefix hash mismatches, or if `curr_size < cursor.byte_offset`, the file MUST be treated as rotated or truncated, resetting `start_offset` to 0.
+
 The adapter boundary is source-agnostic: `Connector` acquires an external
 representation, `Adapter` normalizes it into a Source Record, and the ingestion
 core validates, hashes, records provenance and stages it. An adapter MUST NOT
@@ -96,6 +98,13 @@ adapter_contract:
 
 
 $$\text{write}(\text{temp}) \rightarrow \text{fsync}(\text{temp}) \rightarrow \text{close}(\text{temp}) \rightarrow \text{os.replace}(\text{temp}, \text{target}) \rightarrow \text{fsync}(\text{parent\_dir})$$
+
+**Runtime Durability Tier Detection (D107):**
+Implementations MUST inspect the host environment (`inspect_environment`) to determine the active durability tier before performing atomic publication or staging commits:
+- **Tier 1 (Production):** Linux Native (ext4, XFS, Btrfs) or macOS (APFS) where `os.replace` guarantees atomic directory/file replacement and POSIX `fsync` ensures on-disk crash durability.
+- **Tier 2 (Degraded):** WSL2 DrvFs cross-boundary mounts (e.g. `/mnt/c/`, `/mnt/d/`), where Windows NTFS semantics are translated through 9P/Plan9 or virtio-fs. Atomic replacement is not guaranteed across processes, and file locks are emulated. The system MUST report Degraded status in system diagnostics.
+- **Unsupported:** Network filesystems (NFS, SMB, CIFS) or cloud synchronization folders lacking POSIX atomicity.
+The runtime MUST report its durability tier truthfully and MUST NOT claim full Tier 1 production guarantees when operating on Tier 2 or unsupported mounts.
 
 ---
 
@@ -479,7 +488,23 @@ def acquire_daemon_singleton(
 
 ```
 
+```
+
 ---
+
+### 3.8 Streaming XML Adapter & Ingestion Memory Invariance (ADA-008)
+
+Large structured corpus ingestion (such as multi-gigabyte XML baselines e.g. PubMed/MeSH) poses severe out-of-memory risks if parsed into monolithic in-memory DOM trees.
+
+1. **Streaming Iterator & Sibling Clearing (ADA-008):**
+   - High-throughput XML adapters MUST utilize incremental streaming parsers (e.g. `lxml.etree.iterparse` or SAX) rather than monolithic DOM loaders (`lxml.etree.parse`).
+   - After processing each atomic record element (e.g. `<PubmedArticle>`), the adapter MUST explicitly clear the element (`elem.clear()`) and remove previous siblings from its parent (`while elem.getprevious() is not None: del elem.getparent()[0]`).
+   - Memory footprint across multi-gigabyte ingestion SHALL remain $O(1)$ flat RSS ($< 250$ MB).
+2. **Deterministic Metadata Ingestion (Zero-LLM Pipeline):**
+   - Structured identifiers (PMID, DOI), human-curated classifications (MeSH tree numbers, descriptors), author lists, and explicit citations (`<ReferenceList>`) MUST be mapped directly to canonical or candidate records without invoking LLM inference.
+   - Retraction and errata notices (`<CommentsCorrectionsList>`) SHALL be deterministically mapped to `SUPERSEDES` or `INVALIDATED_BY` epistemic relations.
+3. **Conclusion & Findings Section Preservation:**
+   - Text extractors for structured abstracts MUST preserve section labels (`BACKGROUND`, `METHODS`, `RESULTS`, `CONCLUSIONS`) and guarantee that concluding paragraphs and epistemic hedges are preserved intact without naive character truncations.
 
 ---
 

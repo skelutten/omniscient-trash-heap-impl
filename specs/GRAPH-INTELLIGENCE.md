@@ -307,6 +307,14 @@ discovery/
 
 JSON Lines is the dependency-light baseline format because it is inspectable with standard text tools and requires no database dependency. SQLite MAY be used as an indexed local backend. Parquet MAY be used for large corpora or analytical workloads, but is an optional backend and MUST expose the same versioned logical schema. The choice of backend MUST be recorded in the manifest.
 
+### 11.1 High-Scale Projections (CSR & Memory-Mapped Arrays)
+
+For large-scale corpora exceeding $10^5$ nodes or $10^6$ edges, external graph database roundtrips (1–5 ms per statement) introduce prohibitive traversal latency. Implementations MAY project derived graph topologies into memory-mapped **Compressed Sparse Row (CSR)** binary arrays (`indptr.npy`, `indices.npy`) or sorted Parquet columnar files. CSR representation guarantees microsecond-level in-process node expansion ($< 10\ \mu\text{s}$) with zero daemon overhead. When CSR projections are generated, implementations MUST assert bit-for-bit alignment between node index order and metadata attribute arrays to prevent silent flag misalignment.
+
+### 11.2 Anti-Pattern: Rejection of Unconstrained Query Relaxation Loops
+
+Graph retrieval and agentic synthesis pipelines MUST NOT implement recursive "refinement loops" that automatically broaden concept searches up the taxonomic hierarchy when specific evidence is missing. Empirical analysis demonstrates that climbing the ontology tree on missing evidence fails to answer the specific query while dramatically increasing hallucinated answers on negative control questions. The system MUST fail closed via Stage 1 structural refusal when grounded evidence is absent, rather than expanding search scope until unrelated parent evidence is returned.
+
 Each run follows:
 
 ```text

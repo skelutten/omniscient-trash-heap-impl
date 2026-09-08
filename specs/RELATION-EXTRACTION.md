@@ -58,6 +58,8 @@ Raw Text / High-Confidence Discovery Pair
 | **REX-008** | Self-Reference Ban | Proposing a relation where `source_id == target_id` SHALL fail closed with immediate candidate rejection (`REL-004`). | `E157` |
 | **REX-009** | Scope Isolation | Extracted relations MUST respect scope boundaries: cross-scope edges between `personal` and `engineering` require explicit policy authorization (`DELTA-CORE-007`). | `E158` |
 | **REX-010** | Deduplication Gate | If an identical edge `(source, relation, target)` already exists in canonical storage, the extraction worker SHALL discard it as a redundant candidate. | `E159` |
+| **REX-011** | Deterministic Precedence | Where structured metadata or citations exist, relations SHALL be constructed deterministically with zero LLM extraction calls. | `E160` |
+| **REX-012** | Constrained Logit Extraction | Where LLM relation classification is performed, extractors SHOULD use constrained token logit filtering over valid predicate tokens. | `E161` |
 
 ---
 

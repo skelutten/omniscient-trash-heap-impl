@@ -96,6 +96,8 @@ production linter/conformance implementation for the complete architecture.
 | OKF interoperability | `PROPOSED` | `CONFORMANCE_TESTED` | Knowledge Bundles and Google OKF v0.2 interop (`trashheap/bundle/`, `tests/test_bundles_and_okf.py`). |
 | Graph Visualization | `PROPOSED` | `UNIMPLEMENTED` | Offline interactive graph projection (`specs/VISUALIZE.md`, `plans/94-OPT-IN-GRAPH-VISUALIZATION.md`). |
 | Relation Extraction & Linking | `PROPOSED` | `UNIMPLEMENTED` | Closed-ontology automated relation extraction & entity linking (`specs/RELATION-EXTRACTION.md`, `plans/95-RELATION-EXTRACTION-AND-LINKING.md`). |
+| PubMed & MeSH Benchmark | `PROPOSED` | `PARTIAL` | Streaming XML adapter, CSR projections, adversarial controls (`plans/96-OPT-IN-PUBMED-BENCHMARK.md`). |
+| Constrained Logit Calibration | `PROPOSED` | `UNIMPLEMENTED` | Logit decoding, class calibration, and epistemic abstention gates (`plans/97-CONSTRAINED-DECODING-CALIBRATION.md`). |
 | Tool integration | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan. |
 
 ### Overall conclusion

@@ -239,6 +239,16 @@ validity:
   valid_until: null         # End date (null = unbounded)
 ```
 
+### 5.6 Topological Admissibility vs. Propositional Veracity
+
+A foundational epistemic rule in *The Omniscient Trash Heap* is that **topological reachability is not assertion truth** (**EPI-006**).
+- **Topological Admissibility (Stage 1):** A valid path in the Knowledge Graph establishes topical relevance, context grounding, and conceptual linkage between entities. However, graph connectivity alone cannot verify whether a specific empirical proposition is true, false, or inconclusive (empirically yielding chance accuracy $\text{AUROC} \approx 0.50$ for claim veracity).
+- **Propositional Veracity (Stage 2):** Assertion truth, contradiction detection, and claim verification require propositional grounding in text passages and calibrated confidence scoring.
+
+Consequently, epistemic refusals MUST be bifurcated into typed refusal structures (**EPI-007**):
+1. `STRUCTURAL_REFUSAL`: The query references concepts ungrounded in the ontology registry or exhibits broken/retracted path topology.
+2. `EPISTEMIC_ABSTENTION`: Grounded evidence exists, but the passages fail claim entailment or model posterior confidence fails to clear the decision threshold.
+
 ---
 
 ## Epistemic Invariants
@@ -248,3 +258,5 @@ validity:
 | **EPI-001** | Epistemology | Epistemic dimensions (evidence, verification, authority, consensus) are orthogonal and SHALL NOT be automatically derived from one another |
 | **EPI-002** | Epistemology | provenance.source_type SHALL describe the provenance source, never the claim's epistemic state |
 | **EPI-003** | Epistemology | Epistemic ranking SHALL follow the formal algorithm in §5.3 |
+| **EPI-006** | Epistemology | Topological path connectivity establishes topic admissibility, NOT assertion truth; empirical verification requires Stage 2 propositional evaluation |
+| **EPI-007** | Epistemology | Refusal decisions SHALL distinguish structural graph invalidity (STRUCTURAL_REFUSAL) from epistemic uncertainty (EPISTEMIC_ABSTENTION) |

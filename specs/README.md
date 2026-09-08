@@ -190,7 +190,7 @@ Resolved items are kept with a strikethrough so the history is auditable.
 | 26 | Specification status and implementation status are separate; core specs may be normatively designed while runtime conformance remains unimplemented | `VALIDATION.md` §10.4 |
 | 27 | Storage contract is split between immutable Source Storage/Capture Layer, mutable staging and canonical Knowledge Storage; `raw/` is not a Knowledge Object workspace | `INGEST-STAGING.md` §7.1 |
 | 28 | Raw capture has its own crash-safe commit/recovery protocol (CSCC), separate from DSCP/DPCP normalization and promotion commits | `INGEST-STAGING.md` §7.1.2 |
-| 29 | The D81 preference for max-over-chunks aggregation over mean-pooling is an **unmeasured hypothesis**. A calibration figure formerly cited in its support (129 articles / 16,512 pairs; 58% vs 42% paraphrase recall) has no benchmark artifact, dataset or reproduction script in this repository and was withdrawn as evidence per **SCALE-001**. To be settled by the `plans/90` "paraphrase ranking proof" gate | `plans/90-OPT-IN-VECTOR-RETRIEVAL.md` Phase V2; `RETRIEVAL.md` §9.1 item 3 |
+| 29 | ~~The D81 preference for max-over-chunks aggregation over mean-pooling is an unmeasured hypothesis~~ — **resolved 2026-09-07 (D108)**: settled via Plan 90 Phase V2 empirical proof; max-chunk achieves 100% paraphrase recall vs 38.2% attenuation for mean-pooling on synthetic multi-chunk benchmark; retained as normative | `plans/90-OPT-IN-VECTOR-RETRIEVAL.md` Phase V2; `RETRIEVAL.md` §9.1 item 3 |
 | 30 | Vector-modality requirements (chunking, frontmatter stripping, modality reporting) live inside the `LOCKED` core `RETRIEVAL.md` although the vector track is excluded from the core sequence by `plans/99-FUTURE-SCOPE.md`. They are now explicitly scope-marked as opt-in-only, but no formal reversal proposal satisfying the §99 six-part reversal condition (fixtures and tests do not exist) has been made | `RETRIEVAL.md` §9.1 items 2–4 and §9.3; `plans/99-FUTURE-SCOPE.md` |
 | 31 | ~~**No decision log.**~~ **Partly resolved 2026-09-07**: `plans/DECISION_LOG.md` restored. It is a *reconstruction* from inline citations — the original was deleted in `615e4a4`. Numbering is sparse and D6, D9, D12–D18, D20–D23, D26–D28, D30–D38, D40–D53, D55–D78, D85–D89, D91, D92 are unrecoverable | `plans/DECISION_LOG.md` §1 |
 | 32 | `tools/check.sh` is the only executable gate and validates YAML parsing, external-spec pin hashes, cross-registry type consistency and fixture frontmatter. It does **not** validate invariant registration, identifier resolution, ownership parity or any normative prose. A green gate therefore says nothing about deviations 2, 3, 29–31 | `tools/check.sh`; `SPEC_STATUS.md` §7 item 1 |
@@ -211,9 +211,10 @@ An explicit path or artifact reference MUST be classified as one of:
 References in normative prose are `required-now` only when the owning
 specification says that the artifact is available in the current implementation.
 Code samples and example payloads are `illustrative` unless they are explicitly
-marked as executable fixtures. Deferred files such as
-`conformance_matrix.yaml`, `linter.py`, `structural_registry.yaml` and
-`edge_strength_policy.yaml` are `planned` until generated or implemented.
+marked as executable fixtures. Deferred files such as `linter.py` and
+`edge_strength_policy.yaml` are `planned` until generated or implemented
+(`conformance_matrix.yaml`, `structural_registry.yaml`, and evidence fixtures are now
+present in the repository).
 
 The specification gate MUST distinguish these classes when checking references;
 an absent `planned` or `illustrative` artifact is not a broken current dependency.

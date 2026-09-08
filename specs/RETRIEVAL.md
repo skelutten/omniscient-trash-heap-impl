@@ -239,7 +239,7 @@ where C is the conflict cluster. d* is placed in `evidence_bundle`. The remainin
 - Uses a transformer-based cross-encoder (e.g. `bge-reranker-large` / `ms-marco-MiniLM-L-6-v2`).
 - **Execution Budget & Constraints:**
   - Candidates restricted to top-$K \le 10$ from RRF output to avoid token/latency explosion.
-  - Document text truncated to leading 512 tokens before scoring.
+  - Document text scoring window: naïve leading-only truncation (e.g. cutting at leading 512 tokens) is vulnerable to the *Truncation Trap* (severing trailing conclusion and hedging sections, which empirically degraded answer accuracy by 14.5 points). Implementations SHOULD employ section-aware scoring (including document overview and conclusion/findings sections) or configure context windows up to 1,024–2,048 tokens where execution budget permits.
   - Fallback: If Cross-Encoder model is unavailable or latency exceeds 200 ms, system falls back transparently to raw RRF scores.
 
 ---
@@ -309,10 +309,50 @@ When `CONTRADICTS` relations are detected:
 
 ### 9.5.1 Full-Content Access, Body Excerpts & Draft Visibility
 
-1. **Body Excerpt Boundedness:** In Evidence Bundles, `body_excerpt` is strictly bounded ($\le 250$ characters) to preserve LLM context budget during multi-node synthesis.
+1. **Body Excerpt Boundedness & Synthesis Warning:** In Evidence Bundles, `body_excerpt` is strictly bounded ($\le 250$ characters) to preserve LLM context budget during multi-node candidate routing. Because arbitrary front-end truncation risks discarding conclusions and epistemic hedging clauses, callers performing answer synthesis MUST NOT rely solely on `body_excerpt`. Downstream agents SHALL resolve complete markdown text via `"path"` or request `--include-body`.
 2. **Direct Filesystem Path:** Each bundle node entry SHALL contain a `"path"` field with the canonical repository-relative filesystem location of the Knowledge Object (e.g. `personal/02_formella_vetenskaper_matematik/PERS-CON-0001.md`), preventing local host path leakage in exported or agent-bound evidence bundles.
 3. **Full Text Retrieval:** Complete object markdown text MUST be accessible via the non-truncating CLI command `trashheap show <node_id|file_path>` or through the `--include-body` flag on `trashheap query`.
 4. **Draft Status Invariant:** Canonical retrieval filters `status: draft` objects by default. When querying unpromoted or migrated legacy articles, callers MUST explicitly supply `--include-drafts`.
+5. **Multi-Target Citation Parsing:** When extracting or verifying citation brackets from synthesized answers (e.g. `[NODE-1, NODE-2]`), parsers MUST match bracket boundaries and split comma/semicolon delimited IDs, validating every referenced ID against the evidence bundle path set to prevent multi-citation safety leakage.
+
+---
+
+## 9.6 Two-Stage Refusal Architecture (Topological Aboutness vs. Propositional Truth)
+
+A central epistemic finding is that **graph path certification evaluates topological admissibility, NOT assertion truth**. Empirical evaluation reveals that topological path connectivity between concepts predicts propositional correctness at chance ($\text{AUROC} \approx 0.50$), because a graph edge establishes that concepts are co-studied or related, regardless of whether the specific claim is supported, contradicted, or inconclusive.
+
+To prevent hallucinations while maintaining high answer coverage, retrieval and synthesis MUST execute as a **Two-Stage Refusal Architecture**:
+
+```text
+User Question
+      │
+      ▼
+[Stage 1: Structural Refusal (Graph Gates - Deterministic)]
+      ├── 1. Ontology Grounding: Question maps to registered descriptors / taxonomy?
+      ├── 2. Path Admissibility: Valid path connects grounded concepts (direct / bridge)?
+      ├── 3. Terminal Validity: Connected nodes possess quotable body text?
+      └── 4. Retraction / Supersession: Reject if evidence is superseded or invalidated.
+      │   (If any structural gate fails -> REFUSE with deterministic refusal reason)
+      ▼
+[Candidate Evidence Passages]
+      │
+      ▼
+[Stage 2: Propositional Refusal (Epistemic / Confidence Gates)]
+      ├── 1. Claim Entailment: Cited passage entails the atomic claim (neutrality < tau)?
+      └── 2. Calibrated Confidence: Model confidence over answer tokens clears threshold?
+          (If propositional gate fails -> ABSTAIN with INSUFFICIENT_EVIDENCE)
+```
+
+---
+
+## 9.7 Constrained Logit Decoding & Posterior Calibration
+
+Unconstrained natural language generation evaluated with heuristic regular expressions (such as `\b(yes|no|maybe)\b`) introduces brittle parser failure modes—for example, treating epistemic hedges ("there is no definitive evidence that...") as negative assertions. Furthermore, free-text generation produces point predictions rather than calibrated confidence distributions.
+
+To maintain epistemic rigour:
+1. **Constrained Vocabulary Decoding:** Classification and decision gates over discrete response sets (e.g. `{yes, no, maybe}`, `{approve, reject, revise}`) SHALL extract token logits directly at the decision position (`logits_to_keep=1`), computing a normalized softmax posterior over the candidate token IDs (**RET-008**).
+2. **Prior-Calibrated Decision Rule:** Systems MAY apply class-bias corrections fitted strictly on a held-out development set (DEV split) to adjust for model prior skew before emitting a discrete label.
+3. **Calibrated Abstention:** The maximum class posterior $\max_y P(y)$ SHALL serve as the primary epistemic confidence score. When $\max_y P(y) < \tau_{\text{abstain}}$, the system SHALL emit an `EPISTEMIC_ABSTENTION` refusal.
 
 ---
 
@@ -331,6 +371,10 @@ silently returning the latest source revision.
 | **RET-003** | The evidence bundle SHALL contain all necessary fields for LLM grounding | - |
 | **RET-004** | Query execution SHALL be stateless and MUST NOT accumulate persistent contexts or search caches on disk | - |
 | **RET-005** | Baseline retrieval (lexical + graph) SHALL operate 100% offline and air-gapped without external network calls | - |
+| **RET-006** | Stage 1 graph gates SHALL execute as deterministic boolean predicates before generation, reporting explicit refusal reasons | - |
+| **RET-007** | A non-empty graph path SHALL NOT be treated as verification of propositional claim truth; Stage 2 verification evaluates individual passage entailment | - |
+| **RET-008** | Bounded decision gates over discrete classes SHALL use constrained logit decoding and normalized softmax posteriors rather than regex-parsed free text | - |
+| **RET-009** | Text chunking and reranker scoring windows MUST NOT truncate trailing conclusion, hedging, or findings sections (Truncation Trap defense) | - |
 
 ---
 
