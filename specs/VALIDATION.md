@@ -217,7 +217,7 @@ here for navigation: `DELTA-CORE-001`–`007` (`GRAPH-INTELLIGENCE.md` §3),
 To ensure resilient knowledge representation across diverse consumer runtimes and uncompromised epistemic promotion, the validation subsystem enforces three specific operational rules:
 
 1. **Dual-Representation Link Mirroring (The Redundancy Rule / VAL-011)**:
-   Every semantic relationship declared in frontmatter (`links:` or `related:`) MUST also be mirrored as a valid Markdown link (`[Target Title](./path/to/TARGET-ID.md)`) in the document body prose. Conversely, all cross-article Markdown links in body prose should correspond to declared relationships. This dual-representation guarantees that readers and tools operating purely on prose (e.g. standard markdown readers, OKF-only parsers, web renderers) and graph-aware compilers retain 100% graph visibility without structural breakage.
+   Every semantic relationship declared in frontmatter (`relations`) MUST also be mirrored as a valid Markdown link (`[Target Title](./path/to/TARGET-ID.md)`) in the document body prose. Conversely, all cross-article Markdown links in body prose should correspond to declared relationships. This dual-representation guarantees that readers and tools operating purely on prose (e.g. standard markdown readers, OKF-only parsers, web renderers) and graph-aware compilers retain 100% graph visibility without structural breakage.
 
 2. **Graceful Mermaid Degradation & Auto-Heal (VAL-012)**:
    When a generated or ingested Mermaid diagram (` ```mermaid `) fails AST or syntax parsing, the compiler/linter MUST NOT crash the pipeline or break frontend visualization. Instead, the compiler MUST gracefully degrade the block in place to a standard code fence (` ```text `) prefixed with an explicit diagnostic marker:
@@ -225,7 +225,7 @@ To ensure resilient knowledge representation across diverse consumer runtimes an
    This preserves readability, prevents rendering explosions, and surfaces the failure in the diagnostic queue so an automated self-healing pass can attempt re-generation on the next compilation cycle.
 
 3. **Uncheatable Non-Neural Verifier Mandate (VAL-013)**:
-   Promotion of candidates to `status: canonical` and assignment of verification stamps (`verified: {by: ...}`) SHALL NEVER be granted solely by a generative LLM self-evaluation ("I have verified this and it is correct"). All promotion and verification transitions require passing the deterministic, non-neural 5-layer validation pipeline (`VALIDATION.md` Layers 1–5). Neural models propose; deterministic non-neural verifiers validate and commit.
+   Promotion of candidates to a governed canonical lifecycle status (`status: established`) and assignment of verification stamps (the flat `verification` field together with a `reviewer` actor, per `EPISTEMOLOGY.md` and `SCHEMA.md`) SHALL NEVER be granted solely by a generative LLM self-evaluation ("I have verified this and it is correct"). All promotion and verification transitions require passing the deterministic, non-neural 5-layer validation pipeline (`VALIDATION.md` Layers 1–5). Neural models propose; deterministic non-neural verifiers validate and commit.
 
 4. **Anti-Runaway Loop Fence (The 40% Rule / VAL-014)**:
    Agent execution harnesses and tool orchestrators MUST maintain an in-memory sliding hash ring of recent tool calls (tool name + canonicalized arguments). If identical tool call signatures repeat $\ge 5$ times without state mutation, or if repeated identical failures consume $\ge 40\%$ of the agent's allocated token/turn budget, the execution harness MUST immediately trip the circuit breaker, abort execution, and emit `E052: RunawayLoopError` rather than burn compute in a degenerate loop.
@@ -343,7 +343,7 @@ Owning document: `ARCHITECTURE.md` §2.2–§2.3.
 | **VAL-001** | Validity | validity.valid_until MUST NOT be earlier than validity.valid_from | E007 |
 | **VAL-011** | Links | Every semantic relationship in frontmatter MUST also be mirrored as a valid Markdown link in body prose (Redundancy Rule) | - |
 | **VAL-012** | Rendering | Generated Mermaid diagrams failing AST/syntax validation MUST degrade in place to text blocks with error comment markers and trigger auto-heal | - |
-| **VAL-013** | Verification | Canonical promotion and `verified:` stamps SHALL NEVER be granted by generative LLM self-evaluation; requires deterministic 5-layer non-neural verifiers | - |
+| **VAL-013** | Verification | Canonical promotion and verification stamps SHALL NEVER be granted by generative LLM self-evaluation; requires deterministic 5-layer non-neural verifiers | - |
 | **VAL-014** | Agent Harness | Repetition of identical tool call signatures >= 5 times without state mutation MUST trip the circuit breaker with E052 (The 40% Rule) | E052 |
 | **EPI-001** | Epistemology | Epistemic dimensions (evidence, verification, authority, consensus) are orthogonal and SHALL NOT be automatically derived from one another | - |
 | **EPI-002** | Epistemology | provenance.source_type SHALL describe the provenance source, never the claim's epistemic state | - |

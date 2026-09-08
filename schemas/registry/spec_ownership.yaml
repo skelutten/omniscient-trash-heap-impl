@@ -84,9 +84,13 @@ invariant_families:
     owner: specs/ARCHITECTURE.md
   - family_id: SCOPE
     owner: specs/DATA_MODEL.md
-  # VAL-001 is owned by EPISTEMOLOGY.md and restated in VALIDATION.md §10.2 (E007) and §11.
+  # VAL-001 (temporal validity: valid_until MUST NOT precede valid_from) is
+  # defined in EPISTEMOLOGY.md §Provenance Validation Rules and restated in
+  # VALIDATION.md §11 (E007). VAL-011..014 (link mirroring, mermaid degradation,
+  # non-neural verifier, runaway-loop fence) are defined in VALIDATION.md §10.6.
+  # VALIDATION.md §11 is the consolidated invariant table and owns the family.
   - family_id: VAL
-    owner: specs/EPISTEMOLOGY.md
+    owner: specs/VALIDATION.md
   - family_id: ERR
     owner: specs/VALIDATION.md
   - family_id: FS
