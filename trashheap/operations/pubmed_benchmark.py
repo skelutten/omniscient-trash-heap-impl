@@ -13,7 +13,7 @@ import json
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from trashheap.corpus import Corpus, load_corpus
 from trashheap.operations.pubmed import (
@@ -63,10 +63,16 @@ class BenchmarkReport:
     control_questions_refused: int
     citation_filter_retained: int
     citation_filter_removed: int
+    corpus_build_time_sec: float = 0.0
+    total_query_time_sec: float = 0.0
+
+    @property
+    def top_1_recall(self) -> float:
+        return self.gold_in_top_1 / max(1, self.total_questions)
 
     @property
     def top_1_accuracy(self) -> float:
-        return self.gold_in_top_1 / max(1, self.total_questions)
+        return self.top_1_recall
 
     @property
     def top_5_recall(self) -> float:
@@ -84,6 +90,43 @@ class BenchmarkReport:
     def control_refusal_rate(self) -> float:
         return self.control_questions_refused / max(1, self.control_questions_tested)
 
+    @property
+    def negative_control_refusal_rate(self) -> float:
+        return self.control_refusal_rate
+
+    @property
+    def fake_citations_stripped(self) -> int:
+        return self.citation_filter_removed
+
+    @property
+    def mean_query_ms(self) -> float:
+        if self.total_questions == 0:
+            return 0.0
+        return (self.total_query_time_sec / self.total_questions) * 1000.0
+
+    @property
+    def queries_per_sec(self) -> float:
+        if self.total_query_time_sec <= 0:
+            return 0.0
+        return self.total_questions / self.total_query_time_sec
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "total_questions": self.total_questions,
+            "corpus_size": self.corpus_size,
+            "top_1_recall": self.top_1_recall,
+            "top_5_recall": self.top_5_recall,
+            "top_10_recall": self.top_10_recall,
+            "conclusion_preservation_rate": self.conclusion_preservation_rate,
+            "control_refusal_rate": self.control_refusal_rate,
+            "negative_control_refusal_rate": self.negative_control_refusal_rate,
+            "fake_citations_stripped": self.fake_citations_stripped,
+            "corpus_build_time_sec": round(self.corpus_build_time_sec, 3),
+            "total_query_time_sec": round(self.total_query_time_sec, 3),
+            "mean_query_ms": round(self.mean_query_ms, 2),
+            "queries_per_sec": round(self.queries_per_sec, 1),
+        }
+
 
 class PubmedBenchmarkHarness:
     """Benchmark harness executing retrieval tests on PubMedQA."""
@@ -91,18 +134,22 @@ class PubmedBenchmarkHarness:
     def __init__(
         self,
         sample_limit: int = 50,
+        pubmed_file: Optional[Union[str, Path]] = None,
         registries: Optional[LoadedRegistries] = None,
         registry_dir: Optional[Path] = None,
+        sample_size: Optional[int] = None,
     ):
-        self.sample_limit = sample_limit
+        self.sample_limit = sample_size if sample_size is not None else sample_limit
+        self.pubmed_file = Path(pubmed_file) if pubmed_file else None
         self.adapter = PubmedXmlAdapter(default_scope="personal")
         self.registries = registries or load_registries(registry_dir)
 
     def load_dataset(self, local_cache_path: Optional[Path] = None) -> List[BenchmarkQuestion]:
         """Load PubMedQA benchmark instances from local path or remote URL."""
+        cache_path = local_cache_path or self.pubmed_file
         raw_data = None
-        if local_cache_path and local_cache_path.exists():
-            with open(local_cache_path, "r", encoding="utf-8") as f:
+        if cache_path and cache_path.exists():
+            with open(cache_path, "r", encoding="utf-8") as f:
                 raw_data = json.load(f)
         else:
             req = urllib.request.Request(PUBMEDQA_URL, headers={"User-Agent": "Mozilla/5.0"})
@@ -225,3 +272,22 @@ class PubmedBenchmarkHarness:
             citation_filter_retained=len(retained),
             citation_filter_removed=len(removed),
         )
+
+    def run(self) -> BenchmarkReport:
+        """Run end-to-end benchmark in a temporary corpus."""
+        import tempfile
+        import time
+
+        questions = self.load_dataset(local_cache_path=self.pubmed_file)
+        start_build = time.perf_counter()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            corpus = self.build_test_corpus(questions, Path(tmp_dir))
+            corpus_build_time = time.perf_counter() - start_build
+
+            start_query = time.perf_counter()
+            report = self.run_benchmark(questions, corpus)
+            query_time = time.perf_counter() - start_query
+
+            report.corpus_build_time_sec = corpus_build_time
+            report.total_query_time_sec = query_time
+            return report
