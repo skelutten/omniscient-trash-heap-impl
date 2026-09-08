@@ -19,6 +19,7 @@
 | P8 | [`langchain-ai/openwiki`](https://github.com/langchain-ai/openwiki) (David R Oliver road test) | Codebase knowledge compiler with Grounded Claims, OKF v0.2 export, durable checkpoint state machine | Full article, codebase architecture notes, run logs read |
 | P9 | [`FareedKhan-dev/agentic-knowledge-graph`](https://github.com/FareedKhan-dev/agentic-knowledge-graph) | Deterministic 929M-edge biomedical graph (0 LLM calls), CSR in RAM, constrained decoding, self-debunking benchmark | Full repo, architecture notes, benchmark code read |
 | P10 | [`FareedKhan-dev/all-agentic-architectures`](https://github.com/FareedKhan-dev/all-agentic-architectures) & [`FareedKhan-dev/production-grade-agentic-system`](https://github.com/FareedKhan-dev/production-grade-agentic-system) | 35 agentic architectures, Deterministic-Picker Pattern, and 7 enterprise production hardening layers | Full repos, patterns catalog, production layers read |
+| P11 | [David R Oliver: *The State of the Nation in LLM Knowledge Bases in 2026* / AIX v0.2](state-of-the-nation-llm-knowledge-bases-2026.md) | Industry survey on Luhmann Zettelkasten, the Folder Ceiling, SQLite FTS, the Open Graph crisis, and AIX v0.2 | Full essay + AIX v0.2 specification read |
 
 Full texts not vendored (third-party, no redistribution licence — `README.md` §3).
 
@@ -264,13 +265,30 @@ A comprehensive taxonomy of 35 agent architectures (`all-agentic-architectures`)
 
 ---
 
-## 12. Derived changes & Architectural Affirmations
+## 12. P11 — State of the Nation in LLM Knowledge Bases & AIX v0.2 (David R Oliver)
+
+An August 2026 industry survey and format specification (*"The State of the Nation in LLM Knowledge Bases in 2026"*, David R Oliver) analyzing the convergence on plain text Markdown folders (the "1981 Filing Trick"), the folder scaling ceiling, the open graph dilemma, and AIX v0.2.
+
+### 12.1 Convergence
+- **The Knowledge Library Paradigm:** Confirms that single-folder vaults fail across teams. Endorses the federated library model with cross-bundle citations (`namespace/note`), permanent short identifiers, and shared type/relation vocabularies (`ARCHITECTURE.md` §2.3, `CORPUS_MANIFEST.yaml`).
+- **Pages as Authorship, Bundles as Use:** Independent convergence with our Plan 61 Knowledge Bundles and OKF interop (`specs/OKF-INTEROP.md`).
+- **The Open Graph Vacuum:** Exposes that Google's OKF graph story relies on `kcmd` syncing to the paid, proprietary *Google Cloud Knowledge Catalogue*. Confirms that our open, embedded Compressed Sparse Row (CSR) in-memory graph engine (`specs/GRAPH-INTELLIGENCE.md` §11.1, `trashheap/graph/csr.py`) occupies the primary missing layer in the open-source ecosystem.
+- **Multimodal Hash Fingerprinting:** Validates our cryptographic SHA-256 byte hashing and embedding slot contracts for diagrammatic and audio artifacts.
+
+### 12.2 Divergence
+- **Implementation Scope:** AIX v0.2 is a lightweight format extension proposal authored by one researcher; *The Omniscient Trash Heap* implements an industrial, 5-layer validated, transactional knowledge compiler with live SQLite FTS5 and CSR graph querying.
+
+---
+
+## 13. Derived changes & Architectural Affirmations
 
 | Change / Affirmation | Where |
 |---|---|
 | **CANON-006 strengthened** — cite *Deterministic Control Plane* (*arXiv:2606.26924*) and *Deterministic-Picker Pattern* (Khan 2026) as proof that LLMs must never directly mutate state | `ARCHITECTURE.md` §2.2 |
 | **Ontological Triad validated** — cite *HiSkill* (2026) as quantitative proof that flat trajectory storage fails and hierarchical `Trace → Insight → Skill` compilation is load-bearing | `INGEST-CORE-004` / `ONTOLOGY.md` §4 |
 | **Grounded Claims & OKF v0.2 verified** — cite OpenWiki (2026) for AST hash-pinned claim sidecars and OKF v0.2 interop | `STRUCTURAL-GRAPH.md` (SG-013) / `OKF-INTEROP.md` |
+| **Knowledge Library & Federation verified** — cite *State of the Nation 2026* (Oliver) for cross-bundle citation syntax and namespace federation | `ARCHITECTURE.md` §2.3 / `CORPUS_MANIFEST.yaml` |
+| **Open Graph Imperative validated** — cite Oliver's warning on Google Cloud Knowledge Catalogue lock-in as proof that an open, embedded CSR graph engine is vital | `GRAPH-INTELLIGENCE.md` §11.1 / `specs/RETRIEVAL.md` |
 | **Constrained Logits & Refusal Calibration** — cite PubMed 929M graph (Khan 2026) for softmax posteriors outperforming topological path validation | `RETRIEVAL.md` (§9.6, §9.7, RET-008) / `EPI-006` |
 | **Section-Aware Truncation Trap Defenses** — cite PubMed 1100-char truncation flaw | `RETRIEVAL.md` (RET-009) |
 | **Capture UX precedent** — note `files.md` as a validated pattern for the "write-only entrance" philosophy | `README.md` deviation 21 |
@@ -278,4 +296,4 @@ A comprehensive taxonomy of 35 agent architectures (`all-agentic-architectures`)
 | Threshold proliferation recorded as a simplification target | `README.md` deviation 23 |
 | Section-ownership gap now cites a working precedent | `README.md` deviation 21 |
 
-No design decision was reversed. P1 through P10 independently corroborate existing `llm-wiki-oe` architectural choices (local-first Markdown, deterministic compilation, hierarchical typing, strict execution boundaries, constrained decoding, durable transactions).
+No design decision was reversed. P1 through P11 independently corroborate existing `llm-wiki-oe` architectural choices (local-first Markdown, deterministic compilation, hierarchical typing, strict execution boundaries, constrained decoding, durable transactions, embedded CSR graphs).
