@@ -29,6 +29,7 @@ records for ideas that were adopted.
 | `fareed-khan-10m-rag-and-disk-streaming-architectures.md` | Large-scale RAG & C streaming review (P17) | Fareed Khan on 10M RAG ("Retrieve, Constrain, Verify, Abstain") & pure C 2.8T MoE disk-streaming ($O(1)$ RAM invariant); `RETRIEVAL.md` (§9.6-§9.7), `INGEST-ADAPTERS.md` (ADA-008) |
 | `the-harness-is-the-product-and-open-coding-agents.md` | Production harness & local agent review (P18) | Shrashti Singhal, Hamza Boulahia, Pranit naik on "the harness is the product", OpenCode terminal ergonomics, Sakana AI Fugu router; `ARCHITECTURE.md` (CANON-006), `AGENT-SKILLS.md` |
 | `personal-agentic-systems-and-neuroplastic-graphs.md` | Personal AI & neuroplasticity review (P19) | Erdogan T, Codebook Fusion, Fabio Yáñez Romero on "LLM is a CPU", multi-million doc graphs, and HOPE/Delta Gradient Descent; `INGEST-PIPELINE.md`, `GRAPH-INTELLIGENCE.md` |
+| `shuyi-wang-llm-wiki-adversarial-agents-and-scaffolding.md` | LLM Wiki practice & adversarial agent review (P20) | Shuyi Wang on Karpathy LLM Wiki in production (84-page Hermes test), scaffolding decay, builder-reviewer triad (Claude Code vs Codex), and human-on-the-loop governance; `ARCHITECTURE.md`, `REVIEW-PROMOTION.md`, `AGENT-SKILLS.md` |
 | `sources-and-expanded-literature.md` | Curated Survey & Foundations | Core literature (OKF, lat.md, Graphify, Karpathy, Jin, Shuyi Wang, SkillClaw, MemGraphRAG, BM25, RRF, HNSW, ARIES, Shannon, RE2, PROV-O, KR&R, Cyc, SKOS, Facets, Bloom, Chunking, HippoRAG, LightRAG, A-MEM, CoALA, CRAG) |
 
 
