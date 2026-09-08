@@ -20,6 +20,7 @@
 | P9 | [`FareedKhan-dev/agentic-knowledge-graph`](https://github.com/FareedKhan-dev/agentic-knowledge-graph) | Deterministic 929M-edge biomedical graph (0 LLM calls), CSR in RAM, constrained decoding, self-debunking benchmark | Full repo, architecture notes, benchmark code read |
 | P10 | [`FareedKhan-dev/all-agentic-architectures`](https://github.com/FareedKhan-dev/all-agentic-architectures) & [`FareedKhan-dev/production-grade-agentic-system`](https://github.com/FareedKhan-dev/production-grade-agentic-system) | 35 agentic architectures, Deterministic-Picker Pattern, and 7 enterprise production hardening layers | Full repos, patterns catalog, production layers read |
 | P11 | [David R Oliver: *The State of the Nation in LLM Knowledge Bases in 2026* / AIX v0.2](state-of-the-nation-llm-knowledge-bases-2026.md) | Industry survey on Luhmann Zettelkasten, the Folder Ceiling, SQLite FTS, the Open Graph crisis, and AIX v0.2 | Full essay + AIX v0.2 specification read |
+| P12 | [David R Oliver: *I Was Going to Adopt Google’s Knowledge Format. I Wrote a Superset Instead.* / AIX v0.1](aix-okf-superset-and-practitioner-scars.md) | The 3 practitioner scars: path identity fragility, untyped link blindness, missing trust block; deliberate redundancy rule | Full article + AIX v0.1 specification read |
 
 Full texts not vendored (third-party, no redistribution licence — `README.md` §3).
 
@@ -280,7 +281,23 @@ An August 2026 industry survey and format specification (*"The State of the Nati
 
 ---
 
-## 13. Derived changes & Architectural Affirmations
+---
+
+## 13. P12 — AIX v0.1 & Practitioner Scars (David R Oliver)
+
+A July 2026 architectural analysis and specification (*"I Was Going to Adopt Google’s Knowledge Format. I Wrote a Superset Instead."*, David R Oliver) establishing the superset strategy ("Don't fork down, superset up") and cataloging the three fatal scars of minimal Markdown formats.
+
+### 13.1 Convergence
+- **The Three Scars:** Identifies that unaugmented OKF flattens path-as-identity, untyped links (causing agents to brief users on reversed decisions), and missing provenance/trust metadata. Directly validates our `IDENTITY` slug invariance, `ONTOLOGY.md` §4 typed relations, and `VALIDATION.md` epistemic trust blocks.
+- **The Deliberate Redundancy Rule:** Every typed frontmatter edge must also appear as a standard Markdown link in body prose. Informs our dual-representation invariants (`VALIDATION.md` Layer 5 and `RELATION-EXTRACTION.md`).
+- **"Scars are Portable":** Codifies the philosophy that real-world agent failures precede standards-body specifications, justifying the deliberate "Over Engineering" of *The Omniscient Trash Heap*.
+
+### 13.2 Divergence
+- **Ontological Complexity:** AIX v0.1 defines a rudimentary 4-verb link vocabulary; *The Omniscient Trash Heap* implements 30 typed relations across 6 orthogonal families with bidirectional consistency validation and cycle prevention (`REL-004a`).
+
+---
+
+## 14. Derived changes & Architectural Affirmations
 
 | Change / Affirmation | Where |
 |---|---|
@@ -289,6 +306,7 @@ An August 2026 industry survey and format specification (*"The State of the Nati
 | **Grounded Claims & OKF v0.2 verified** — cite OpenWiki (2026) for AST hash-pinned claim sidecars and OKF v0.2 interop | `STRUCTURAL-GRAPH.md` (SG-013) / `OKF-INTEROP.md` |
 | **Knowledge Library & Federation verified** — cite *State of the Nation 2026* (Oliver) for cross-bundle citation syntax and namespace federation | `ARCHITECTURE.md` §2.3 / `CORPUS_MANIFEST.yaml` |
 | **Open Graph Imperative validated** — cite Oliver's warning on Google Cloud Knowledge Catalogue lock-in as proof that an open, embedded CSR graph engine is vital | `GRAPH-INTELLIGENCE.md` §11.1 / `specs/RETRIEVAL.md` |
+| **Three Scars & Deliberate Redundancy codified** — cite AIX v0.1 (Oliver) for stable ID precedence, typed relations preventing reversed decisions, and body-link mirroring | `specs/SCHEMA.md`, `specs/ONTOLOGY.md` §4, `specs/VALIDATION.md` |
 | **Constrained Logits & Refusal Calibration** — cite PubMed 929M graph (Khan 2026) for softmax posteriors outperforming topological path validation | `RETRIEVAL.md` (§9.6, §9.7, RET-008) / `EPI-006` |
 | **Section-Aware Truncation Trap Defenses** — cite PubMed 1100-char truncation flaw | `RETRIEVAL.md` (RET-009) |
 | **Capture UX precedent** — note `files.md` as a validated pattern for the "write-only entrance" philosophy | `README.md` deviation 21 |
@@ -296,4 +314,4 @@ An August 2026 industry survey and format specification (*"The State of the Nati
 | Threshold proliferation recorded as a simplification target | `README.md` deviation 23 |
 | Section-ownership gap now cites a working precedent | `README.md` deviation 21 |
 
-No design decision was reversed. P1 through P11 independently corroborate existing `llm-wiki-oe` architectural choices (local-first Markdown, deterministic compilation, hierarchical typing, strict execution boundaries, constrained decoding, durable transactions, embedded CSR graphs).
+No design decision was reversed. P1 through P12 independently corroborate existing `llm-wiki-oe` architectural choices (local-first Markdown, deterministic compilation, hierarchical typing, strict execution boundaries, constrained decoding, durable transactions, embedded CSR graphs, and practitioner scar formalization).
