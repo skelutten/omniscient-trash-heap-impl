@@ -21,6 +21,7 @@
 | P10 | [`FareedKhan-dev/all-agentic-architectures`](https://github.com/FareedKhan-dev/all-agentic-architectures) & [`FareedKhan-dev/production-grade-agentic-system`](https://github.com/FareedKhan-dev/production-grade-agentic-system) | 35 agentic architectures, Deterministic-Picker Pattern, and 7 enterprise production hardening layers | Full repos, patterns catalog, production layers read |
 | P11 | [David R Oliver: *The State of the Nation in LLM Knowledge Bases in 2026* / AIX v0.2](state-of-the-nation-llm-knowledge-bases-2026.md) | Industry survey on Luhmann Zettelkasten, the Folder Ceiling, SQLite FTS, the Open Graph crisis, and AIX v0.2 | Full essay + AIX v0.2 specification read |
 | P12 | [David R Oliver: *I Was Going to Adopt Google’s Knowledge Format. I Wrote a Superset Instead.* / AIX v0.1](aix-okf-superset-and-practitioner-scars.md) | The 3 practitioner scars: path identity fragility, untyped link blindness, missing trust block; deliberate redundancy rule | Full article + AIX v0.1 specification read |
+| P13 | [Stanford CS329A: *Self-Improving AI Agents* (Chowdhery & Mirhoseini)](stanford-cs329a-self-improving-agents.md) | Graduate curriculum on test-time compute, uncheatable verifiers, Code RL, and long-horizon memory degradation | Full lecture syllabus, readings, and Anthropic role profile analyzed |
 
 Full texts not vendored (third-party, no redistribution licence — `README.md` §3).
 
@@ -297,12 +298,31 @@ A July 2026 architectural analysis and specification (*"I Was Going to Adopt Goo
 
 ---
 
-## 14. Derived changes & Architectural Affirmations
+---
+
+## 14. P13 — Stanford CS329A: Self-Improving AI Agents (Chowdhery & Mirhoseini)
+
+A graduate curriculum and frontier lab survey (Stanford CS329A, public release August 2026) codifying test-time compute scaling, external uncheatable verifiers, Code RL, and long-horizon memory degradation.
+
+### 14.1 Convergence
+- **Uncheatable External Verifiers:** Proves that agent self-improvement without deterministic non-neural verifiers collapses into circular hallucination and reward hacking. Directly affirms our 5-layer epistemic validation pipeline (`specs/VALIDATION.md`).
+- **Test-Time Compute over Structured Graphs:** Validates that allocating compute to tree search and bounded relational expansion drastically outperforms single-pass greedy generation. Directly validates our sub-$10\ \mu\text{s}$ Compressed Sparse Row (CSR) in-memory graph search (`specs/GRAPH-INTELLIGENCE.md` §11.1).
+- **Long-Horizon Cognitive Erosion:** Demonstrates that agents degrade exponentially over 50+ step horizons without transactional checkpointing and hierarchical memory compaction. Directly affirms our Ontological Triad (`Trace → Lesson → Skill`, `specs/ONTOLOGY.md` §4) and Durable Staged Commit Protocol (`specs/INGEST-STAGING.md`).
+- **Compiler Paradigm Validation:** Confirms that frontier agents require deterministic harnesses (e.g. Claude Code orchestrator-worker patterns) rather than raw terminal root execution, affirming **CANON-006**.
+
+### 14.2 Divergence
+- **Research Scope:** CS329A addresses general self-improving agent training (including train-time RL and weights updates); *The Omniscient Trash Heap* focuses on test-time cognitive compilation and durable enterprise memory preservation without requiring model parameter fine-tuning.
+
+---
+
+## 15. Derived changes & Architectural Affirmations
 
 | Change / Affirmation | Where |
 |---|---|
-| **CANON-006 strengthened** — cite *Deterministic Control Plane* (*arXiv:2606.26924*) and *Deterministic-Picker Pattern* (Khan 2026) as proof that LLMs must never directly mutate state | `ARCHITECTURE.md` §2.2 |
-| **Ontological Triad validated** — cite *HiSkill* (2026) as quantitative proof that flat trajectory storage fails and hierarchical `Trace → Insight → Skill` compilation is load-bearing | `INGEST-CORE-004` / `ONTOLOGY.md` §4 |
+| **CANON-006 strengthened** — cite *Deterministic Control Plane* (*arXiv:2606.26924*), *Deterministic-Picker Pattern* (Khan 2026), and *Stanford CS329A* as proof that LLMs must never directly mutate state | `ARCHITECTURE.md` §2.2 |
+| **Uncheatable Verifier Mandate** — cite *Stanford CS329A* (Chowdhery & Mirhoseini) for requiring deterministic linters/compilers over circular LLM self-evaluation | `VALIDATION.md` (5-Layer Pipeline) |
+| **Test-Time Graph Search Validated** — cite *Stanford CS329A* test-time compute scaling for sub-10$\mu$s CSR relational search | `GRAPH-INTELLIGENCE.md` §11.1 / `specs/RETRIEVAL.md` |
+| **Ontological Triad validated** — cite *HiSkill* (2026) and *CS329A* as quantitative proof that flat trajectory storage fails and hierarchical `Trace → Insight → Skill` compilation is load-bearing | `INGEST-CORE-004` / `ONTOLOGY.md` §4 |
 | **Grounded Claims & OKF v0.2 verified** — cite OpenWiki (2026) for AST hash-pinned claim sidecars and OKF v0.2 interop | `STRUCTURAL-GRAPH.md` (SG-013) / `OKF-INTEROP.md` |
 | **Knowledge Library & Federation verified** — cite *State of the Nation 2026* (Oliver) for cross-bundle citation syntax and namespace federation | `ARCHITECTURE.md` §2.3 / `CORPUS_MANIFEST.yaml` |
 | **Open Graph Imperative validated** — cite Oliver's warning on Google Cloud Knowledge Catalogue lock-in as proof that an open, embedded CSR graph engine is vital | `GRAPH-INTELLIGENCE.md` §11.1 / `specs/RETRIEVAL.md` |
@@ -314,4 +334,4 @@ A July 2026 architectural analysis and specification (*"I Was Going to Adopt Goo
 | Threshold proliferation recorded as a simplification target | `README.md` deviation 23 |
 | Section-ownership gap now cites a working precedent | `README.md` deviation 21 |
 
-No design decision was reversed. P1 through P12 independently corroborate existing `llm-wiki-oe` architectural choices (local-first Markdown, deterministic compilation, hierarchical typing, strict execution boundaries, constrained decoding, durable transactions, embedded CSR graphs, and practitioner scar formalization).
+No design decision was reversed. P1 through P13 independently corroborate existing `llm-wiki-oe` architectural choices (local-first Markdown, deterministic compilation, hierarchical typing, strict execution boundaries, constrained decoding, durable transactions, embedded CSR graphs, practitioner scar formalization, and uncheatable external verification).
