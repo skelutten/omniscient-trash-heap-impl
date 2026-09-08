@@ -38,3 +38,4 @@ review-outputs/
 tools/cat-all.sh
 derived/
 discovery/
+.cache/
