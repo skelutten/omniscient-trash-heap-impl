@@ -194,6 +194,21 @@ here for navigation: `DELTA-CORE-001`–`007` (`GRAPH-INTELLIGENCE.md` §3),
 > `E101`–`E107`, which collided with the ingestion engine's `E101`–`E124`.
 > The delta codes are renumbered to `E201`–`E207` per **ERR-001**.
 
+### 10.6 Verification Integrity, Link Mirroring and Rendering Degradation
+
+To ensure resilient knowledge representation across diverse consumer runtimes and uncompromised epistemic promotion, the validation subsystem enforces three specific operational rules:
+
+1. **Dual-Representation Link Mirroring (The Redundancy Rule / VAL-011)**:
+   Every semantic relationship declared in frontmatter (`links:` or `related:`) MUST also be mirrored as a valid Markdown link (`[Target Title](./path/to/TARGET-ID.md)`) in the document body prose. Conversely, all cross-article Markdown links in body prose should correspond to declared relationships. This dual-representation guarantees that readers and tools operating purely on prose (e.g. standard markdown readers, OKF-only parsers, web renderers) and graph-aware compilers retain 100% graph visibility without structural breakage.
+
+2. **Graceful Mermaid Degradation & Auto-Heal (VAL-012)**:
+   When a generated or ingested Mermaid diagram (` ```mermaid `) fails AST or syntax parsing, the compiler/linter MUST NOT crash the pipeline or break frontend visualization. Instead, the compiler MUST gracefully degrade the block in place to a standard code fence (` ```text `) prefixed with an explicit diagnostic marker:
+   `<!-- LINT_FAILURE: mermaid syntax error: <details> -->`
+   This preserves readability, prevents rendering explosions, and surfaces the failure in the diagnostic queue so an automated self-healing pass can attempt re-generation on the next compilation cycle.
+
+3. **Uncheatable Non-Neural Verifier Mandate (VAL-013)**:
+   Promotion of candidates to `status: canonical` and assignment of verification stamps (`verified: {by: ...}`) SHALL NEVER be granted solely by a generative LLM self-evaluation ("I have verified this and it is correct"). All promotion and verification transitions require passing the deterministic, non-neural 5-layer validation pipeline (`VALIDATION.md` Layers 1–5). Neural models propose; deterministic non-neural verifiers validate and commit.
+
 ---
 
 ## 11. Formal System Invariants
@@ -305,6 +320,9 @@ Owning document: `ARCHITECTURE.md` §2.2–§2.3.
 | **PROV-002** | Provenance | `author`/`reviewer` are separate roles; `last_modified`/`last_verified` are independent | - |
 | **PROV-003** | Provenance | `confidence` is provenance, not an epistemic dimension; it MUST NOT be collapsed into the four dimensions | - |
 | **VAL-001** | Validity | validity.valid_until MUST NOT be earlier than validity.valid_from | E007 |
+| **VAL-011** | Links | Every semantic relationship in frontmatter MUST also be mirrored as a valid Markdown link in body prose (Redundancy Rule) | - |
+| **VAL-012** | Rendering | Generated Mermaid diagrams failing AST/syntax validation MUST degrade in place to text blocks with error comment markers and trigger auto-heal | - |
+| **VAL-013** | Verification | Canonical promotion and `verified:` stamps SHALL NEVER be granted by generative LLM self-evaluation; requires deterministic 5-layer non-neural verifiers | - |
 | **EPI-001** | Epistemology | Epistemic dimensions (evidence, verification, authority, consensus) are orthogonal and SHALL NOT be automatically derived from one another | - |
 | **EPI-002** | Epistemology | provenance.source_type SHALL describe the provenance source, never the claim's epistemic state | - |
 | **EPI-003** | Epistemology | Epistemic ranking SHALL follow the formal algorithm in `EPISTEMOLOGY.md` §5.3 | - |

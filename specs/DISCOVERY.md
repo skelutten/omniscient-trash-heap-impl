@@ -74,12 +74,12 @@ class NodeDiscoveryCandidate(DiscoveryBaseModel):
 ```
 
 `source_refs`, `representation_refs`, `evidence_unit_refs` and `derivation_ref`
-form the mandatory lineage envelope for every candidate. Candidate-specific source
+form the mandatory lineage envelope for every candidate (**DISC-001**). Candidate-specific source
 fields remain convenience fields and MUST be consistent with the envelope. The
 envelope is the discovery projection of the provenance contract in
 `UNIVERSAL-SOURCE-EXTENSION.md`, not a second source of truth.
 
-For `RelationDiscoveryCandidate`, `source_id` and `target_id` MUST refer to existing canonical objects at generation time. For `NodeDiscoveryCandidate`, `trigger_source_ids` MUST refer to existing canonical objects; the class has no `source_id` or `target_id` fields because it is not a relation candidate. `suggested_relation`, when present, MUST exist in the relation registry and satisfy source/target constraints before promotion. `expires_at` is mandatory for all discovery candidates and MUST be no later than 90 calendar days after `created_at`; the general artifact contract permits `expires_at: null` only for non-expiring derived artifacts.
+For `RelationDiscoveryCandidate`, `source_id` and `target_id` MUST refer to existing canonical objects at generation time. For `NodeDiscoveryCandidate`, `trigger_source_ids` MUST refer to existing canonical objects; the class has no `source_id` or `target_id` fields because it is not a relation candidate. `suggested_relation`, when present, MUST exist in the relation registry and satisfy source/target constraints before promotion. `expires_at` is mandatory for all discovery candidates and MUST be no later than 90 calendar days after `created_at` (**DISC-005**); the general artifact contract permits `expires_at: null` only for non-expiring derived artifacts.
 
 ## 6. Discovery lifecycle and promotion
 
@@ -120,9 +120,9 @@ Discovery expiry MUST archive the candidate as `expired`; it MUST NOT physically
 
 ## 10. Discovery rules
 
-### 10.1 Potential duplicates
+### 10.1 Potential duplicates (DISC-002)
 
-A duplicate candidate requires cosine similarity at or above the configured threshold within the same scope. Pair identity MUST be canonicalized as:
+A duplicate candidate requires cosine similarity at or above the configured threshold within the same scope (**DISC-002**). Pair identity MUST be canonicalized as:
 
 ```text
 (min(node_id_a, node_id_b), max(node_id_a, node_id_b))
@@ -134,8 +134,8 @@ The pipeline MUST deduplicate repeated observations and preserve prior rejected/
 
 Knowledge gaps represent areas where the graph is missing relationships, evidence, or syntheses. Discovery distinguishes **Topological Gaps** (textual/semantic proximity without canonical edges) and **Ontological Gaps** (structural incompleteness against expected relation patterns).
 
-#### 10.2.1 Topological Knowledge Gaps
-A topological gap candidate is generated only when at least two of these three predicates are true:
+#### 10.2.1 Topological Knowledge Gaps (DISC-003)
+A topological gap candidate is generated only when at least two of these three predicates are true (**DISC-003**):
 
 ```text
 A = same_scope_and_community
@@ -146,8 +146,8 @@ gap_candidate = (A and B) or (A and C) or (B and C)
 
 The candidate MUST not already have a canonical relation, MUST not be self-referential, and MUST pass scope and object-type policy. The exact predicate results MUST be stored as evidence.
 
-#### 10.2.2 Ontological & Structural Gaps (Opportunities)
-Discovery scans canonical and staged graphs for structural incompleteness patterns:
+#### 10.2.2 Ontological & Structural Gaps (Opportunities / DISC-004)
+Discovery scans canonical and staged graphs for structural incompleteness patterns (**DISC-004**):
 1. **`unresolved_event`:** An `Incident` or `TroubleReport` with no outgoing `RESOLVED_BY` or `SATISFIES` relation to a `Lesson`, `Component`, or `Fix`.
 2. **`unimplemented_lesson`:** A `Lesson` or `Principle` that defines an empirical finding or recommendation but has no incoming `SATISFIES`, `INTRODUCED_IN`, or `IMPLEMENTS` relation from any canonical `Workflow`, `Procedure`, or `Specification`.
 3. **`unreconciled_conflict`:** Two or more canonical `Claim` or `Fact` objects participating in a `CONTRADICTS` cluster with equal epistemic rank and no resolving synthesis node.
@@ -175,6 +175,18 @@ representation references (that is, source and representation references are
 mandatory lineage for every candidate). Contradiction detection is a discovery function;
 it MUST propose conflicts for review and MUST NOT silently rewrite canonical
 objects.
+
+### 10.4 Automated Instruction Ingestion & Delimited Fence (DISC-009)
+
+When the autonomous discovery or ingestion pipeline updates repository root instruction files (such as `AGENTS.md`, `CLAUDE.md`, or `.cursorrules`), it MUST strictly confine its automated updates within explicit delimiters:
+
+```markdown
+<!-- TRASHHEAP:START -->
+... automated knowledge index, ontology summaries, and pointers ...
+<!-- TRASHHEAP:END -->
+```
+
+- **DISC-009**: Automated injection of knowledge references into repository root instruction files (`AGENTS.md`, `CLAUDE.md`, etc.) MUST be enclosed strictly between `<!-- TRASHHEAP:START -->` and `<!-- TRASHHEAP:END -->`. Any content outside this delimited instruction fence is human-owned or operator-defined and MUST NOT be modified, reordered, or overwritten by automated tooling. If the delimiter comments are absent, tooling MUST append the delimited block at the end of the file rather than replacing existing content.
 
 ---
 

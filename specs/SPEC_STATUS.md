@@ -1,8 +1,8 @@
 # LLM Wiki Specification Status
 
 > **Document ID**: `LLM-WIKI-SPEC-STATUS-001`
-> **Version**: `1.3.0`
-> **Updated**: `2026-09-07`
+> **Version**: `1.4.0`
+> **Updated**: `2026-09-08`
 > **Status**: `LOCKED` as a status vocabulary and reporting contract
 > **Implementation status**: `CONFORMANCE_TESTED` — specifications and registries are backed by runtime implementation, automated tests, and gate tools/check.sh
 > **Normative owner**: This document owns the status vocabulary, status-reporting rules and the dashboard below. Individual specifications remain normative for their own contracts.
@@ -96,8 +96,9 @@ production linter/conformance implementation for the complete architecture.
 | OKF interoperability | `PROPOSED` | `CONFORMANCE_TESTED` | Knowledge Bundles and Google OKF v0.2 interop (`trashheap/bundle/`, `tests/test_bundles_and_okf.py`). |
 | Graph Visualization | `PROPOSED` | `UNIMPLEMENTED` | Offline interactive graph projection (`specs/VISUALIZE.md`, `plans/94-OPT-IN-GRAPH-VISUALIZATION.md`). |
 | Relation Extraction & Linking | `PROPOSED` | `UNIMPLEMENTED` | Closed-ontology automated relation extraction & entity linking (`specs/RELATION-EXTRACTION.md`, `plans/95-RELATION-EXTRACTION-AND-LINKING.md`). |
-| PubMed & MeSH Benchmark | `PROPOSED` | `PARTIAL` | Streaming XML adapter, CSR projections, adversarial controls (`plans/96-OPT-IN-PUBMED-BENCHMARK.md`). |
-| Constrained Logit Calibration | `PROPOSED` | `UNIMPLEMENTED` | Logit decoding, class calibration, and epistemic abstention gates (`plans/97-CONSTRAINED-DECODING-CALIBRATION.md`). |
+| PubMed & MeSH Benchmark | `PROPOSED` | `CONFORMANCE_TESTED` | Streaming XML adapter, CSR projections, adversarial controls, and PubMedQA benchmark harness (`plans/96-OPT-IN-PUBMED-BENCHMARK.md`, `trashheap benchmark --pubmed`). |
+| Constrained Logit Calibration | `PROPOSED` | `CONFORMANCE_TESTED` | Discrete logit decoding, class calibration, and epistemic abstention gates (`plans/97-CONSTRAINED-DECODING-CALIBRATION.md`, `trashheap/calibration/`, `tests/test_calibration.py`). |
+| Test-Time Search & Verifiers | `PROPOSED` | `UNIMPLEMENTED` | Test-time compute search, RAM CSR MCTS, Best-of-N, PRM verification (`plans/98-TEST-TIME-SEARCH-AND-VERIFIERS.md`). |
 | Tool integration | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan. |
 
 ### Overall conclusion
