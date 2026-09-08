@@ -33,6 +33,39 @@ def count_executable_tests(test_path: Path) -> int:
         ) from exc
 
 
+def _has_substantive_implementation(path: Path) -> bool:
+    """Return True if a source file contains executable code beyond a docstring/imports.
+
+    A comment-only or empty module is not a real implementation and must not be
+    projected as implemented. A directory reference is treated as present (it is
+    a package, not a stub file).
+    """
+    if path.is_dir():
+        return True
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            return True
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
+            continue  # module docstring or bare string literal
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            continue
+        return True  # any other top-level statement (assignment, call, ...)
+    return False
+
+
+def _has_assertions(path: Path) -> bool:
+    """Return True if a test file contains at least one assert statement."""
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return any(isinstance(node, ast.Assert) for node in ast.walk(tree))
+
+
 # Mapping of invariant families to owners, invariant IDs, implementations, tests, and verifications.
 # Fields correspond strictly to spec_ownership.yaml conformance_evidence_fields:
 # [owner, invariant_id, implementation, test, verification]
@@ -462,7 +495,7 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "status": "CONFORMANCE_TESTED",
     },
     "VAL": {
-        "owner": "specs/EPISTEMOLOGY.md",
+        "owner": "specs/VALIDATION.md",
         "invariants": ["VAL-001", "VAL-011", "VAL-012", "VAL-013", "VAL-014"],
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
@@ -645,7 +678,9 @@ def generate_conformance_matrix(
 
         # Verify physical presence in repository
         impl_ok = impl != "UNIMPLEMENTED" and all(
-            (workspace_root / p.strip()).exists() for p in impl.split(",")
+            (workspace_root / p.strip()).exists()
+            and _has_substantive_implementation(workspace_root / p.strip())
+            for p in impl.split(",")
         )
 
         test_files = [workspace_root / p.strip() for p in test.split(",") if p.strip() != "planned"]
@@ -660,6 +695,7 @@ def generate_conformance_matrix(
             and bool(test_files)
             and all(tf.exists() for tf in test_files)
             and test_funcs_found > 0
+            and all(_has_assertions(tf) for tf in test_files)
         )
 
         if impl_ok and test_ok:

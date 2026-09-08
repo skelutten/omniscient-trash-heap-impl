@@ -43,6 +43,77 @@ class CaptureResult:
         }
 
 
+def _manifest_file(workspace_root: Path) -> Path:
+    return workspace_root / "raw" / "manifests" / "capture_manifest.json"
+
+
+def _manifest_entry_matches(workspace_root: Path, envelope: UniversalSourceEnvelope) -> bool:
+    """Return True if the capture manifest already indexes this representation."""
+    manifest_file = _manifest_file(workspace_root)
+    if not manifest_file.exists():
+        return False
+    try:
+        with open(manifest_file, "r", encoding="utf-8") as f:
+            manifest_data = json.load(f)
+    except Exception:
+        return False
+    if not isinstance(manifest_data, dict):
+        return False
+    reps = manifest_data.get("representations", {})
+    if not isinstance(reps, dict):
+        return False
+    rep_key = f"{envelope.source_id}/{envelope.representation.representation_id}"
+    entry = reps.get(rep_key)
+    return (
+        isinstance(entry, dict)
+        and entry.get("representation_hash") == envelope.representation.representation_hash
+    )
+
+
+def _write_capture_manifest(
+    workspace_root: Path, envelope: UniversalSourceEnvelope, raw_bytes: bytes
+) -> Path:
+    """Atomically add this representation's index entry to the capture manifest."""
+    manifests_root = workspace_root / "raw" / "manifests"
+    manifests_root.mkdir(parents=True, exist_ok=True)
+    manifest_file = manifests_root / "capture_manifest.json"
+    manifest_data: Dict[str, Any] = {"schema_version": "1.0.0", "representations": {}}
+    if manifest_file.exists():
+        try:
+            with open(manifest_file, "r", encoding="utf-8") as f:
+                manifest_data = json.load(f)
+            if not isinstance(manifest_data, dict) or "representations" not in manifest_data:
+                raise ValueError(f"Corrupt manifest schema in '{manifest_file}'")
+        except Exception as exc:
+            corrupt_backup = manifest_file.with_name(
+                f"capture_manifest.corrupt.{int(time.time())}.json"
+            )
+            shutil.copy2(str(manifest_file), str(corrupt_backup))
+            raise IntegrityConflictError(
+                representation_id=envelope.representation.representation_id,
+                existing_hash="CORRUPT_MANIFEST",
+                new_hash=f"Failed to parse manifest {manifest_file}: {exc}",
+            ) from exc
+
+    rep_key = f"{envelope.source_id}/{envelope.representation.representation_id}"
+    manifest_data["representations"][rep_key] = {
+        "source_id": envelope.source_id,
+        "representation_id": envelope.representation.representation_id,
+        "representation_hash": envelope.representation.representation_hash,
+        "media_type": envelope.representation.media_type,
+        "byte_size": len(raw_bytes),
+        "captured_at": envelope.representation.captured_at,
+    }
+
+    tmp_manifest = manifests_root / ".capture_manifest.json.tmp"
+    with open(tmp_manifest, "w", encoding="utf-8") as f:
+        json.dump(manifest_data, f, indent=2, sort_keys=True)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_manifest, manifest_file)
+    return manifest_file
+
+
 def commit_raw_capture(
     workspace_root: Path,
     envelope: UniversalSourceEnvelope,
@@ -59,7 +130,6 @@ def commit_raw_capture(
     """
     raw_root = workspace_root / "raw"
     sources_root = raw_root / "sources"
-    manifests_root = raw_root / "manifests"
 
     source_dir = sources_root / envelope.source_id
     rep_dir = source_dir / "representations" / envelope.representation.representation_id
@@ -76,7 +146,11 @@ def commit_raw_capture(
 
         new_hash = envelope.representation.representation_hash
         if existing_hash and existing_hash == new_hash:
-            # Verified no-op
+            # Verified representation no-op. Ensure the manifest index entry is
+            # also present and correct, repairing a failed prior publication so a
+            # retry cannot silently skip the manifest step.
+            if not _manifest_entry_matches(workspace_root, envelope):
+                _write_capture_manifest(workspace_root, envelope, raw_bytes)
             return CaptureResult(
                 source_id=envelope.source_id,
                 representation_id=envelope.representation.representation_id,
@@ -131,42 +205,7 @@ def commit_raw_capture(
         os.replace(tmp_rep_dir, rep_dir)
 
         # Step 7: Atomically update capture manifest index entry
-        manifests_root.mkdir(parents=True, exist_ok=True)
-        manifest_file = manifests_root / "capture_manifest.json"
-        manifest_data: Dict[str, Any] = {"schema_version": "1.0.0", "representations": {}}
-        if manifest_file.exists():
-            try:
-                with open(manifest_file, "r", encoding="utf-8") as f:
-                    manifest_data = json.load(f)
-                if not isinstance(manifest_data, dict) or "representations" not in manifest_data:
-                    raise ValueError(f"Corrupt manifest schema in '{manifest_file}'")
-            except Exception as exc:
-                corrupt_backup = manifest_file.with_name(
-                    f"capture_manifest.corrupt.{int(time.time())}.json"
-                )
-                shutil.copy2(str(manifest_file), str(corrupt_backup))
-                raise IntegrityConflictError(
-                    representation_id=envelope.representation.representation_id,
-                    existing_hash="CORRUPT_MANIFEST",
-                    new_hash=f"Failed to parse manifest {manifest_file}: {exc}",
-                ) from exc
-
-        rep_key = f"{envelope.source_id}/{envelope.representation.representation_id}"
-        manifest_data["representations"][rep_key] = {
-            "source_id": envelope.source_id,
-            "representation_id": envelope.representation.representation_id,
-            "representation_hash": envelope.representation.representation_hash,
-            "media_type": envelope.representation.media_type,
-            "byte_size": len(raw_bytes),
-            "captured_at": envelope.representation.captured_at,
-        }
-
-        tmp_manifest = manifests_root / ".capture_manifest.json.tmp"
-        with open(tmp_manifest, "w", encoding="utf-8") as f:
-            json.dump(manifest_data, f, indent=2, sort_keys=True)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp_manifest, manifest_file)
+        _write_capture_manifest(workspace_root, envelope, raw_bytes)
 
         return CaptureResult(
             source_id=envelope.source_id,

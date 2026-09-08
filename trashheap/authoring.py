@@ -44,7 +44,12 @@ def parse_markdown_sections(body: str) -> Dict[str, str]:
 
 
 def extract_notes_section(body: str) -> Tuple[Optional[str], int]:
-    """Extract raw ## Notes section verbatim, returning (section_text, count)."""
+    """Extract the first raw ## Notes section verbatim, returning (section_text, count).
+
+    The count is the total number of ``## Notes`` headings in the body, so a
+    second Notes section separated by another heading is still detected as a
+    duplicate (OWN-002) rather than silently dropped.
+    """
     lines = body.splitlines(keepends=True)
     in_notes = False
     notes_lines: list[str] = []
@@ -53,13 +58,15 @@ def extract_notes_section(body: str) -> Tuple[Optional[str], int]:
     for line in lines:
         if line.startswith("## Notes"):
             count += 1
-            in_notes = True
-            notes_lines.append(line)
+            if count == 1:
+                in_notes = True
+                notes_lines.append(line)
         elif in_notes:
             if line.startswith("## "):
-                # Reached next section
-                break
-            notes_lines.append(line)
+                # Reached the end of the first Notes section
+                in_notes = False
+            else:
+                notes_lines.append(line)
 
     if count == 0:
         return None, 0

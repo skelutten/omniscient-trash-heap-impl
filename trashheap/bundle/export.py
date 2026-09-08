@@ -452,19 +452,20 @@ def build_bundle(
     with open(manifest_file, "w", encoding="utf-8") as f:
         json.dump(manifest.to_dict(), f, indent=2, sort_keys=True)
 
-    # Atomic swap into target directory
+    # Atomic swap into target directory. The previous bundle is renamed aside
+    # and only deleted once the new bundle is published; any failure (including
+    # KeyboardInterrupt) restores it so a crash never leaves no bundle at all.
     backup_dir = None
     if output_dir.exists():
         backup_dir = output_dir.with_name(f".{output_dir.name}.old.{uuid.uuid4().hex[:8]}")
         os.rename(output_dir, backup_dir)
     try:
         os.rename(tmp_output_dir, output_dir)
-    except Exception:
+    except BaseException:
         if backup_dir and backup_dir.exists():
             os.rename(backup_dir, output_dir)
         raise
-    finally:
-        if backup_dir and backup_dir.exists():
-            shutil.rmtree(backup_dir, ignore_errors=True)
+    if backup_dir and backup_dir.exists():
+        shutil.rmtree(backup_dir, ignore_errors=True)
 
     return manifest

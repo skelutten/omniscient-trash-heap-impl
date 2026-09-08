@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from trashheap.corpus import load_single_file
+from trashheap.corpus import load_corpus, load_single_file
 from trashheap.ingest.exceptions import AccessDeniedError
 from trashheap.ingest.models import EvidenceUnit
 from trashheap.ingest.security import sandbox_path
@@ -451,6 +451,15 @@ def promote_candidate(
             "Source revision mismatch between approval and proposal [REVIEW-002]"
         )
 
+    # Bind approval to the actual content bytes (REVIEW-002, PROMO-002). A staged
+    # payload whose recomputed hash no longer matches the approved hash is rejected.
+    actual_content_hash = compute_content_sha256(proposal.proposed_content)
+    if actual_content_hash != proposal.proposal_hash:
+        raise ApprovalBindingError(
+            f"Proposal hash mismatch: approved {proposal.proposal_hash} does not match "
+            f"recomputed content hash {actual_content_hash} [REVIEW-002]"
+        )
+
     # Verify scope admissibility (§9.5)
     scope = proposal.proposed_frontmatter.get("scope")
     if scope not in {"personal", "engineering"}:
@@ -513,6 +522,26 @@ def promote_candidate(
             findings.extend(linter._check_layer2_structural(ko))
             findings.extend(linter._check_layer3_semantic(ko))
             findings.extend(linter._check_section_ownership(ko))
+
+            # Layers 4 & 5 are cross-object (PROMO-003): validate the candidate
+            # against the existing canonical corpus plus itself.
+            corpus = load_corpus(ws)
+            # Reflect exactly what will be committed: drop any already-materialized
+            # copy of the target, then add the candidate.
+            corpus.objects = [
+                o for o in corpus.objects if o.path.resolve() != target_file.resolve()
+            ]
+            corpus.objects_by_path = {o.path: o for o in corpus.objects}
+            corpus.objects_by_id = {}
+            for o in corpus.objects:
+                if o.id and o.id not in corpus.objects_by_id:
+                    corpus.objects_by_id[o.id] = o
+            corpus.objects.append(ko)
+            corpus.objects_by_path[target_file] = ko
+            if ko.id and ko.id not in corpus.objects_by_id:
+                corpus.objects_by_id[ko.id] = ko
+            findings.extend(linter._check_layer4_graph(corpus))
+            findings.extend(linter._check_layer5_cross_object(corpus))
 
             errors = [f for f in findings if f.level == "ERROR"]
             if errors:

@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from trashheap.promotion.models import compute_content_sha256
+
 
 def current_iso_timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -239,19 +241,51 @@ class DPCPJournal:
                     }
                 )
             elif j.current_state == "CANONICAL_COMMITTED":
-                # Files were atomically committed before crash: complete promotion
-                self.transition_state(
-                    j.operation_id,
-                    "COMPLETED",
-                    error_message="Recovered from post-commit crash; canonical files confirmed",
-                )
-                recovery_log.append(
-                    {
-                        "operation_id": j.operation_id,
-                        "action": "completed",
-                        "reason": "crash_post_commit",
-                    }
-                )
+                # PROMO-008: verify canonical files actually exist and still match
+                # the expected hashes before confirming the commit. A missing or
+                # divergent target is a crash/inconsistency, not a completed commit.
+                all_present = True
+                for tp, expected_hash in j.expected_hashes.items():
+                    target_path = workspace_root / tp
+                    if not target_path.exists():
+                        all_present = False
+                        break
+                    actual_hash = compute_content_sha256(
+                        target_path.read_text(encoding="utf-8")
+                    )
+                    if actual_hash != expected_hash:
+                        all_present = False
+                        break
+
+                if all_present:
+                    self.transition_state(
+                        j.operation_id,
+                        "COMPLETED",
+                        error_message="Recovered from post-commit crash; canonical files confirmed",
+                    )
+                    recovery_log.append(
+                        {
+                            "operation_id": j.operation_id,
+                            "action": "completed",
+                            "reason": "crash_post_commit",
+                        }
+                    )
+                else:
+                    self.transition_state(
+                        j.operation_id,
+                        "FAILED",
+                        error_message=(
+                            "Recovered post-commit state but canonical target is "
+                            "missing or its hash no longer matches"
+                        ),
+                    )
+                    recovery_log.append(
+                        {
+                            "operation_id": j.operation_id,
+                            "action": "failed",
+                            "reason": "canonical_file_missing_or_mismatch",
+                        }
+                    )
 
         # Sweep orphan .tmp_promo_* folders in staging/transactions
         transactions_dir = workspace_root / "staging" / "transactions"

@@ -1678,13 +1678,15 @@ def handle_benchmark(args: argparse.Namespace) -> int:
         shard_range = range(shard_start, shard_start + num_shards)
         ingestor = PubmedBatchIngestor(download_workers=dl_workers, parse_workers=parse_workers)
         print(
-            f"Downloading/verifying {num_shards} PubMed baseline shards ({shard_start}..{shard_start + num_shards - 1}) from NCBI with {dl_workers} download workers..."
+            f"Downloading/verifying {num_shards} PubMed baseline shards ({shard_start}..{shard_start + num_shards - 1}) from NCBI with {dl_workers} download workers...",
+            file=sys.stderr,
         )
         shard_paths = ingestor.download_shards(shard_range)
         out_csr = Path(args.pubmed_output_csr) if getattr(args, "pubmed_output_csr", None) else None
         pw_count = parse_workers if parse_workers is not None else ingestor.parse_workers
         print(
-            f"Ingesting {len(shard_paths)} shards concurrently across {pw_count} CPU workers and compiling CSR knowledge graph..."
+            f"Ingesting {len(shard_paths)} shards concurrently across {pw_count} CPU workers and compiling CSR knowledge graph...",
+            file=sys.stderr,
         )
         _, s_report = ingestor.ingest_shards(shard_paths, output_csr_dir=out_csr)
         if args.json:

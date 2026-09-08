@@ -114,6 +114,13 @@ def load_corpus(
             "tools",
             "tests",
             "conformance",
+            # Non-canonical storage and derived working directories (CANON-005).
+            "raw",
+            "staging",
+            "artifacts",
+            "derived",
+            "discovery",
+            ".cache",
         }
 
     # Find candidate Markdown files
