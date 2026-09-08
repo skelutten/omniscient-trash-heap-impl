@@ -2,7 +2,7 @@
 
 > *All the sources. All the wisdom. Some of the trash.*
 
-[![Tests](https://img.shields.io/badge/pytest-130%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/pytest-passing-brightgreen)](tests/)
 [![Architecture Conformance](https://img.shields.io/badge/Conformance-37%2F37%20Families%20(100%25)-blue)](artifacts/conformance_matrix.yaml)
 [![Python](https://img.shields.io/badge/Python->=3.11-blue.svg)](pyproject.toml)
 [![License](https://img.shields.io/badge/License-Apache--2.0-yellow.svg)](LICENSE)

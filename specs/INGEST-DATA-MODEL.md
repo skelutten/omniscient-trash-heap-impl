@@ -7,7 +7,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `LLM-WIKI-INGEST-SPEC-001` §11, §13
 > **Status**: `DRAFT`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Universal Source addendum**: normative design extension; runtime unimplemented
 > **Compatibility target**: Additive, non-invasive, opt-in
 > **Normative owner**: This document owns ingestion data models, normalized Source Record envelope and production configuration schemas

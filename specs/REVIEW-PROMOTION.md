@@ -6,7 +6,7 @@
 > **Version**: `0.1.0`
 > **Updated**: `2026-08-23`
 > **Status**: `DRAFT`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Additive contract for staged Source-derived candidates; no change to baseline Knowledge Object schema
 > **Normative owner**: This document owns REVIEW-001..REVIEW-010 and PROMO-001..PROMO-010
 > **Related documents**: `DISCOVERY.md`, `INGEST-STAGING.md`, `EPISTEMOLOGY.md`, `VALIDATION.md`, `SCHEMA.md`

@@ -94,6 +94,8 @@ production linter/conformance implementation for the complete architecture.
 | Raw Source Storage and staging | `DRAFT` | `CONFORMANCE_TESTED` | CSCC raw layout, DSCP/DPCP promotion, TTL reaper; verified by `tests/test_ingest_safety.py`, `tests/test_proposal_promotion.py`. |
 | Structural Knowledge Graph | `PROPOSED` | `CONFORMANCE_TESTED` | Machine-built AST structural graph, revision binding, blast radius analysis (`trashheap/structural/`, `tests/test_structural_graph.py`). |
 | OKF interoperability | `PROPOSED` | `CONFORMANCE_TESTED` | Knowledge Bundles and Google OKF v0.2 interop (`trashheap/bundle/`, `tests/test_bundles_and_okf.py`). |
+| Graph Visualization | `PROPOSED` | `UNIMPLEMENTED` | Offline interactive graph projection (`specs/VISUALIZE.md`, `plans/94-OPT-IN-GRAPH-VISUALIZATION.md`). |
+| Relation Extraction & Linking | `PROPOSED` | `UNIMPLEMENTED` | Closed-ontology automated relation extraction & entity linking (`specs/RELATION-EXTRACTION.md`, `plans/95-RELATION-EXTRACTION-AND-LINKING.md`). |
 | Tool integration | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan. |
 
 ### Overall conclusion
@@ -139,6 +141,8 @@ Conformance maturity:  verified by automated test suite, check.sh gate, and conf
 | `INGEST-DATA-MODEL.md` | `DRAFT` | `CONFORMANCE_TESTED` | Trajectory models plus Universal Source Record addendum (`trashheap/ingest/models.py`) |
 | `UNIVERSAL-SOURCE-EXTENSION.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Source categories, source registry boundary and source impact map (`trashheap/ingest/`) |
 | `AGENT-SKILLS.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Standardized agent interface (agentskills.io); drift check code `E050` (`trashheap/skills.py`) |
+| `VISUALIZE.md` | `PROPOSED` | `UNIMPLEMENTED` | Offline interactive graph visualization; error range `E250–E259` (`plans/94-OPT-IN-GRAPH-VISUALIZATION.md`) |
+| `RELATION-EXTRACTION.md` | `PROPOSED` | `UNIMPLEMENTED` | Automated closed-ontology relation extraction & entity linking; error range `E150–E159` (`plans/95-RELATION-EXTRACTION-AND-LINKING.md`) |
 | `TOOL-INTEGRATION.md` | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan |
 | `REVIEW-PROMOTION.md` | `DRAFT` | `CONFORMANCE_TESTED` | Review decisions, deterministic promotion, provenance and recovery contract (`trashheap/promotion/`) |
 

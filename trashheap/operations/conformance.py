@@ -1,17 +1,33 @@
-"""Conformance projection generator and SPEC_STATUS.md drift detector (D90, VALIDATION.md §10.5, CONFORM-001)."""
-
+import ast
 import hashlib
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 import yaml
 
 
 def current_iso_timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def count_executable_tests(test_path: Path) -> int:
+    """Parse test file with AST and count executable test functions (test_*)."""
+    if not test_path.exists() or not test_path.is_file():
+        return 0
+    try:
+        tree = ast.parse(test_path.read_text(encoding="utf-8"))
+        return len(
+            [
+                n
+                for n in ast.walk(tree)
+                if isinstance(n, ast.FunctionDef) and n.name.startswith("test_")
+            ]
+        )
+    except Exception:
+        return 0
 
 
 # Mapping of invariant families to owners, invariant IDs, implementations, tests, and verifications.
@@ -429,7 +445,7 @@ class ConformanceMatrix:
     generated_at: str
     evidence_type: str
     note: str
-    summary: Dict[str, int]
+    summary: Dict[str, Any]
     families: List[ConformanceFamilyEntry]
 
     def to_dict(self) -> Dict[str, Any]:
@@ -519,6 +535,9 @@ def generate_conformance_matrix(
     tested_count = 0
     implemented_count = 0
     unimplemented_count = 0
+    total_invariants_count = 0
+    seen_test_paths: Set[Path] = set()
+    total_executable_tests = 0
 
     for item in families_spec:
         fid = item.get("family_id", "")
@@ -526,6 +545,7 @@ def generate_conformance_matrix(
 
         mapped = INVARIANT_FAMILY_MAP.get(fid, {})
         invariants = mapped.get("invariants", [f"{fid}-*"])
+        total_invariants_count += len(invariants)
         inv_id_summary = (
             f"{invariants[0]}..{invariants[-1]}" if len(invariants) > 1 else invariants[0]
         )
@@ -542,9 +562,23 @@ def generate_conformance_matrix(
             impl != "UNIMPLEMENTED"
             and all((workspace_root / p.strip()).exists() for p in impl.split(","))
         )
+
+        test_files = [
+            workspace_root / p.strip()
+            for p in test.split(",")
+            if p.strip() != "planned"
+        ]
+        test_funcs_found = sum(count_executable_tests(tf) for tf in test_files)
+        for tf in test_files:
+            if tf not in seen_test_paths:
+                seen_test_paths.add(tf)
+                total_executable_tests += count_executable_tests(tf)
+
         test_ok = (
             test != "planned"
-            and all((workspace_root / p.strip()).exists() for p in test.split(","))
+            and bool(test_files)
+            and all(tf.exists() for tf in test_files)
+            and test_funcs_found > 0
         )
 
         if impl_ok and test_ok:
@@ -570,18 +604,40 @@ def generate_conformance_matrix(
             )
         )
 
+    corpus_hash = compute_corpus_hash(workspace_root)
+    summary: Dict[str, Any] = {
+        "total_families": len(entries),
+        "conformance_tested": tested_count,
+        "implemented": implemented_count,
+        "unimplemented": unimplemented_count,
+        "total_invariants_tracked": total_invariants_count,
+        "total_executable_tests": total_executable_tests,
+        "corpus_hash": corpus_hash,
+    }
+
+    # Check if output file exists and whether the non-timestamp content matches
+    existing_generated_at = None
+    if output_path is not None and output_path.exists():
+        try:
+            with open(output_path, "r", encoding="utf-8") as f:
+                old_data = yaml.safe_load(f)
+            if isinstance(old_data, dict):
+                old_summary = old_data.get("summary", {})
+                old_families = old_data.get("families", [])
+                new_summary_check = {k: v for k, v in summary.items()}
+                old_summary_check = {k: old_summary.get(k) for k in new_summary_check}
+                if new_summary_check == old_summary_check and old_families == [f.to_dict() for f in entries]:
+                    existing_generated_at = old_data.get("generated_at")
+        except Exception:
+            pass
+
     matrix = ConformanceMatrix(
         schema_version="1.0.0",
         matrix_id="conformance_matrix",
-        generated_at=current_iso_timestamp(),
+        generated_at=existing_generated_at or current_iso_timestamp(),
         evidence_type="generated_projection",
         note="Generated evidence per VALIDATION.md §10.5 and CONFORM-001. Not a normative specification.",
-        summary={
-            "total_families": len(entries),
-            "conformance_tested": tested_count,
-            "implemented": implemented_count,
-            "unimplemented": unimplemented_count,
-        },
+        summary=summary,
         families=entries,
     )
 

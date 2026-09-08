@@ -783,7 +783,15 @@ class HybridRetriever:
                 },
                 "subgraph_relations": subgraph_rels,
                 "body_excerpt": extract_body_excerpt(ko.raw_body),
-                "path": str(ko.path) if ko.path else None,
+                "path": str(
+                    Path(ko.path).relative_to(self.corpus.root)
+                    if ko.path and Path(ko.path).is_relative_to(self.corpus.root)
+                    else (
+                        Path(ko.path).relative_to(self.workspace_root)
+                        if ko.path and Path(ko.path).is_relative_to(self.workspace_root)
+                        else (Path(ko.path).name if ko.path else None)
+                    )
+                ) if ko.path else None,
             }
 
             if parameters_used.get("include_body"):

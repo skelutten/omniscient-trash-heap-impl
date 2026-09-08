@@ -6,7 +6,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `spec.md` §10–11; extended by current registry and source contracts
 > **Status**: `LOCKED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Baseline linter/error contract plus additive extension allocations
 > **Normative owner**: This document owns validation layers, error-code allocation and status vocabulary
 > **Related documents**: `DATA_MODEL.md`, `ONTOLOGY.md`, `SPEC_STATUS.md`, all registry files

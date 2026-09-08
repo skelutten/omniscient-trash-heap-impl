@@ -7,7 +7,7 @@
 > **Baseline**: v3.8.10
 > **Source**: Architectural extension derived from the Universal Source review and current ingestion model
 > **Status**: `PROPOSED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Opt-in; no change to baseline canonical objects or retrieval
 > **Normative owner**: This document owns SOURCE-001..SOURCE-020; storage invariants RAW-001..RAW-010 are owned by `INGEST-STAGING.md`
 > **Related documents**: `INGEST.md`, `INGEST-ADAPTERS.md`, `INGEST-DATA-MODEL.md`, `INGEST-STAGING.md`, `VALIDATION.md`

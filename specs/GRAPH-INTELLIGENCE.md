@@ -7,7 +7,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `LLM-WIKI-KG-DELTA-001` §1–§5.1, §7, §11–§14
 > **Status**: `PROPOSED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Additive, isolated, opt-in
 > **Companion documents**: `GRAPH-RETRIEVAL.md` (§8–§9), `DISCOVERY.md` (§5.2, §6, §10)
 > **Normative owner**: This document owns graph-intelligence delta algorithms, signals and error family `E201–E299`

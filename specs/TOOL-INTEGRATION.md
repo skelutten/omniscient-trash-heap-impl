@@ -6,7 +6,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Adapter plan; not a normative specification
 > **Status**: `PLAN`
-> **Implementation status**: `NOT_APPLICABLE`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Additive, isolated integrations; canonical wiki remains source of truth
 > **Normative owner**: None; this is a non-normative integration plan
 > **Related documents**: `ARCHITECTURE.md`, `OKF-INTEROP.md`, `UNIVERSAL-SOURCE-EXTENSION.md`

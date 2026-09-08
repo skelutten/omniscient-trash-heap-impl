@@ -6,7 +6,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `research/GRAPH-RAG-RESEARCH-NOTES.md` §1–§12
 > **Status**: `PROPOSED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Additive, isolated, opt-in
 > **Base specification**: v3.8.10 (`ARCHITECTURE.md`, `ONTOLOGY.md`, `EPISTEMOLOGY.md`)
 > **Normative owner**: This document owns the Structural Knowledge Graph extension and error family `E301–E399`

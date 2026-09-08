@@ -7,7 +7,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `LLM-WIKI-INGEST-SPEC-001` §3
 > **Status**: `DRAFT`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Additive, non-invasive, opt-in
 > **System documents**: `INGEST.md` (core) · `INGEST-ADAPTERS.md` (§3) · `INGEST-PIPELINE.md` (§4–§6) · `INGEST-STAGING.md` (§7, §9–§10) · `INGEST-DATA-MODEL.md` (§11, §13)
 > **Normative owner**: This document owns connector/adapter contracts, cursors, completion signals and DSCP source-commit semantics

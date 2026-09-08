@@ -10,7 +10,7 @@
 > **Updated**: `2026-09-07`  
 > **Source**: Specification index and ownership map  
 > **Status**: `INDEX`  
-> **Implementation status**: `NOT_APPLICABLE`  
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Documentation-only; does not alter canonical data or runtime behavior  
 > **Normative owner**: This document owns the specification index, ownership map and cross-document status references  
 > **Related documents**: `SPEC_STATUS.md`, `VALIDATION.md`

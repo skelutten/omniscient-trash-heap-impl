@@ -7,7 +7,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `LLM-WIKI-INGEST-SPEC-001` §1–§2, §8, §12
 > **Status**: `DRAFT`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Additive, non-invasive, opt-in
 
 > **Universal Source extension:** The generic input abstraction is a normalized

@@ -98,6 +98,17 @@ class PromotionOperation(BaseModel):
     idempotency_key: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
 
 
+class SemanticResolutionRecord(BaseModel):
+    """Explicit audit record of semantic duplicate/match resolution decisions (G-3)."""
+
+    outcome: str = "NEW_CANDIDATE"  # EXISTING_MATCH, NEW_CANDIDATE, EVIDENCE_ONLY, CONTRADICTION, UNRESOLVED
+    method: str = "hybrid_rrf"
+    candidate_ids: List[str] = Field(default_factory=list)
+    decision_confidence: float = 1.0
+    evidence: Dict[str, Any] = Field(default_factory=dict)
+    requires_review: bool = False
+
+
 class CandidateProposal(BaseModel):
     """Full Candidate Proposal record staged for review and promotion."""
 
@@ -120,3 +131,5 @@ class CandidateProposal(BaseModel):
     history: List[StateTransitionRecord] = Field(default_factory=list)
     review_decision: Optional[ReviewDecision] = None
     supersedes: Optional[str] = None
+    semantic_resolution: Optional[SemanticResolutionRecord] = None
+

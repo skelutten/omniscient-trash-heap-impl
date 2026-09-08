@@ -6,7 +6,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `spec.md` §1–2, §7; extended by current modular specs
 > **Status**: `LOCKED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Baseline canonical architecture; additive extensions opt-in
 > **Normative owner**: This document owns architecture axioms, canonical/derived boundaries, the Knowledge Library model and architecture-level storage semantics
 > **Related documents**: `DATA_MODEL.md`, `ONTOLOGY.md`, `EPISTEMOLOGY.md`, `UNIVERSAL-SOURCE-EXTENSION.md`

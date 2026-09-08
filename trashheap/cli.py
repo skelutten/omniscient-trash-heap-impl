@@ -427,6 +427,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--ttl-days", type=int, default=180, help="Retention TTL in days (default: 180)"
     )
     status_parser.add_argument(
+        "--corpus-root",
+        type=str,
+        default=None,
+        help="Optional corpus root directory to inspect canonical knowledge objects",
+    )
+    status_parser.add_argument(
         "--json", action="store_true", help="Emit machine-readable JSON output"
     )
 
@@ -1344,29 +1350,60 @@ def handle_status(args: argparse.Namespace) -> int:
     env_report = inspect_environment(ws_root)
     debt_report = calculate_knowledge_debt(ws_root, ttl_days=ttl_days)
 
+    corpus_arg = getattr(args, "corpus_root", None)
+    if corpus_arg:
+        corpus_dir = Path(corpus_arg).resolve()
+    elif (ws_root / "fixtures" / "canonical").exists():
+        corpus_dir = ws_root / "fixtures" / "canonical"
+    elif (ws_root / "personal").exists() or (ws_root / "engineering").exists():
+        corpus_dir = ws_root
+    else:
+        corpus_dir = None
+
+    canonical_count = 0
+    if corpus_dir and corpus_dir.exists():
+        canonical_count = len([p for p in corpus_dir.glob("**/*.md") if p.is_file()])
+
+    total_units = canonical_count + debt_report.pending_backlog_count
+    debt_index = round(debt_report.pending_backlog_count / max(1, total_units), 3)
+    health_label = (
+        "Pristine"
+        if debt_index == 0.0
+        else ("Nominal" if debt_index < 0.1 else ("Attention Required" if debt_index < 0.3 else "Critical Backlog"))
+    )
+
     if args.json:
         payload = {
             "status": "ok",
             "environment": env_report.to_dict(),
             "knowledge_debt": debt_report.to_dict(),
+            "knowledge_health": {
+                "canonical_objects": canonical_count,
+                "pending_backlog": debt_report.pending_backlog_count,
+                "quarantined_count": debt_report.quarantined_count,
+                "knowledge_debt_index": debt_index,
+                "health_status": health_label,
+            },
         }
         print(json.dumps(payload, indent=2))
     else:
-        print("=== Trashheap Operations & Health Status ===")
+        print("=== Omniscient Trash Heap Health & Operations ===")
         print(f"OS: {env_report.os_system}")
         print(f"Durability Tier: {env_report.filesystem_tier}")
-        print(f"Atomic Rename: {'✓' if env_report.atomic_rename_supported else '✗'}")
-        print(f"Fsync Durability: {'✓' if env_report.fsync_durability_supported else '✗'}")
+        print(f"Atomic Rename: {'✓' if env_report.atomic_rename_supported else '✗'} | Fsync Durability: {'✓' if env_report.fsync_durability_supported else '✗'}")
         print(
             f"Dependencies: SQLite={'✓' if env_report.sqlite_available else '✗'}, "
             f"DuckDB={'✓' if env_report.duckdb_available else '✗'}, "
             f"Git-LFS={'✓' if env_report.git_lfs_available else '✗'}"
         )
-        print("\n--- Staging & Knowledge Debt ---")
-        print(f"Pending Backlog: {debt_report.pending_backlog_count} item(s)")
-        print(f"Oldest Item Age: {debt_report.oldest_item_age_days:.1f} day(s)")
-        print(f"Quarantined Items: {debt_report.quarantined_count}")
-        print(f"Expiry Warning: {'⚠️ YES' if debt_report.expiry_warning else '✓ No'}")
+        print("\n--- Knowledge Health & Debt ---")
+        corpus_label = f"({corpus_dir.relative_to(ws_root) if corpus_dir and corpus_dir.is_relative_to(ws_root) else corpus_dir})" if corpus_dir else "(none)"
+        print(f"Canonical Objects:       {canonical_count} {corpus_label}")
+        print(f"Pending Backlog:         {debt_report.pending_backlog_count} item(s)")
+        print(f"Quarantined Items:       {debt_report.quarantined_count} item(s)")
+        print(f"Oldest Item Age:         {debt_report.oldest_item_age_days:.1f} day(s)")
+        print(f"Expiry Warning:          {'⚠️ YES' if debt_report.expiry_warning else '✓ No'}")
+        print(f"Knowledge Debt Index:    {debt_index:.3f} ({health_label})")
 
     return ExitCode.SUCCESS
 

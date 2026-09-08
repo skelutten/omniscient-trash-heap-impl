@@ -6,7 +6,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `spec.md` §3, §6, §8; extended by current modular specs
 > **Status**: `LOCKED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Baseline Knowledge Object schema; additive source model remains opt-in
 > **Normative owner**: This document owns Knowledge Object types, IDs, facets, scope and domain
 > **Related documents**: `ARCHITECTURE.md`, `ONTOLOGY.md`, `EPISTEMOLOGY.md`, `VALIDATION.md`

@@ -6,7 +6,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `spec.md` §5; extended by Universal Source provenance rules
 > **Status**: `LOCKED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Baseline epistemic model and governance semantics
 > **Normative owner**: This document owns epistemic dimensions, provenance and governance boundaries
 > **Related documents**: `DATA_MODEL.md`, `VALIDATION.md`, `UNIVERSAL-SOURCE-EXTENSION.md`, `governance_policy.yaml`

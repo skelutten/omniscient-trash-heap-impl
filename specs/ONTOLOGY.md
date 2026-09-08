@@ -6,7 +6,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `spec.md` §4; relation ownership is delegated to `relation_registry.yaml`
 > **Status**: `LOCKED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Baseline ontology and relation semantics
 > **Normative owner**: This document owns ontology invariants; `relation_registry.yaml` owns relation definitions
 > **Related documents**: `DATA_MODEL.md`, `ARCHITECTURE.md`, `VALIDATION.md`, `relation_registry.yaml`

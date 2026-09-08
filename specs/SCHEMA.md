@@ -6,7 +6,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Reader-facing overview; normative owners are named per section
 > **Status**: `LOCKED` reader-facing overview
-> **Implementation status**: `NOT_APPLICABLE`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Reader-facing documentation only; normative contracts remain owned by the referenced specifications
 > **Scope**: Official schema overview for the LLM Wiki Knowledge Architecture;
 > compliant with the modular specification in `specs/` v3.8.10 (see `README.md`)

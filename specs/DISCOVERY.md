@@ -7,7 +7,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `LLM-WIKI-KG-DELTA-001` §5.2, §6, §10
 > **Status**: `PROPOSED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Additive, isolated, opt-in (Phase 4–5)
 > **Base specification**: `EPISTEMOLOGY.md` §5.4 (governance policy), `VALIDATION.md` §10
 > **Companion documents**: `GRAPH-INTELLIGENCE.md` (delta core), `GRAPH-RETRIEVAL.md`

@@ -4,7 +4,7 @@
 > **Document ID**: `LLM-WIKI-AGENT-SKILLS-001`
 > **Version**: `1.0.0`
 > **Status**: `PROPOSED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Normative owner**: This document owns the agent skill generation contract, slash command specifications, and compliance rules with the Agent Skills standard (`agentskills.io` / `dot-agents.com`).
 > **Related documents**: `ARCHITECTURE.md`, `VALIDATION.md`, `TOOL-INTEGRATION.md`, `specs/README.md`
 

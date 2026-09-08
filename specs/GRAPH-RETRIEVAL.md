@@ -7,7 +7,7 @@
 > **Updated**: `2026-08-17`
 > **Source**: Extracted from `LLM-WIKI-KG-DELTA-001` §8–§9
 > **Status**: `PROPOSED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Additive, isolated, opt-in (Phase 3+)
 > **Base specification**: `RETRIEVAL.md` §9 (Layer 7 hybrid retrieval)
 > **Companion documents**: `GRAPH-INTELLIGENCE.md` (delta core), `DISCOVERY.md`

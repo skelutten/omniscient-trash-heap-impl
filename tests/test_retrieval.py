@@ -155,3 +155,8 @@ Content Beta.
     assert suppressed["node_id"] == "ENG-CLM-2026-0002"
     assert suppressed["reason"] == "conflict_lower_epistemic_rank"
     assert suppressed["conflicting_node_id"] == "ENG-CLM-2026-0001"
+
+    # Invariant: Evidence Bundle path MUST be relative, never leaking absolute host directories
+    assert winner["path"] == "ENG-CLM-2026-0001.md"
+    assert not Path(winner["path"]).is_absolute()
+

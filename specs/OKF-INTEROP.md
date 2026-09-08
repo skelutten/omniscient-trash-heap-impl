@@ -9,7 +9,7 @@
 > `external-specs/okf/SPEC.md` (OKF v0.2, Apache-2.0, sha256 `5a3311d2…`).
 > Section references of the form "OKF §N" point into that file
 > **Status**: `PROPOSED`
-> **Implementation status**: `UNIMPLEMENTED`
+> **Implementation status**: See [`SPEC_STATUS.md`](./SPEC_STATUS.md) for canonical runtime & conformance status
 > **Compatibility target**: Additive, isolated, opt-in (export/import adapter)
 > **Base specification**: v3.8.10 (`ARCHITECTURE.md`, `DATA_MODEL.md`, `ONTOLOGY.md`)
 > **Normative owner**: This document owns OKF projection and Knowledge Bundle contracts

@@ -332,6 +332,9 @@ def test_conformance_matrix_generation(tmp_path: Path):
     assert matrix.summary["total_families"] == 37
     assert matrix.summary["conformance_tested"] >= 30
     assert matrix.summary["unimplemented"] <= 5
+    assert matrix.summary["total_invariants_tracked"] == 164
+    assert matrix.summary["total_executable_tests"] > 50
+    assert "corpus_hash" in matrix.summary
 
     assert out_file.exists()
     with open(out_file, "r", encoding="utf-8") as f:
