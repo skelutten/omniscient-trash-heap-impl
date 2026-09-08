@@ -159,3 +159,55 @@ Content Beta.
     # Invariant: Evidence Bundle path MUST be relative, never leaking absolute host directories
     assert winner["path"] == "ENG-CLM-2026-0001.md"
     assert not Path(winner["path"]).is_absolute()
+
+
+def test_k1_conflict_cluster_determinism(tmp_path: Path):
+    """K1: Conflict cluster resolution must be strictly deterministic across multiple nodes."""
+    registries = load_registries(Path("schemas/registry"))
+    nodes = ["ENG-CLM-TEST-0001", "ENG-CLM-TEST-0002", "ENG-CLM-TEST-0003", "ENG-CLM-TEST-0004"]
+    for i, nid in enumerate(nodes):
+        # 0001 is strongest (authoritative), others have lower authority (advisory)
+        auth = "authoritative" if i == 0 else "advisory"
+        other_targets = [f"{{type: CONTRADICTS, target: {x}}}" for x in nodes if x != nid]
+        rels_block = "\n".join(f"  - {t}" for t in other_targets)
+        (tmp_path / f"{nid}.md").write_text(
+            f"""---
+schema_version: "3.8.10"
+id: {nid}
+title: Claim {nid}
+taxonomy_path: engineering/03_runtime_frameworks/
+object_type: Claim
+domain: runtime_frameworks
+evidence: derived
+verification: unverified
+authority: {auth}
+consensus: contested
+source_type: internal_document
+source_refs: ["specs/ARCHITECTURE.md"]
+author: human:daniel
+last_modified: "2026-08-27"
+next_review: "2027-02-17"
+confidence: 0.80
+status: established
+relations:
+{rels_block}
+---
+## Summary
+Claim content for {nid}
+""",
+            encoding="utf-8",
+        )
+
+    corpus = load_corpus(tmp_path)
+    retriever = HybridRetriever(corpus=corpus, registries=registries)
+    bundle1 = retriever.retrieve("Claim")
+    bundle2 = retriever.retrieve("Claim")
+
+    assert bundle1["returned_count"] == 1
+    assert bundle1["suppressed_count"] == 3
+    assert bundle1["evidence_bundle"][0]["node_id"] == "ENG-CLM-TEST-0001"
+    # Suppressed losers must be deterministically ordered
+    losers1 = [s["node_id"] for s in bundle1["suppressed_nodes"]]
+    losers2 = [s["node_id"] for s in bundle2["suppressed_nodes"]]
+    assert losers1 == losers2 == ["ENG-CLM-TEST-0002", "ENG-CLM-TEST-0003", "ENG-CLM-TEST-0004"]
+

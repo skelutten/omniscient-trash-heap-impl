@@ -147,8 +147,31 @@ class PubmedBenchmarkHarness:
     def load_dataset(self, local_cache_path: Optional[Path] = None) -> List[BenchmarkQuestion]:
         """Load PubMedQA benchmark instances from local path or remote URL."""
         cache_path = local_cache_path or self.pubmed_file
+        if cache_path and str(cache_path).endswith(".parquet") and Path(cache_path).exists():
+            import duckdb
+
+            conn = duckdb.connect()
+            limit_clause = f"LIMIT {self.sample_limit}" if self.sample_limit else ""
+            rows = conn.query(
+                f'SELECT pubid, question, context FROM "{cache_path}" {limit_clause}'
+            ).fetchall()
+            questions: List[BenchmarkQuestion] = []
+            for pubid, q_text, ctx_struct in rows:
+                labels = ctx_struct.get("labels", []) if isinstance(ctx_struct, dict) else []
+                contexts = ctx_struct.get("contexts", []) if isinstance(ctx_struct, dict) else []
+                questions.append(
+                    BenchmarkQuestion(
+                        pmid=int(pubid),
+                        question=q_text or "",
+                        decision="maybe",
+                        labels=labels,
+                        contexts=contexts,
+                    )
+                )
+            return questions
+
         raw_data = None
-        if cache_path and cache_path.exists():
+        if cache_path and Path(cache_path).exists():
             with open(cache_path, "r", encoding="utf-8") as f:
                 raw_data = json.load(f)
         else:
@@ -156,7 +179,7 @@ class PubmedBenchmarkHarness:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 raw_data = json.loads(resp.read().decode("utf-8"))
             if local_cache_path:
-                local_cache_path.parent.mkdir(parents=True, exist_ok=True)
+                Path(local_cache_path).parent.mkdir(parents=True, exist_ok=True)
                 with open(local_cache_path, "w", encoding="utf-8") as f:
                     json.dump(raw_data, f)
 

@@ -513,6 +513,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Custom path to PubMedQA questions JSON or PubMed XML file",
     )
+    bench_parser.add_argument(
+        "--pubmed-shards",
+        type=int,
+        default=None,
+        help="Download and ingest N official PubMed baseline shards (e.g. 10 or 1218)",
+    )
+    bench_parser.add_argument(
+        "--pubmed-output-csr",
+        type=str,
+        default=None,
+        help="Directory to save memory-mapped CSR binary projection (indptr.npy, indices.npy)",
+    )
 
     # 16. bundle
     bundle_parser = subparsers.add_parser(
@@ -1637,6 +1649,38 @@ def handle_benchmark(args: argparse.Namespace) -> int:
             )
         return ExitCode.SUCCESS
 
+    if getattr(args, "pubmed_shards", None) is not None:
+        from trashheap.operations.pubmed_batch import PubmedBatchIngestor
+
+        num_shards = getattr(args, "pubmed_shards", 1)
+        ingestor = PubmedBatchIngestor()
+        print(f"Downloading/verifying {num_shards} PubMed baseline shards from NCBI...")
+        shard_paths = ingestor.download_shards(range(1, num_shards + 1))
+        out_csr = Path(args.pubmed_output_csr) if getattr(args, "pubmed_output_csr", None) else None
+        print(f"Ingesting {len(shard_paths)} shards and compiling CSR knowledge graph...")
+        _, s_report = ingestor.ingest_shards(shard_paths, output_csr_dir=out_csr)
+        if args.json:
+            print(json.dumps(s_report.to_dict(), indent=2))
+        else:
+            print(f"=== PubMed Baseline Batch Ingestion Report ({num_shards} Shards) ===")
+            print(f"Total Articles Processed: {s_report.total_articles:,}")
+            print(
+                f"Total MeSH Headings: {s_report.total_mesh_headings:,} ({s_report.unique_mesh_concepts:,} unique)"
+            )
+            print(f"Total Citations: {s_report.total_citations:,}")
+            print(f"Total Graph Nodes: {s_report.total_graph_nodes:,}")
+            print(f"Total Graph Edges: {s_report.total_graph_edges:,}")
+            print(
+                f"Parse & Ingestion Time: {s_report.parse_time_sec:.2f}s ({s_report.articles_per_sec:,.1f} arts/s)"
+            )
+            print(f"CSR Binary Graph Build Time: {s_report.csr_build_time_sec * 1000:.2f} ms")
+            print(
+                f"CSR Working Memory Footprint: {s_report.csr_memory_bytes / (1024 * 1024):.2f} MB"
+            )
+            print(f"Single-Hop Latency: {s_report.single_hop_latency_us:.3f} µs")
+            print(f"Total Elapsed Time: {s_report.total_elapsed_sec:.2f}s")
+        return ExitCode.SUCCESS
+
     ws_root = Path(getattr(args, "workspace_root", ".") or ".").resolve()
     fx_dir = Path(args.fixtures_dir).resolve() if getattr(args, "fixtures_dir", None) else None
 
@@ -2239,7 +2283,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         args = parser.parse_args(argv)
     except SystemExit as e:
-        return int(e.code) if isinstance(e.code, int) else ExitCode.CONFIG_OR_ARG_ERROR
+        code = int(e.code) if isinstance(e.code, int) else ExitCode.CONFIG_OR_ARG_ERROR
+        return ExitCode.CONFIG_OR_ARG_ERROR if code == 2 else code
 
     handlers = {
         "init": handle_init,

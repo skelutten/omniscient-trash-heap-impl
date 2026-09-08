@@ -300,7 +300,11 @@ def epistemic_conflict_key(ko: KnowledgeObject) -> Tuple[Any, ...]:
     c_val = EPISTEMIC_RANKS["consensus"].get(c_str, 0)
     e_val = EPISTEMIC_RANKS["evidence"].get(e_str, 0)
 
-    conf = float(fm.get("confidence", 0.0))
+    raw_conf = fm.get("confidence")
+    try:
+        conf = float(raw_conf) if raw_conf is not None else 0.0
+    except (ValueError, TypeError):
+        conf = 0.0
     last_verified = str(fm.get("last_verified") or "")
 
     node_id = ko.id or ""
@@ -573,7 +577,11 @@ class HybridRetriever:
             if status == "deprecated" and not include_deprecated:
                 continue
             # Confidence
-            conf = float(fm.get("confidence", 0.0))
+            raw_conf = fm.get("confidence")
+            try:
+                conf = float(raw_conf) if raw_conf is not None else 0.0
+            except (ValueError, TypeError):
+                conf = 0.0
             if conf < min_confidence:
                 continue
             # Validity
@@ -870,7 +878,7 @@ class HybridRetriever:
             while c_queue:
                 curr = c_queue.popleft()
                 cluster.append(curr)
-                for neighbor in contradicts_adj[curr]:
+                for neighbor in sorted(contradicts_adj[curr]):
                     if neighbor not in visited_clusters:
                         visited_clusters.add(neighbor)
                         c_queue.append(neighbor)
@@ -878,7 +886,10 @@ class HybridRetriever:
             if len(cluster) >= 2:
                 # Rank cluster nodes using formal vector key K(d)
                 winner_id = max(cluster, key=lambda x: epistemic_conflict_key(eligible_objects[x]))
-                losers = [x for x in cluster if x != winner_id]
+                losers = sorted(
+                    [x for x in cluster if x != winner_id],
+                    key=lambda x: (-rrf_scores[x], x),
+                )
 
                 winner_conflict_info[winner_id] = {
                     "detected": True,

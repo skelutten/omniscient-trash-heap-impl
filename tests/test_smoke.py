@@ -34,3 +34,14 @@ def test_cli_help():
     assert res.returncode == 0
     assert "trashheap" in res.stdout
     assert "check-registries" in res.stdout
+
+
+def test_cli_bogus_flag_exit_code():
+    """K2: Invalid CLI argument must return CONFIG_OR_ARG_ERROR (exit 3), not 2."""
+    from trashheap.cli import main
+    from trashheap.constants import ExitCode
+
+    code = main(["--bogus-flag"])
+    assert code == ExitCode.CONFIG_OR_ARG_ERROR
+    assert code == 3
+

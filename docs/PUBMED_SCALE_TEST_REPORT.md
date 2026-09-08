@@ -64,6 +64,24 @@ trashheap benchmark --pubmed --pubmed-sample 1000
 
 ---
 
+## 3b. Benchmark Suite 1b: PubMedQA Unlabeled Split (`ori_pqau`, 61,249 Instances)
+
+Evaluated via:
+```bash
+trashheap benchmark --pubmed --pubmed-file .cache/pubmedqa/pqa_unlabeled.parquet --pubmed-sample 1000
+```
+
+- **Total Questions Evaluated:** **1,000** sampled from the 61,249-question unlabeled split
+- **Direct Top-1 Recall:** **100.0%**
+- **Top-5 Recall:** **100.0%**
+- **Top-10 Recall:** **100.0%**
+- **Conclusion Preservation Rate:** **100.0%**
+- **Negative Control Refusal Rate:** **100.0%**
+- **Mean Query Latency:** **22.07 ms** (45.3 queries / sec)
+- **Corpus Materialization:** **6.59s** for 1,000 articles
+
+---
+
 ## 4. Benchmark Suite 2: High-Scale Ingestion & Streaming XML Parsing (30,000 Articles)
 
 Evaluated using [`trashheap.operations.pubmed.stream_pubmed_xml`](file:///home/$USER/omniscient-trash-heap-impl/trashheap/operations/pubmed.py#L36) against `pubmed26n0001.xml.gz`.
@@ -132,7 +150,53 @@ Evaluated using [`trashheap.retrieval.BM25Index`](file:///home/$USER/omniscient-
 
 ---
 
-## 7. Key Findings & Architectural Conclusions
+## 7. Benchmark Suite 5: Multi-Shard Batch Ingestion (10 Shards, 300,000 Articles)
+
+Evaluated via:
+```bash
+trashheap benchmark --pubmed-shards 10 --pubmed-output-csr .cache/pubmed/csr_10shards
+```
+
+### Empirical 10-Shard Ingestion & CSR Telemetry
+
+| Metric | Measured Result | Analysis |
+| :--- | :--- | :--- |
+| **Shards Ingested** | **10 shards** (`pubmed26n0001` .. `0010`) | ~190 MB compressed XML.gz |
+| **Total Articles Processed** | **300,000** | 100% sequential $O(1)$ streaming |
+| **Total MeSH Headings** | **2,998,177** | 14,155 unique MeSH descriptors |
+| **Total Citation Links** | **556,418** | Canonical `CITES` relations |
+| **Total Graph Nodes** | **555,200** | Articles + MeSH concepts + cited entities |
+| **Total Graph Edges** | **6,552,772** | Over 6.55 million directed graph edges |
+| **Parse & Ingestion Time** | **206.28 seconds** | **1,454.3 articles / second** |
+| **CSR Matrix Build Time** | **3.27 seconds** | Encoded 6.55M edges in ~3.3s |
+| **CSR Memory Footprint** | **54.23 MB** | `indptr`: 4.3 MB, `indices`: 50.0 MB |
+| **Zero-Copy Memmap Load Time** | **390.64 ms** | Instantaneous cold-start from disk |
+| **Single-Hop Slicing Latency** | **1.222 µs** (in-memory) / **4.472 µs** (memmap) | > 220,000 traversals / second |
+
+---
+
+## 8. Benchmark Suite 6: Full PubMed Knowledge Graph (40 Million Articles) Extrapolation Model
+
+Based on our observed empirical constants (1,454 articles/sec ingestion, ~11.8 edges per article/MeSH association, and 8 bytes per CSR index pointer and index entry), the architectural requirements for ingesting and serving the **entire PubMed collection** (all 1,334 baseline shards, ~38–40 million articles) are:
+
+### Hardware & Resource Extrapolation for Full PubMed (40M Docs)
+
+| Dimension | 10 Shards (Empirical) | Full PubMed (1,334 Shards Extrapolated) | Feasibility on Single Server |
+| :--- | :--- | :--- | :--- |
+| **Raw Archive Size (gz)** | 190 MB | ~25.3 GB | Readily fits on standard NVMe SSD |
+| **Article Count** | 300,000 | ~38,500,000 – 40,000,000 | Streamed in $O(1)$ memory |
+| **Total Graph Nodes** | 555,200 | ~42,000,000 (articles + 30k MeSH descriptors) | Fits in 64-bit address space |
+| **Total Graph Edges** | 6,552,772 | ~850,000,000 – 900,000,000 | Matches Fareed Khan's 929M edges |
+| **CSR Memory (`indptr.npy`)** | 4.3 MB | ~336 MB ($42\text{M} \times 8\text{B}$) | Fits in RAM |
+| **CSR Memory (`indices.npy`)** | 50.0 MB | ~7.2 GB ($900\text{M} \times 8\text{B}$) | Fits in standard 16GB / 32GB RAM |
+| **Total CSR RAM Footprint** | **54.2 MB** | **~7.54 GB** | **100% in-memory on standard laptop / workstation** |
+| **Cold-Start Startup Time** | 390 ms | **< 2.5 seconds** via `mmap_mode="r"` | No long database warmup needed |
+| **Single-Hop Traversal** | 1.22 µs | **< 5 µs** | Instantaneous graph gating |
+| **Ingestion Time (1 Core)** | 3.4 minutes | ~7.6 hours (or ~1.5 hours on 8 CPU cores) | Unattended overnight batch |
+
+---
+
+## 9. Key Findings & Architectural Conclusions
 
 1. **Elimination of External Graph Databases:**
    Traditional agentic systems frequently introduce heavy external graph databases (such as Neo4j or Amazon Neptune) that add substantial memory overhead, daemon management complexity, and network roundtrip latency (often 5–20 ms per traversal).
