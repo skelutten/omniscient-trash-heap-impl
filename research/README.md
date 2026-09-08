@@ -23,6 +23,7 @@ records for ideas that were adopted.
 | `state-of-the-nation-llm-knowledge-bases-2026.md` | Industry state survey & OpenWiki review | `ARCHITECTURE.md` (§2.3 Knowledge Library), `OKF-INTEROP.md` (OKF-001–OKF-010), `STRUCTURAL-GRAPH.md` (SG-013), `GRAPH-INTELLIGENCE.md` (§11.1 CSR), Plan 61 |
 | `aix-okf-superset-and-practitioner-scars.md` | Standard superset & failure mode review | `OKF-INTEROP.md` (OKF-001–OKF-010), `ONTOLOGY.md` (§4, REL-004/REL-004a), `SCHEMA.md` (slug/ID invariance), `VALIDATION.md` |
 | `stanford-cs329a-self-improving-agents.md` | Curriculum & frontier lab review | `ARCHITECTURE.md` (CANON-006), `VALIDATION.md` (uncheatable verifiers), `GRAPH-INTELLIGENCE.md` (§11.1 CSR), `INGEST-STAGING.md` |
+| `frontier-agentic-foundations-and-test-time-scaling.md` | Master survey: 34 foundational papers (2021–2026) | `ARCHITECTURE.md` (CANON-006), `VALIDATION.md` (uncheatable verifiers), `GRAPH-INTELLIGENCE.md` (§11.1 CSR), `ONTOLOGY.md` §4, `INGEST-STAGING.md` |
 | `sources-and-expanded-literature.md` | Curated Survey & Foundations | Core literature (OKF, lat.md, Graphify, Karpathy, Jin, Shuyi Wang, SkillClaw, MemGraphRAG, BM25, RRF, HNSW, ARIES, Shannon, RE2, PROV-O, KR&R, Cyc, SKOS, Facets, Bloom, Chunking, HippoRAG, LightRAG, A-MEM, CoALA, CRAG) |
 
 

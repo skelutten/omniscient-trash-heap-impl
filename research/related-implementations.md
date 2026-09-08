@@ -22,6 +22,7 @@
 | P11 | [David R Oliver: *The State of the Nation in LLM Knowledge Bases in 2026* / AIX v0.2](state-of-the-nation-llm-knowledge-bases-2026.md) | Industry survey on Luhmann Zettelkasten, the Folder Ceiling, SQLite FTS, the Open Graph crisis, and AIX v0.2 | Full essay + AIX v0.2 specification read |
 | P12 | [David R Oliver: *I Was Going to Adopt Google’s Knowledge Format. I Wrote a Superset Instead.* / AIX v0.1](aix-okf-superset-and-practitioner-scars.md) | The 3 practitioner scars: path identity fragility, untyped link blindness, missing trust block; deliberate redundancy rule | Full article + AIX v0.1 specification read |
 | P13 | [Stanford CS329A: *Self-Improving AI Agents* (Chowdhery & Mirhoseini)](stanford-cs329a-self-improving-agents.md) | Graduate curriculum on test-time compute, uncheatable verifiers, Code RL, and long-horizon memory degradation | Full lecture syllabus, readings, and Anthropic role profile analyzed |
+| P14 | [Frontier Agentic Foundations & Test-Time Scaling](frontier-agentic-foundations-and-test-time-scaling.md) | 34 landmark papers (2021–2026): Snell test-time compute, PRM800K, AlphaCode 1/2, AlphaEvolve, Darwin Gödel, MemGPT | Full master literature survey & technical synthesis |
 
 Full texts not vendored (third-party, no redistribution licence — `README.md` §3).
 
@@ -315,14 +316,31 @@ A graduate curriculum and frontier lab survey (Stanford CS329A, public release A
 
 ---
 
-## 15. Derived changes & Architectural Affirmations
+## 15. P14 — Frontier Agentic Foundations & Test-Time Scaling (34 Foundational Papers)
+
+A master literature survey synthesizing 34 landmark papers and technical reports (2021–2026) across OpenAI, Google DeepMind, Anthropic, Stanford, Sakana AI, UC Berkeley, and Princeton.
+
+### 15.1 Convergence
+- **Verifier Supremacy Law:** Proves that agent progress is bounded by verifier quality. Uncheatable deterministic verification (Cobbe GSM8K, Lightman PRM800K, Weak Verifiers) strictly validates our 5-layer epistemic pipeline (`specs/VALIDATION.md`).
+- **Test-Time Compute over Parameters:** Proves that allocating compute to inference search (Snell et al., Large Language Monkeys, LATS) outperforms scaling model parameter count. Directly validates our sub-10$\mu$s CSR graph search (`specs/GRAPH-INTELLIGENCE.md` §11.1).
+- **Execution Grounding & CANON-006:** In AlphaCode 1/2, AlphaEvolve, and RLEF, the LLM emits proposals while deterministic environments execute and evaluate them. Directly affirms **CANON-006** ("The LLM only reasons — it never touches the filesystem directly").
+- **Memory OS & Anti-Erosion:** Validates that bounded LLMs require OS-level memory paging and hierarchical compaction (MemGPT, Long Software Tasks 2025). Directly validates our Ontological Triad (`Trace → Lesson → Skill`, `specs/ONTOLOGY.md` §4).
+- **Evolutionary Checkpoints:** Validates that self-improving code/agent systems require transactional rollback journals (Darwin Gödel Machine, STaR). Directly validates our Continuous Staged Commit Coordinator (`specs/INGEST-STAGING.md`).
+
+### 15.2 Divergence
+- **Model Training vs. Knowledge Compilation:** The literature emphasizes parameter fine-tuning (RLHF, RLVR, GRPO); *The Omniscient Trash Heap* implements test-time cognitive compilation over local files, achieving frontier reliability on commodity open-weight models without retraining.
+
+---
+
+## 16. Derived changes & Architectural Affirmations
 
 | Change / Affirmation | Where |
 |---|---|
-| **CANON-006 strengthened** — cite *Deterministic Control Plane* (*arXiv:2606.26924*), *Deterministic-Picker Pattern* (Khan 2026), and *Stanford CS329A* as proof that LLMs must never directly mutate state | `ARCHITECTURE.md` §2.2 |
-| **Uncheatable Verifier Mandate** — cite *Stanford CS329A* (Chowdhery & Mirhoseini) for requiring deterministic linters/compilers over circular LLM self-evaluation | `VALIDATION.md` (5-Layer Pipeline) |
-| **Test-Time Graph Search Validated** — cite *Stanford CS329A* test-time compute scaling for sub-10$\mu$s CSR relational search | `GRAPH-INTELLIGENCE.md` §11.1 / `specs/RETRIEVAL.md` |
-| **Ontological Triad validated** — cite *HiSkill* (2026) and *CS329A* as quantitative proof that flat trajectory storage fails and hierarchical `Trace → Insight → Skill` compilation is load-bearing | `INGEST-CORE-004` / `ONTOLOGY.md` §4 |
+| **CANON-006 strengthened** — cite *AlphaCode 1/2*, *RLEF*, *Deterministic Control Plane*, and *CS329A* as absolute proof that models must propose mutations to an external execution harness | `ARCHITECTURE.md` §2.2 |
+| **Verifier Supremacy Mandate** — cite *PRM800K* (Lightman) and *GSM8K* (Cobbe) for requiring step-by-step non-neural verification | `VALIDATION.md` (5-Layer Pipeline) |
+| **Test-Time Compute Search Validated** — cite *Snell et al.* and *Large Language Monkeys* for sub-10$\mu$s CSR relational graph search | `GRAPH-INTELLIGENCE.md` §11.1 / `specs/RETRIEVAL.md` |
+| **Ontological Triad validated** — cite *HiSkill*, *MemGPT*, and *Measuring Long Tasks 2025* as quantitative proof that flat trajectory storage causes catastrophic decay | `INGEST-CORE-004` / `ONTOLOGY.md` §4 |
+| **Transactional Self-Evolution verified** — cite *Darwin Gödel Machine* (2025) and *AlphaEvolve* for durable rollback journals during autonomous evolution | `specs/INGEST-STAGING.md` (CSCC / DSCP) |
 | **Grounded Claims & OKF v0.2 verified** — cite OpenWiki (2026) for AST hash-pinned claim sidecars and OKF v0.2 interop | `STRUCTURAL-GRAPH.md` (SG-013) / `OKF-INTEROP.md` |
 | **Knowledge Library & Federation verified** — cite *State of the Nation 2026* (Oliver) for cross-bundle citation syntax and namespace federation | `ARCHITECTURE.md` §2.3 / `CORPUS_MANIFEST.yaml` |
 | **Open Graph Imperative validated** — cite Oliver's warning on Google Cloud Knowledge Catalogue lock-in as proof that an open, embedded CSR graph engine is vital | `GRAPH-INTELLIGENCE.md` §11.1 / `specs/RETRIEVAL.md` |
@@ -334,4 +352,4 @@ A graduate curriculum and frontier lab survey (Stanford CS329A, public release A
 | Threshold proliferation recorded as a simplification target | `README.md` deviation 23 |
 | Section-ownership gap now cites a working precedent | `README.md` deviation 21 |
 
-No design decision was reversed. P1 through P13 independently corroborate existing `llm-wiki-oe` architectural choices (local-first Markdown, deterministic compilation, hierarchical typing, strict execution boundaries, constrained decoding, durable transactions, embedded CSR graphs, practitioner scar formalization, and uncheatable external verification).
+No design decision was reversed. P1 through P14 independently corroborate existing `llm-wiki-oe` architectural choices (local-first Markdown, deterministic compilation, hierarchical typing, strict execution boundaries, constrained decoding, durable transactions, embedded CSR graphs, practitioner scar formalization, and uncheatable external verification).
