@@ -470,10 +470,20 @@ class HybridRetriever:
                                 self.ontology_terms.add(token)
 
         if hasattr(self.registries, "taxonomy_registry") and self.registries.taxonomy_registry:
-            for term in getattr(self.registries.taxonomy_registry, "taxonomies", {}).keys():
-                for token in tokenize(str(term)):
-                    if token not in STOPWORDS and len(token) > 2:
-                        self.ontology_terms.add(token)
+            nodes = getattr(self.registries.taxonomy_registry, "taxonomy", None)
+            if nodes is not None and isinstance(nodes, list):
+                for node in nodes:
+                    name = getattr(node, "name", "")
+                    tax_id = getattr(node, "taxonomy_id", "")
+                    for text in (name, tax_id):
+                        for token in tokenize(str(text)):
+                            if token not in STOPWORDS and len(token) > 2:
+                                self.ontology_terms.add(token)
+            else:
+                for term in getattr(self.registries.taxonomy_registry, "taxonomies", {}).keys():
+                    for token in tokenize(str(term)):
+                        if token not in STOPWORDS and len(token) > 2:
+                            self.ontology_terms.add(token)
 
     @property
     def csr(self):

@@ -268,7 +268,13 @@ class LegacyParser:
             "reviewer": "human:operator",
             "last_verified": today_iso,
             "next_review": next_review_iso,
-            "confidence": float(legacy_fm.get("confidence", 0.5)),
+            "confidence": (
+                float(legacy_fm["confidence"])
+                if "confidence" in legacy_fm
+                and isinstance(legacy_fm["confidence"], (int, float, str))
+                and str(legacy_fm["confidence"]).replace(".", "", 1).isdigit()
+                else 0.5
+            ),
             "validity": legacy_fm.get("validity")
             if isinstance(legacy_fm.get("validity"), dict)
             else None,
@@ -322,7 +328,9 @@ class LegacyParser:
         # Propose matches for legacy tags against registered facets
         facet_vocab: Dict[str, Set[str]] = {}
         for facet_name, facet_spec in self.registries.facets.items():
-            if isinstance(facet_spec, dict) and "values" in facet_spec:
+            if hasattr(facet_spec, "values"):
+                facet_vocab[facet_name] = set(facet_spec.values)
+            elif isinstance(facet_spec, dict) and "values" in facet_spec:
                 facet_vocab[facet_name] = set(facet_spec["values"])
 
         for tag in legacy_tags:

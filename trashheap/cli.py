@@ -119,6 +119,7 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument(
         "--json",
         action="store_true",
+        default=argparse.SUPPRESS,
         help="Emit machine-readable JSON output",
     )
 
@@ -128,7 +129,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Validate all 10 YAML registry schemas and cross-registry consistency",
     )
     check_reg_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
     check_reg_parser.add_argument(
         "--registry-dir", type=str, default=None, help="Custom path to schemas/registry"
@@ -164,7 +165,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-check-skills", action="store_true", help="Skip agent skills drift check"
     )
     lint_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
 
     # 3. validate
@@ -179,7 +180,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     val_parser.add_argument("--now", type=str, default=None, help="Reference date (YYYY-MM-DD)")
     val_parser.add_argument("--strict", action="store_true", help="Strict mode")
-    val_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    val_parser.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output")
 
     # 4. rename
     rename_parser = subparsers.add_parser(
@@ -195,7 +196,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run", action="store_true", help="Simulate without modifying files"
     )
     rename_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
 
     # 5. query
@@ -225,7 +226,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     query_parser.add_argument("--min-relevance", type=float, default=0.0, help="Min relevance knob")
     query_parser.add_argument(
-        "--json", action="store_true", default=True, help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
     query_parser.add_argument(
         "--vector",
@@ -304,7 +305,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--vector", action="store_true", help="Also rebuild offline vector index (Plan 90)"
     )
     rebuild_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
 
     # 7. generate-skills
@@ -325,7 +326,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Install skill globally to ~/.agents/skills/trashheap/SKILL.md",
     )
     skills_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
 
     # 8. stage-lint
@@ -337,7 +338,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--staging-dir", type=str, default="staging", help="Path to staging directory"
     )
     stage_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
 
     # 9. ingest
@@ -356,7 +357,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--staging-dir", type=str, default="staging", help="Target staging directory"
     )
     ingest_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
 
     # 10. review
@@ -371,13 +372,13 @@ def build_parser() -> argparse.ArgumentParser:
     r_list.add_argument("--scope", type=str, default=None, choices=["personal", "engineering"])
     r_list.add_argument("--status", type=str, default=None, help="Filter by candidate state")
     r_list.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
-    r_list.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    r_list.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output")
 
     # review show
     r_show = review_subs.add_parser("show", help="Show candidate proposal details")
     r_show.add_argument("candidate_id", type=str, help="Candidate proposal ID")
     r_show.add_argument("--workspace-root", type=str, default=".", help="Workspace root directory")
-    r_show.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    r_show.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output")
 
     # review approve
     r_approve = review_subs.add_parser("approve", help="Approve candidate proposal (REVIEW-002)")
@@ -391,7 +392,7 @@ def build_parser() -> argparse.ArgumentParser:
     r_approve.add_argument(
         "--workspace-root", type=str, default=".", help="Workspace root directory"
     )
-    r_approve.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    r_approve.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output")
 
     # review reject
     r_reject = review_subs.add_parser("reject", help="Reject candidate proposal (REVIEW-009)")
@@ -401,7 +402,7 @@ def build_parser() -> argparse.ArgumentParser:
     r_reject.add_argument(
         "--workspace-root", type=str, default=".", help="Workspace root directory"
     )
-    r_reject.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    r_reject.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output")
 
     # review promote
     r_promote = review_subs.add_parser("promote", help="Promote approved candidate via DPCP (§9)")
@@ -409,7 +410,7 @@ def build_parser() -> argparse.ArgumentParser:
     r_promote.add_argument(
         "--workspace-root", type=str, default=".", help="Workspace root directory"
     )
-    r_promote.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    r_promote.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output")
 
     # review recover
     r_recover = review_subs.add_parser(
@@ -418,7 +419,7 @@ def build_parser() -> argparse.ArgumentParser:
     r_recover.add_argument(
         "--workspace-root", type=str, default=".", help="Workspace root directory"
     )
-    r_recover.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    r_recover.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output")
 
     # 11. promote (top-level alias for review promote)
     promote_parser = subparsers.add_parser(
@@ -430,7 +431,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--workspace-root", type=str, default=".", help="Workspace root directory"
     )
     promote_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
 
     # 12. status
@@ -451,7 +452,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional corpus root directory to inspect canonical knowledge objects",
     )
     status_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
 
     # 13. reap
@@ -472,7 +473,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Grace period before tombstone purging (default: 7)",
     )
     reap_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
 
     # 14. conformance
@@ -493,7 +494,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--check", action="store_true", help="Run drift detector validating SPEC_STATUS.md"
     )
     conformance_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
 
     # 15. benchmark
@@ -508,7 +509,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--fixtures-dir", type=str, default=None, help="Directory containing canonical fixtures"
     )
     bench_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON output"
+        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
     )
     bench_parser.add_argument(
         "--pubmed", action="store_true", help="Run PubMedQA hybrid retrieval and refusal benchmark"
@@ -576,13 +577,13 @@ def build_parser() -> argparse.ArgumentParser:
     b_export.add_argument(
         "--registry-dir", type=str, default=None, help="Custom path to schemas/registry"
     )
-    b_export.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    b_export.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output")
 
     # bundle import
     b_import = bundle_subs.add_parser("import", help="Permissively import an OKF Knowledge Bundle")
     b_import.add_argument("bundle_dir", type=str, help="Directory containing OKF bundle")
     b_import.add_argument("--target-scope", type=str, default="engineering", help="Target scope")
-    b_import.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    b_import.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output")
 
     # 17. graph
     graph_parser = subparsers.add_parser(
@@ -599,7 +600,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     g_manifest.add_argument("--corpus-root", type=str, default=None, help="Corpus root directory")
     g_manifest.add_argument("--output-dir", type=str, default="derived", help="Output directory")
-    g_manifest.add_argument("--json", action="store_true", help="Emit JSON output")
+    g_manifest.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     g_analyze = graph_subs.add_parser("analyze", help="Calculate graph metrics and derived edges")
     g_analyze.add_argument(
@@ -609,7 +610,7 @@ def build_parser() -> argparse.ArgumentParser:
     g_analyze.add_argument(
         "--output-dir", type=str, default="derived/graph", help="Output directory"
     )
-    g_analyze.add_argument("--json", action="store_true", help="Emit JSON output")
+    g_analyze.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     # 18. discover
     discover_parser = subparsers.add_parser(
@@ -624,7 +625,7 @@ def build_parser() -> argparse.ArgumentParser:
     d_scan.add_argument(
         "--discovery-dir", type=str, default="discovery", help="Discovery directory"
     )
-    d_scan.add_argument("--json", action="store_true", help="Emit JSON output")
+    d_scan.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     d_list = discover_subs.add_parser("list", help="List discovered candidates")
     d_list.add_argument(
@@ -633,7 +634,7 @@ def build_parser() -> argparse.ArgumentParser:
     d_list.add_argument(
         "--status", type=str, default=None, help="Filter by status (e.g. pending, approved)"
     )
-    d_list.add_argument("--json", action="store_true", help="Emit JSON output")
+    d_list.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     d_review = discover_subs.add_parser("review", help="Review a discovery candidate")
     d_review.add_argument("candidate_id", type=str, help="Candidate ID")
@@ -649,7 +650,7 @@ def build_parser() -> argparse.ArgumentParser:
     d_review.add_argument(
         "--discovery-dir", type=str, default="discovery", help="Discovery directory"
     )
-    d_review.add_argument("--json", action="store_true", help="Emit JSON output")
+    d_review.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     d_promote = discover_subs.add_parser(
         "promote", help="Validate and promote an approved candidate"
@@ -663,7 +664,7 @@ def build_parser() -> argparse.ArgumentParser:
     d_promote.add_argument(
         "--workspace-root", type=str, default=".", help="Workspace root directory"
     )
-    d_promote.add_argument("--json", action="store_true", help="Emit JSON output")
+    d_promote.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     d_sweep = discover_subs.add_parser(
         "sweep", help="Sweep and archive expired candidates older than 90 days"
@@ -674,7 +675,7 @@ def build_parser() -> argparse.ArgumentParser:
     d_sweep.add_argument(
         "--current-date", type=str, default=None, help="Optional simulated ISO UTC date"
     )
-    d_sweep.add_argument("--json", action="store_true", help="Emit JSON output")
+    d_sweep.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     d_literature = discover_subs.add_parser(
         "literature", help="Run Swanson's ABC literature-based discovery over a large graph CSR"
@@ -691,7 +692,7 @@ def build_parser() -> argparse.ArgumentParser:
     d_literature.add_argument(
         "--top-k", type=int, default=15, help="Number of top bridges to return (default: 15)"
     )
-    d_literature.add_argument("--json", action="store_true", help="Emit JSON output")
+    d_literature.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     # Structural commands (specs/STRUCTURAL-GRAPH.md, SG-001..SG-020)
     structural_parser = subparsers.add_parser(
@@ -706,13 +707,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     s_index.add_argument("--incremental", action="store_true", help="Perform incremental indexing")
     s_index.add_argument("--cache-dir", type=str, default=None, help="Cache directory")
-    s_index.add_argument("--json", action="store_true", help="Emit JSON output")
+    s_index.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     s_inspect = struct_subs.add_parser("inspect", help="Inspect a structural node by ID")
     s_inspect.add_argument("node_id", type=str, help="Structural node ID")
     s_inspect.add_argument("--repo-root", type=str, default=".", help="Repository root path")
     s_inspect.add_argument("--cache-dir", type=str, default=None, help="Cache directory")
-    s_inspect.add_argument("--json", action="store_true", help="Emit JSON output")
+    s_inspect.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     s_impact = struct_subs.add_parser(
         "impact", help="Calculate blast radius impact for a structural node"
@@ -722,7 +723,7 @@ def build_parser() -> argparse.ArgumentParser:
     s_impact.add_argument("--node-ceiling", type=int, default=50, help="Max node ceiling")
     s_impact.add_argument("--repo-root", type=str, default=".", help="Repository root path")
     s_impact.add_argument("--cache-dir", type=str, default=None, help="Cache directory")
-    s_impact.add_argument("--json", action="store_true", help="Emit JSON output")
+    s_impact.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     s_bridge = struct_subs.add_parser("bridge", help="Bridge Knowledge Objects to structural nodes")
     s_bridge.add_argument("bridge_action", choices=["scan", "list", "review"], help="Bridge action")
@@ -730,7 +731,7 @@ def build_parser() -> argparse.ArgumentParser:
     s_bridge.add_argument("--cache-dir", type=str, default=None, help="Cache directory")
     s_bridge.add_argument("--bridge-id", type=str, default=None, help="Bridge ID for review")
     s_bridge.add_argument("--status", type=str, default=None, help="Status for review or filter")
-    s_bridge.add_argument("--json", action="store_true", help="Emit JSON output")
+    s_bridge.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     # Migration commands (plans/60-OLD-WIKI-MIGRATION.md)
     migrate_parser = subparsers.add_parser(
@@ -762,7 +763,7 @@ def build_parser() -> argparse.ArgumentParser:
     m_plan.add_argument(
         "--registry-dir", type=str, default="schemas/registry", help="Registry directory"
     )
-    m_plan.add_argument("--json", action="store_true", help="Emit JSON output")
+    m_plan.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     m_exec = migrate_subs.add_parser(
         "execute", help="Execute migration with fresh-target checks and idempotency"
@@ -791,7 +792,7 @@ def build_parser() -> argparse.ArgumentParser:
     m_exec.add_argument(
         "--force", action="store_true", help="Force overwrite even if source changed"
     )
-    m_exec.add_argument("--json", action="store_true", help="Emit JSON output")
+    m_exec.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     # Staging commands (plans/93-OPT-IN-PARQUET-STAGING.md)
     staging_parser = subparsers.add_parser(
@@ -812,19 +813,19 @@ def build_parser() -> argparse.ArgumentParser:
     st_status.add_argument(
         "--workspace-root", type=str, default=None, help="Path to workspace root"
     )
-    st_status.add_argument("--json", action="store_true", help="Emit JSON output")
+    st_status.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     st_sync = staging_subs.add_parser(
         "sync", help="Sync proposals from baseline staging to Parquet staging"
     )
     st_sync.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
-    st_sync.add_argument("--json", action="store_true", help="Emit JSON output")
+    st_sync.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     st_equiv = staging_subs.add_parser(
         "verify-equivalence", help="Verify equivalence between baseline and Parquet staging"
     )
     st_equiv.add_argument("--workspace-root", type=str, default=None, help="Path to workspace root")
-    st_equiv.add_argument("--json", action="store_true", help="Emit JSON output")
+    st_equiv.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     st_manifest = staging_subs.add_parser(
         "manifest", help="Emit and inspect atomic staging manifest"
@@ -839,7 +840,7 @@ def build_parser() -> argparse.ArgumentParser:
     st_manifest.add_argument(
         "--workspace-root", type=str, default=None, help="Path to workspace root"
     )
-    st_manifest.add_argument("--json", action="store_true", help="Emit JSON output")
+    st_manifest.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     st_recover = staging_subs.add_parser(
         "recover", help="Recover pending DSCP staging transactions and sweep orphans"
@@ -847,7 +848,7 @@ def build_parser() -> argparse.ArgumentParser:
     st_recover.add_argument(
         "--workspace-root", type=str, default=None, help="Path to workspace root"
     )
-    st_recover.add_argument("--json", action="store_true", help="Emit JSON output")
+    st_recover.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Emit JSON output")
 
     return parser
 
@@ -2372,6 +2373,8 @@ def handle_staging(args: argparse.Namespace) -> int:
             print(f"Error: {e}", file=sys.stderr)
             return ExitCode.VALIDATION_ERROR
 
+    return ExitCode.CONFIG_OR_ARG_ERROR
+
 
 def handle_init(args: argparse.Namespace) -> int:
     """Handle init / new subcommand."""
@@ -2397,6 +2400,12 @@ def handle_init(args: argparse.Namespace) -> int:
             print("  trashheap lint .")
             print('  trashheap query "welcome" --corpus-root .')
         return ExitCode.SUCCESS
+    except FileNotFoundError as e:
+        if getattr(args, "json", False):
+            print(json.dumps({"status": "error", "message": str(e)}, indent=2), file=sys.stderr)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        return ExitCode.NOT_FOUND
     except Exception as e:
         if getattr(args, "json", False):
             print(json.dumps({"status": "error", "message": str(e)}, indent=2), file=sys.stderr)

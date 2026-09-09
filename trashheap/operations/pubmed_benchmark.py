@@ -151,10 +151,19 @@ class PubmedBenchmarkHarness:
             import duckdb
 
             conn = duckdb.connect()
-            limit_clause = f"LIMIT {self.sample_limit}" if self.sample_limit else ""
-            rows = conn.query(
-                f'SELECT pubid, question, context FROM "{cache_path}" {limit_clause}'
-            ).fetchall()
+            try:
+                if self.sample_limit:
+                    rows = conn.execute(
+                        "SELECT pubid, question, context FROM read_parquet(?) LIMIT ?",
+                        [str(cache_path), int(self.sample_limit)],
+                    ).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT pubid, question, context FROM read_parquet(?)",
+                        [str(cache_path)],
+                    ).fetchall()
+            finally:
+                conn.close()
             questions: List[BenchmarkQuestion] = []
             for pubid, q_text, ctx_struct in rows:
                 labels = ctx_struct.get("labels", []) if isinstance(ctx_struct, dict) else []
@@ -281,8 +290,9 @@ class PubmedBenchmarkHarness:
 
         # Test citation bracket filtering
         all_valid_ids = {q.gold_canonical_id for q in questions}
+        first_gold = questions[0].gold_canonical_id if questions else "PERS-ART-MED_00000001-0001"
         fake_ans = (
-            f"Result based on [{questions[0].gold_canonical_id}, FAKE_PMID_99999999]. "
+            f"Result based on [{first_gold}, FAKE_PMID_99999999]. "
             "Fabricated source [FAKE_PMID_12345678]."
         )
         _, retained, removed = validate_and_filter_citations(fake_ans, all_valid_ids)

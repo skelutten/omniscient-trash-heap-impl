@@ -56,7 +56,6 @@ def build_section_map(body: str) -> List[SectionMapEntry]:
     entries: List[SectionMapEntry] = []
     current_title: Optional[str] = None
     current_start: int = 0
-    current_tokens: int = 0
 
     def close(prev_end: int) -> None:
         nonlocal current_title
@@ -66,7 +65,7 @@ def build_section_map(body: str) -> List[SectionMapEntry]:
                     title=current_title,
                     start_line=current_start,
                     end_line=prev_end,
-                    tokens=current_tokens,
+                    tokens=approx_tokens("\n".join(lines[current_start - 1 : prev_end])),
                 )
             )
             current_title = None
@@ -77,19 +76,8 @@ def build_section_map(body: str) -> List[SectionMapEntry]:
             close(lineno - 1)
             current_title = line[3:].strip()
             current_start = lineno
-            current_tokens = 0
-        elif current_title is not None:
-            current_tokens = approx_tokens("\n".join(lines[current_start - 1 : lineno]))
 
-    if current_title is not None:
-        entries.append(
-            SectionMapEntry(
-                title=current_title,
-                start_line=current_start,
-                end_line=len(lines),
-                tokens=approx_tokens("\n".join(lines[current_start - 1 :])),
-            )
-        )
+    close(len(lines))
 
     return entries
 

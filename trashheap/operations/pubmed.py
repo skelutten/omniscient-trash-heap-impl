@@ -83,7 +83,9 @@ def stream_pubmed_xml(
 
     try:
         if use_lxml:
-            context = etree.iterparse(fh, events=("end",), tag="PubmedArticle")
+            context = etree.iterparse(
+                fh, events=("end",), tag="PubmedArticle", resolve_entities=False
+            )
         else:
             context = etree.iterparse(fh, events=("end",))
         count = 0
@@ -284,7 +286,7 @@ class PubmedXmlAdapter(BaseAdapter):
         fm_dict: Dict[str, Any] = {
             "id": record.canonical_id,
             "title": record.title,
-            "schema_version": "1.0.0",
+            "schema_version": "3.8.10",
             "aliases": aliases,
             "keywords": keywords,
             "scope": self.default_scope,
@@ -293,7 +295,7 @@ class PubmedXmlAdapter(BaseAdapter):
             "object_type": "Article",
             "domain": "natural_science",
             "source_type": "document",
-            "author": "system:nlm",
+            "author": "process:nlm",
             "last_modified": str(today),
             "next_review": str(review_date),
             "language": ["en"],

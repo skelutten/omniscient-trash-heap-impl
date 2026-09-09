@@ -19,6 +19,7 @@ class RawPayload:
     content_hash: str
     media_type: str = "text/plain"
     metadata: Optional[Dict[str, Any]] = None
+    collected_at: Optional[str] = None
 
 
 class BaseConnector(ABC):
@@ -38,9 +39,12 @@ class FileConnector(BaseConnector):
         self.cursor_store = cursor_store
 
     def acquire(self) -> Generator[RawPayload, None, None]:
+        from datetime import datetime, timezone
+
         if not self.file_path.exists():
             return
 
+        now_iso = datetime.now(timezone.utc).isoformat()
         if self.cursor_store:
             content, cursor = self.cursor_store.check_and_read_new_bytes(self.file_path)
             if not content:
@@ -51,6 +55,7 @@ class FileConnector(BaseConnector):
                 content_bytes=content,
                 content_hash=h,
                 metadata={"byte_offset": cursor.byte_offset, "inode": cursor.inode},
+                collected_at=now_iso,
             )
         else:
             data = self.file_path.read_bytes()
@@ -58,6 +63,7 @@ class FileConnector(BaseConnector):
                 source_path=str(self.file_path),
                 content_bytes=data,
                 content_hash=compute_sha256(data),
+                collected_at=now_iso,
             )
 
 
@@ -128,6 +134,15 @@ class TrajectoryAdapter(BaseAdapter):
         payload: RawPayload,
         workspace_root: Path,
     ) -> IngestionResult:
+        from datetime import datetime, timezone
+
+        occurred_at = (
+            payload.collected_at
+            or (payload.metadata.get("occurred_at") if payload.metadata else None)
+            or (payload.metadata.get("collected_at") if payload.metadata else None)
+            or datetime.now(timezone.utc).isoformat()
+        )
+
         return intake_source(
             source_input=payload.content_bytes,
             source_type="agent_trajectory",
@@ -141,6 +156,6 @@ class TrajectoryAdapter(BaseAdapter):
                 "source_system": self.agent_runtime,
                 "external_id": Path(payload.source_path).name,
                 "representation_hash": payload.content_hash,
-                "occurred_at": "2026-09-07T10:00:00Z",
+                "occurred_at": occurred_at,
             },
         )

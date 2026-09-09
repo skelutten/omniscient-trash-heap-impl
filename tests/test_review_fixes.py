@@ -292,3 +292,240 @@ def test_pubmed_batch_json_output_is_parseable(tmp_path):
     assert int(rc) == 0
     data = json.loads(stdout.getvalue())  # must not raise
     assert data["total_articles"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Qwen Review Fixes (2026-09-09): WP1, WP2, WP3
+# ---------------------------------------------------------------------------
+
+
+def test_lint_strict_warning_returns_exit_code_2(tmp_path: Path):
+    """Verify ExitCode.STRICT_WARNING (2) is returned when corpus has only warnings under --strict."""
+    from datetime import date
+
+    from trashheap.constants import ExitCode
+
+    corpus_dir = tmp_path / "warn_corpus"
+    note_path = corpus_dir / "engineering" / "01_domain_system_architecture" / "ENG-CON-TEST-0001.md"
+    note_path.parent.mkdir(parents=True, exist_ok=True)
+    note_path.write_text(
+        f"""---
+id: ENG-CON-TEST-0001
+title: Test Concept Approaching Review
+schema_version: 3.8.10
+keywords:
+  - test
+scope: engineering
+taxonomy_path: 01. Domain & System Architecture
+taxonomy_id: TX-ENG-01
+object_type: Concept
+domain: software_engineering
+author: human:test
+last_modified: {date.today().isoformat()}
+next_review: 2020-01-01
+language:
+  - en
+audience: engineer
+status: established
+consensus: accepted
+evidence: observed
+verification: peer_verified
+authority: authoritative
+confidence: 0.95
+source_type: document
+source_refs:
+  - tests/test_review_fixes.py
+---
+# Test Concept
+Content text.
+""",
+        encoding="utf-8",
+    )
+
+    # 1. Normal lint without strict -> ExitCode.SUCCESS (0) because warnings are non-fatal
+    rc_normal = main(["lint", str(corpus_dir), "--no-check-skills"])
+    assert rc_normal == ExitCode.SUCCESS
+
+    # 2. Strict lint -> ExitCode.STRICT_WARNING (2)
+    rc_strict = main(["lint", str(corpus_dir), "--strict", "--no-check-skills"])
+    assert rc_strict == ExitCode.STRICT_WARNING
+
+
+def test_root_json_flag_preserved_across_subcommands():
+    """Verify trashheap --json <subcmd> preserves args.json is True."""
+    from trashheap.cli import build_parser
+
+    p = build_parser()
+    for cmd in ["lint", "check-registries", "benchmark", "status", "reap", "conformance"]:
+        parsed = p.parse_args(["--json", cmd])
+        assert parsed.json is True, f"Root --json was clobbered by subparser for {cmd}"
+
+
+def test_rename_entity_validations_and_piped_links(tmp_path: Path):
+    """Verify rename_entity regex validation, collision detection, and piped link preservation."""
+    from trashheap.rename import rename_entity
+
+    corpus_dir = tmp_path / "rename_corpus"
+    pers_dir = corpus_dir / "personal" / "02_formal_sciences_mathematics"
+    pers_dir.mkdir(parents=True, exist_ok=True)
+
+    note1 = pers_dir / "PERS-CON-MATH-0001.md"
+    note1.write_text(
+        """---
+id: PERS-CON-MATH-0001
+title: Peano Axioms
+aliases: []
+---
+# Peano Axioms
+Mathematical axioms.
+""",
+        encoding="utf-8",
+    )
+
+    note2 = pers_dir / "PERS-CON-MATH-0002.md"
+    note2.write_text(
+        """---
+id: PERS-CON-MATH-0002
+title: Logic Systems
+---
+# Logic
+Refers to [[PERS-CON-MATH-0001]] and piped [[PERS-CON-MATH-0001|Peano System]].
+""",
+        encoding="utf-8",
+    )
+
+    # 1. Reject invalid ID format
+    with pytest.raises(ValueError, match="does not conform to ID_PATTERN"):
+        rename_entity(corpus_dir, "PERS-CON-MATH-0001", "invalid_id")
+
+    # 2. Reject existing ID collision in corpus
+    with pytest.raises(FileExistsError, match="already exists in corpus"):
+        rename_entity(corpus_dir, "PERS-CON-MATH-0001", "PERS-CON-MATH-0002")
+
+    # 3. Successful rename with piped link propagation
+    res = rename_entity(corpus_dir, "PERS-CON-MATH-0001", "PERS-CON-MATH-0009")
+    assert res.old_id == "PERS-CON-MATH-0001"
+    assert res.new_id == "PERS-CON-MATH-0009"
+
+    # Verify note2 has updated links
+    note2_content = note2.read_text(encoding="utf-8")
+    assert "[[PERS-CON-MATH-0009]]" in note2_content
+    assert "[[PERS-CON-MATH-0009|Peano System]]" in note2_content
+
+
+def test_taxonomy_grounding_extracts_all_nodes():
+    """Verify HybridRetriever extracts ontology terms from taxonomy_registry.taxonomy."""
+    from trashheap.retrieval import HybridRetriever
+
+    regs = load_registries()
+    retriever = HybridRetriever(corpus=Corpus(Path(".")), registries=regs)
+    assert "personal" in retriever.ontology_terms or "engineering" in retriever.ontology_terms
+    assert len(retriever.ontology_terms) > 20
+
+
+def test_section_map_linear_token_computation():
+    """Verify build_section_map correctly computes section tokens without O(L^2) overhead."""
+    from trashheap.section_map import build_section_map
+
+    body = "## Section One\nLine 1\nLine 2\nLine 3\n\n## Section Two\nLine 4\nLine 5\n"
+    entries = build_section_map(body)
+    assert len(entries) == 2
+    assert entries[0].title == "Section One"
+    assert entries[0].tokens > 0
+    assert entries[1].title == "Section Two"
+    assert entries[1].tokens > 0
+
+
+def test_pubmed_adapter_author_and_schema_version():
+    """Verify PubmedXmlAdapter emits process:nlm and schema_version 3.8.10."""
+    from trashheap.operations.pubmed import PubmedArticleRecord, PubmedXmlAdapter
+
+    record = PubmedArticleRecord(
+        pmid=12345678,
+        title="Sample PubMed Article",
+        abstract="Abstract content.",
+    )
+    adapter = PubmedXmlAdapter(default_scope="personal")
+    md = adapter.record_to_markdown(record)
+    assert "schema_version: 3.8.10" in md
+    assert "author: process:nlm" in md
+
+
+def test_migration_facet_definition_and_safe_confidence():
+    """Verify LegacyParser supports FacetDefinition objects and guards non-numeric confidence."""
+    from trashheap.migration import FrontmatterMode, MigrationMap
+    from trashheap.migration.parser import LegacyParser
+
+    regs = load_registries()
+    mmap = MigrationMap(frontmatter_mode=FrontmatterMode.REQUIRED, target_scope="engineering")
+    parser = LegacyParser(regs)
+
+    legacy_text = """---
+title: Sample Note
+confidence: non-numeric-confidence-string
+tags:
+  - python
+  - rust
+---
+# Sample
+Body text.
+"""
+    result = parser.parse_file("test.md", legacy_text.encode("utf-8"), mmap)
+    assert isinstance(result, tuple)
+    ko, _, facet_proposals, _ = result
+    assert ko.frontmatter_dict["confidence"] == 0.5
+    assert any(p.facet_name == "toolchain" for p in facet_proposals)
+
+
+def test_corpus_excludes_docs_and_trashheap(tmp_path: Path):
+    """Verify load_corpus excludes docs and .trashheap directories anywhere in path."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "test.md").write_text("---\nid: DOCS-0001\n---\n# Docs", encoding="utf-8")
+
+    (tmp_path / ".trashheap").mkdir()
+    (tmp_path / ".trashheap" / "test.md").write_text("---\nid: TRASH-0001\n---\n# Trash", encoding="utf-8")
+
+    (tmp_path / "nested" / "docs").mkdir(parents=True)
+    (tmp_path / "nested" / "docs" / "test.md").write_text("---\nid: NEST-0001\n---\n# Nest", encoding="utf-8")
+
+    corpus = load_corpus(tmp_path)
+    ids = {ko.id for ko in corpus.objects}
+    assert "DOCS-0001" not in ids
+    assert "TRASH-0001" not in ids
+    assert "NEST-0001" not in ids
+
+
+def test_load_single_file_enforces_starting_fence(tmp_path: Path):
+    """Verify load_single_file records load_error if file does not start with ---."""
+    from trashheap.corpus import load_single_file
+
+    bad_file = tmp_path / "no_fence.md"
+    bad_file.write_text("# Just Heading\nSome text\n---\nmore text\n---\n", encoding="utf-8")
+
+    ko = load_single_file(bad_file)
+    assert ko.load_error is not None
+    assert "missing starting YAML frontmatter fence" in str(ko.load_error)
+
+
+def test_environment_durability_flags_tied_to_tier():
+    """Verify atomic_rename_supported and fsync_durability_supported reflect filesystem tier."""
+    from trashheap.operations.environment import inspect_environment
+
+    drvfs_path = Path("/mnt/c/Users/Dev/repo")
+    report = inspect_environment(drvfs_path)
+    assert report.filesystem_tier == "Tier 2 (Degraded)"
+    assert report.atomic_rename_supported is False
+    assert report.fsync_durability_supported is False
+
+
+def test_reaper_handles_corrupt_created_at(temp_workspace):
+    """Verify TTLReaper treats corrupt/unparseable created_at as epoch (expired) rather than current time."""
+    from trashheap.operations.reaper import TTLReaper
+
+    c = create_candidate_proposal(candidate_id="CAND-CORRUPT-TIME", workspace_root=temp_workspace)
+    c.created_at = "not-a-valid-timestamp"
+    save_candidate(c, temp_workspace)
+
+    reaper = TTLReaper(workspace_root=temp_workspace, ttl_days=180, grace_days=7)
+    counts = reaper.run_reap_cycle()
+    assert counts["expired_count"] >= 1

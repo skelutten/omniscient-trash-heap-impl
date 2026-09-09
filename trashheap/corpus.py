@@ -35,7 +35,18 @@ def load_single_file(file_path: Path) -> KnowledgeObject:
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    parts = content.split("---", 2)
+    stripped_start = content.lstrip()
+    if not stripped_start.startswith("---"):
+        err = ValueError(f"File missing starting YAML frontmatter fence ('---'): {file_path}")
+        return KnowledgeObject(
+            path=file_path,
+            frontmatter_dict={},
+            raw_body=content,
+            frontmatter=None,
+            load_error=err,
+        )
+
+    parts = stripped_start.split("---", 2)
     if len(parts) < 3:
         err = ValueError(f"File missing YAML frontmatter fence ('---'): {file_path}")
         return KnowledgeObject(
@@ -114,6 +125,8 @@ def load_corpus(
             "tools",
             "tests",
             "conformance",
+            "docs",
+            ".trashheap",
             # Non-canonical storage and derived working directories (CANON-005).
             "raw",
             "staging",
@@ -131,8 +144,7 @@ def load_corpus(
         for p in root.rglob("*.md"):
             # Check exclusions
             rel = p.relative_to(root)
-            first_part = rel.parts[0] if rel.parts else ""
-            if first_part in exclude_dirs:
+            if any(part in exclude_dirs for part in rel.parts):
                 continue
             if len(rel.parts) == 1 and rel.name in {
                 "README.md",

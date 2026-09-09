@@ -74,7 +74,7 @@ class TTLReaper:
             try:
                 created_dt = datetime.fromisoformat(c.created_at.replace("Z", "+00:00"))
             except Exception:
-                created_dt = current_time
+                created_dt = datetime.fromtimestamp(0, tz=timezone.utc)
 
             age_days = (current_time - created_dt).total_seconds() / 86400.0
 
@@ -108,8 +108,7 @@ class TTLReaper:
             # Step 2: Purge proposals that have been expired past the grace period
             elif c.state == "expired" and age_days >= (self.ttl_days + self.grace_days):
                 p_file = self.workspace_root / "staging" / "proposals" / f"{c.candidate_id}.yaml"
-                if p_file.exists():
-                    p_file.unlink(missing_ok=True)
+                p_file.unlink(missing_ok=True)
                 self._log_audit(
                     {
                         "action": "tombstone_purge",

@@ -60,11 +60,13 @@ def inspect_environment(workspace_root: Path) -> EnvironmentReport:
     git_lfs_ok = shutil.which("git-lfs") is not None
     sqlite_ok = True  # python standard library
 
+    is_tier_1 = fs_tier == "Tier 1 (Production)"
+
     return EnvironmentReport(
         os_system=sys_name,
         filesystem_tier=fs_tier,
-        atomic_rename_supported=True,
-        fsync_durability_supported=True,
+        atomic_rename_supported=is_tier_1,
+        fsync_durability_supported=is_tier_1,
         duckdb_available=duckdb_ok,
         git_lfs_available=git_lfs_ok,
         sqlite_available=sqlite_ok,
