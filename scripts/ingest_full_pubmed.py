@@ -117,113 +117,165 @@ def _parse_shard_to_parquet_worker(args: Tuple[str, str, bool]) -> Dict[str, Any
 def compile_csr_from_parquet(
     edge_dir: Path,
     out_csr_dir: Path,
-    max_memory: str = "4GB",
-    threads: int = 4,
+    max_memory: str = "5GB",
+    threads: int = 2,
     log_func=print,
-) -> CsrGraphProjection:
+) -> Tuple[CsrGraphProjection, int]:
     """Compile Compressed Sparse Row binary projection from Parquet edge shards via DuckDB."""
+    import shutil
+
     t0 = time.perf_counter()
     out_csr_dir.mkdir(parents=True, exist_ok=True)
+    temp_dir = out_csr_dir / "duckdb_temp"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    cache_dir = edge_dir.parent
+    distinct_nodes_pq = cache_dir / "distinct_nodes.parquet"
+    node_mapping_pq = out_csr_dir / "node_mapping.parquet"
+    indptr_npy = out_csr_dir / "indptr.npy"
+    indices_npy = out_csr_dir / "indices.npy"
+
     con = duckdb.connect()
     con.execute(f"PRAGMA max_memory = '{max_memory}';")
     con.execute(f"PRAGMA threads = {threads};")
+    con.execute("PRAGMA preserve_insertion_order = false;")
+    con.execute(f"PRAGMA temp_directory = '{temp_dir}';")
 
-    log_func("DuckDB: Scanning and indexing unique nodes across Parquet edge shards...")
-    con.execute(f"""
-        CREATE TABLE all_edges AS
-        SELECT DISTINCT u, v FROM read_parquet('{edge_dir}/*.parquet');
-    """)
+    # Step 1: Distinct nodes
+    if not distinct_nodes_pq.exists() or distinct_nodes_pq.stat().st_size < 1000:
+        log_func("DuckDB: Extracting distinct source nodes (u)...")
+        con.execute(
+            f"COPY (SELECT DISTINCT u AS id FROM read_parquet('{edge_dir}/*.parquet')) TO '{cache_dir}/u_nodes.parquet' (FORMAT PARQUET);"
+        )
+        log_func("DuckDB: Extracting distinct target nodes (v)...")
+        con.execute(
+            f"COPY (SELECT DISTINCT v AS id FROM read_parquet('{edge_dir}/*.parquet')) TO '{cache_dir}/v_nodes.parquet' (FORMAT PARQUET);"
+        )
+        log_func("DuckDB: Merging and ordering distinct nodes...")
+        con.execute(f"""
+            COPY (
+                SELECT DISTINCT id FROM (
+                    SELECT id FROM read_parquet('{cache_dir}/u_nodes.parquet')
+                    UNION ALL
+                    SELECT id FROM read_parquet('{cache_dir}/v_nodes.parquet')
+                ) ORDER BY id
+            ) TO '{distinct_nodes_pq}' (FORMAT PARQUET);
+        """)
+        (cache_dir / "u_nodes.parquet").unlink(missing_ok=True)
+        (cache_dir / "v_nodes.parquet").unlink(missing_ok=True)
 
-    con.execute("""
-        CREATE TABLE distinct_nodes AS
-        SELECT DISTINCT id FROM (
-            SELECT u AS id FROM all_edges
-            UNION
-            SELECT v AS id FROM all_edges
-        ) ORDER BY id;
-    """)
+    # Step 2: Node mapping
+    if not node_mapping_pq.exists() or node_mapping_pq.stat().st_size < 1000:
+        log_func("DuckDB: Generating 0-based integer node mapping...")
+        con.execute(f"""
+            COPY (
+                SELECT (row_number() OVER () - 1)::BIGINT AS node_idx, id AS node_id
+                FROM read_parquet('{distinct_nodes_pq}')
+            ) TO '{node_mapping_pq}' (FORMAT PARQUET);
+        """)
 
-    con.execute("""
-        CREATE TABLE node_mapping AS
-        SELECT id, (row_number() OVER () - 1)::BIGINT AS node_idx
-        FROM distinct_nodes;
-    """)
-
-    num_nodes = con.execute("SELECT count(*) FROM distinct_nodes;").fetchone()[0]
-    total_edges = con.execute("SELECT count(*) FROM all_edges;").fetchone()[0]
+    num_nodes = con.execute(
+        f"SELECT count(*) FROM read_parquet('{distinct_nodes_pq}');"
+    ).fetchone()[0]
+    total_edges = con.execute(
+        f"SELECT count(*) FROM read_parquet('{edge_dir}/*.parquet');"
+    ).fetchone()[0]
+    num_articles = con.execute(
+        f"SELECT count(*) FROM read_parquet('{distinct_nodes_pq}') WHERE id LIKE 'PERS-ART-MED_%';"
+    ).fetchone()[0]
     log_func(
-        f"DuckDB: Discovered {num_nodes:,} unique nodes and {total_edges:,} distinct directed edges."
+        f"DuckDB: Verified {num_nodes:,} unique nodes ({num_articles:,} articles) and {total_edges:,} directed edges."
     )
 
-    log_func("DuckDB: Mapping edge vertices to 0-based contiguous integer coordinates...")
-    con.execute("""
-        CREATE TABLE mapped_edges AS
-        SELECT
-            m1.node_idx AS u_idx,
-            m2.node_idx AS v_idx
-        FROM all_edges e
-        JOIN node_mapping m1 ON e.u = m1.id
-        JOIN node_mapping m2 ON e.v = m2.id
-        ORDER BY u_idx, v_idx;
-    """)
+    # Step 3: Degrees & indptr.npy
+    if not indptr_npy.exists() or indptr_npy.stat().st_size < 1000:
+        log_func("DuckDB: Calculating degree sequences and indptr offsets...")
+        con.execute(f"""
+            CREATE VIEW deg_counts AS
+            SELECT u, count(*)::BIGINT AS deg
+            FROM read_parquet('{edge_dir}/*.parquet')
+            GROUP BY u;
+        """)
+        con.execute(f"""
+            CREATE TABLE node_degrees AS
+            SELECT m.node_idx, coalesce(d.deg, 0)::BIGINT AS deg
+            FROM read_parquet('{node_mapping_pq}') m
+            LEFT JOIN deg_counts d ON m.node_id = d.u
+            ORDER BY m.node_idx;
+        """)
+        deg_arr = (
+            con.execute("SELECT deg FROM node_degrees ORDER BY node_idx;")
+            .to_arrow_table()
+            .column(0)
+            .to_numpy()
+        )
+        indptr = np.zeros(num_nodes + 1, dtype=np.int64)
+        indptr[1:] = np.cumsum(deg_arr)
+        np.save(indptr_npy, indptr)
+        log_func(f"DuckDB: Saved indptr.npy ({indptr.nbytes / (1024 * 1024):.1f} MB).")
+    else:
+        log_func("DuckDB: Loading existing verified indptr.npy from disk...")
+        indptr = np.load(indptr_npy)
 
-    log_func("DuckDB: Calculating degree sequences and indptr offsets...")
-    con.execute("""
-        CREATE TABLE degrees AS
-        SELECT m.node_idx, coalesce(d.deg, 0)::BIGINT AS deg
-        FROM node_mapping m
-        LEFT JOIN (
-            SELECT u_idx, count(*)::BIGINT AS deg FROM mapped_edges GROUP BY u_idx
-        ) d ON m.node_idx = d.u_idx
-        ORDER BY m.node_idx;
-    """)
+    # Step 4: Indices.npy memmap streaming
+    if not indices_npy.exists() or indices_npy.stat().st_size != total_edges * 8:
+        log_func(
+            "DuckDB: Streaming indices binary array directly to disk via memory mapping..."
+        )
+        indices = np.memmap(
+            indices_npy,
+            dtype=np.int64,
+            mode="w+",
+            shape=(total_edges,),
+        )
+        con.execute(f"""
+            CREATE VIEW mapped_edges AS
+            SELECT m1.node_idx AS u_idx, m2.node_idx AS v_idx
+            FROM read_parquet('{edge_dir}/*.parquet') e
+            JOIN read_parquet('{node_mapping_pq}') m1 ON e.u = m1.node_id
+            JOIN read_parquet('{node_mapping_pq}') m2 ON e.v = m2.node_id;
+        """)
+        cursor = 0
+        batch_size = 20_000_000
+        res = con.execute("SELECT v_idx FROM mapped_edges ORDER BY u_idx, v_idx")
+        reader = res.to_arrow_reader(batch_size=batch_size)
+        for batch in reader:
+            arr = batch.column(0).to_numpy()
+            sz = len(arr)
+            indices[cursor : cursor + sz] = arr
+            cursor += sz
+            log_func(
+                f"DuckDB: Streamed {cursor:,} / {total_edges:,} edges ({cursor / total_edges * 100:.1f}%)..."
+            )
+        indices.flush()
+        log_func("DuckDB: Flushed full indices.npy binary array to disk.")
+    else:
+        log_func("DuckDB: Mapping existing indices.npy from disk...")
+        indices = np.memmap(indices_npy, dtype=np.int64, mode="r", shape=(total_edges,))
 
-    deg_arr = (
-        con.execute("SELECT deg FROM degrees ORDER BY node_idx;")
-        .to_arrow_table()
-        .column(0)
-        .to_numpy()
-    )
-    indptr = np.zeros(num_nodes + 1, dtype=np.int64)
-    indptr[1:] = np.cumsum(deg_arr)
-    np.save(out_csr_dir / "indptr.npy", indptr)
-
-    log_func("DuckDB: Streaming indices binary array directly to disk via memory mapping...")
-    indices = np.memmap(
-        out_csr_dir / "indices.npy",
-        dtype=np.int64,
-        mode="w+",
-        shape=(total_edges,),
-    )
-    cursor = 0
-    batch_size = 50_000_000
-    res = con.execute("SELECT v_idx FROM mapped_edges ORDER BY u_idx, v_idx")
-    reader = res.to_arrow_reader(batch_size=batch_size)
-    for batch in reader:
-        arr = batch.column(0).to_numpy()
-        sz = len(arr)
-        indices[cursor : cursor + sz] = arr
-        cursor += sz
-    indices.flush()
-
-    log_func("DuckDB: Exporting node index mapping...")
-    con.execute(f"""
-        COPY (SELECT node_idx, id AS node_id FROM node_mapping ORDER BY node_idx)
-        TO '{out_csr_dir}/node_mapping.parquet' (FORMAT PARQUET);
-    """)
-
-    # Build memory index structures for small/medium graphs, or top nodes
-    node_rows = con.execute("SELECT id FROM node_mapping ORDER BY node_idx;").fetchall()
-    int_to_node = [r[0] for r in node_rows]
-    node_to_int = {nid: idx for idx, nid in enumerate(int_to_node)}
+    # Node index metadata
+    if num_nodes <= 1_000_000:
+        node_rows = con.execute(
+            f"SELECT node_id FROM read_parquet('{node_mapping_pq}') ORDER BY node_idx;"
+        ).fetchall()
+        int_to_node = [r[0] for r in node_rows]
+        node_to_int = {nid: idx for idx, nid in enumerate(int_to_node)}
+    else:
+        int_to_node = []
+        node_to_int = {}
 
     meta = {
         "num_nodes": num_nodes,
         "num_edges": total_edges,
+        "num_articles": num_articles,
         "nodes": int_to_node,
+        "node_mapping_parquet": "node_mapping.parquet",
         "relation_types": ["CITES", "HAS_MESH"],
     }
     (out_csr_dir / "node_index.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+    con.close()
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
     csr = CsrGraphProjection(
         indptr=indptr,
@@ -234,7 +286,7 @@ def compile_csr_from_parquet(
     )
     elapsed = time.perf_counter() - t0
     log_func(f"DuckDB: Full CSR matrix compilation completed in {elapsed:.2f}s!")
-    return csr
+    return csr, num_articles
 
 
 def main() -> None:
@@ -368,11 +420,11 @@ def main() -> None:
     log("================================================================================")
 
     csr_start = time.perf_counter()
-    csr = compile_csr_from_parquet(
+    csr, num_articles = compile_csr_from_parquet(
         edge_dir=edge_dir,
         out_csr_dir=args.output_csr,
-        max_memory="4GB",
-        threads=num_parse_workers,
+        max_memory="5GB",
+        threads=2,
         log_func=log,
     )
     csr_elapsed = time.perf_counter() - csr_start
@@ -394,7 +446,7 @@ def main() -> None:
     report_data = {
         "status": "completed",
         "total_shards": len(all_shards),
-        "total_articles": total_articles,
+        "total_articles": num_articles if num_articles > 0 else total_articles,
         "total_citations": total_citations,
         "total_mesh_headings": total_mesh,
         "graph_nodes": csr.num_nodes,

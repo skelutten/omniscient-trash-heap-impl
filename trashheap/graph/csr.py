@@ -30,7 +30,7 @@ class CsrGraphProjection:
 
     @property
     def num_nodes(self) -> int:
-        return len(self.int_to_node)
+        return len(self.int_to_node) if self.int_to_node else len(self.indptr) - 1
 
     @property
     def num_edges(self) -> int:
