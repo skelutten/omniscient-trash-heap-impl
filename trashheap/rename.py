@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
+from trashheap.constants import ID_PATTERN
 from trashheap.corpus import load_corpus
 
 
@@ -45,19 +46,38 @@ def rename_entity(
     graph_path: Optional[Path] = None,
 ) -> RenameResult:
     """Atomically rename an entity and propagate all backlinks across the corpus."""
+    if not re.match(ID_PATTERN, new_id):
+        raise ValueError(f"Invalid new_id '{new_id}': does not conform to ID_PATTERN ({ID_PATTERN})")
+
     result = RenameResult(old_id=old_id, new_id=new_id)
     corpus = load_corpus(corpus_root)
+
+    if corpus.get_by_id(new_id) is not None:
+        raise FileExistsError(f"Entity with id '{new_id}' already exists in corpus")
 
     target_obj = corpus.get_by_id(old_id)
     if target_obj is None:
         raise KeyError(f"Entity with id '{old_id}' not found in corpus")
 
+    new_target_path = target_obj.path.with_name(f"{new_id}.md")
+    if new_target_path.exists() and new_target_path.resolve() != target_obj.path.resolve():
+        raise FileExistsError(f"Target file '{new_target_path}' already exists on disk")
+
     # 1. Update target object frontmatter (id -> new_id, add old_id to aliases)
     with open(target_obj.path, "r", encoding="utf-8") as f:
         content = f.read()
 
+    if not content.startswith("---"):
+        raise ValueError(f"File '{target_obj.path}' does not start with YAML frontmatter fence ('---')")
+
     parts = content.split("---", 2)
+    if len(parts) < 3:
+        raise ValueError(f"File '{target_obj.path}' missing closing YAML frontmatter fence ('---')")
+
     fm = yaml.safe_load(parts[1])
+    if not isinstance(fm, dict):
+        raise ValueError(f"File '{target_obj.path}' frontmatter is not a dictionary")
+
     fm["id"] = new_id
 
     aliases = fm.get("aliases", [])
@@ -68,20 +88,25 @@ def rename_entity(
     new_fm_str = yaml.dump(fm, sort_keys=False, allow_unicode=True)
     new_target_content = f"---\n{new_fm_str}---\n{parts[2]}"
 
-    new_target_path = target_obj.path.with_name(f"{new_id}.md")
     result.renamed_file = new_target_path
 
     if not dry_run:
         # Write updated content to new path or existing path
         atomic_write(new_target_path, new_target_content)
-        if new_target_path != target_obj.path:
+        if new_target_path.resolve() != target_obj.path.resolve():
             try:
                 target_obj.path.unlink()
             except FileNotFoundError:
                 pass
 
-    # 2. Propagate backlinks across all other files
-    wikilink_pattern = re.compile(rf"\[\[\s*{re.escape(old_id)}\s*\]\]")
+    # 2. Propagate backlinks across all other files (supporting piped links [[old|label]])
+    wikilink_pattern = re.compile(rf"\[\[\s*{re.escape(old_id)}(?:\s*\|\s*([^\]]*))?\s*\]\]")
+
+    def _replace_link(m: re.Match) -> str:
+        label = m.group(1)
+        if label is not None:
+            return f"[[{new_id}|{label}]]"
+        return f"[[{new_id}]]"
 
     for ko in corpus.objects:
         if ko.id == old_id:
@@ -90,6 +115,9 @@ def rename_entity(
         file_changed = False
         with open(ko.path, "r", encoding="utf-8") as f:
             file_text = f.read()
+
+        if not file_text.startswith("---"):
+            continue
 
         file_parts = file_text.split("---", 2)
         if len(file_parts) < 3:
@@ -107,8 +135,9 @@ def rename_entity(
                     file_changed = True
 
         # Check wikilinks in body
-        if wikilink_pattern.search(curr_body):
-            curr_body = wikilink_pattern.sub(f"[[{new_id}]]", curr_body)
+        new_curr_body, count = wikilink_pattern.subn(_replace_link, curr_body)
+        if count > 0:
+            curr_body = new_curr_body
             file_changed = True
 
         if file_changed:

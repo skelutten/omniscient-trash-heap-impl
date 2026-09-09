@@ -11,9 +11,9 @@ from typing import Any, Dict, List, Optional, Set
 
 from trashheap.constants import (
     ACTOR_PATTERN,
+    ALL_FRONTMATTER_FIELDS,
     DOMAIN_TAG_PATTERN,
     ID_PATTERN,
-    METADATA_CATEGORIES,
     YEAR_TAG_PATTERN,
 )
 from trashheap.corpus import Corpus
@@ -115,6 +115,10 @@ class Linter:
 
         # Precompute lookups from registries
         self.tax_by_id = {n.taxonomy_id: n for n in self.registries.taxonomy_registry.taxonomy}
+        self.raw_tax_dict = {
+            n.taxonomy_id: {"name": n.name, "parent_id": n.parent_id, "scope": n.scope}
+            for n in self.registries.taxonomy_registry.taxonomy
+        }
         self.obj_types = self.registries.object_registry.object_types
         self.domains = set(self.registries.object_registry.domains)
         self.relations = self.registries.relation_registry.relations
@@ -198,12 +202,6 @@ class Linter:
                 if f.file is not None and str(Path(f.file).resolve()) == resolved_target
             ]
 
-        # In strict mode, elevate warnings
-        if self.strict:
-            for f in findings:
-                if f.level == "WARNING":
-                    f.level = "ERROR"
-
         return findings
 
     def _check_layer1_schema(self, ko: KnowledgeObject) -> List[Finding]:
@@ -224,7 +222,7 @@ class Linter:
             )
 
         # Check for unallocated fields (META-002)
-        all_allocated = set().union(*METADATA_CATEGORIES.values())
+        all_allocated = ALL_FRONTMATTER_FIELDS
         for key in ko.frontmatter_dict.keys():
             if key not in all_allocated:
                 findings.append(
@@ -404,13 +402,8 @@ class Linter:
                     )
 
                 # Disk path calculation vs actual path (TAX-002, E002)
-                # Convert raw registry list to dict format for slug resolution
-                raw_tax_dict = {
-                    n.taxonomy_id: {"name": n.name, "parent_id": n.parent_id, "scope": n.scope}
-                    for n in self.registries.taxonomy_registry.taxonomy
-                }
                 try:
-                    expected_dir = taxonomy_id_to_directory(raw_tax_dict, reg_node.scope, tax_id)
+                    expected_dir = taxonomy_id_to_directory(self.raw_tax_dict, reg_node.scope, tax_id)
                     expected_file_suffix = f"{expected_dir}{node_id}.md"
                     actual_posix = ko.path.as_posix()
                     if not actual_posix.endswith(expected_file_suffix):

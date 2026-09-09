@@ -2,8 +2,8 @@
 
 > *All the sources. All the wisdom. Some of the trash.*
 
-[![Tests](https://img.shields.io/badge/pytest-passing-brightgreen)](tests/)
-[![Architecture Conformance](https://img.shields.io/badge/Conformance-37%2F37%20Families%20(100%25)-blue)](artifacts/conformance_matrix.yaml)
+[![Tests](https://img.shields.io/badge/pytest-208%20passing-brightgreen)](tests/)
+[![Architecture Conformance](https://img.shields.io/badge/Conformance-43%2F45%20Families%20(95.6%25)-blue)](artifacts/conformance_matrix.yaml)
 [![Python](https://img.shields.io/badge/Python->=3.11-blue.svg)](pyproject.toml)
 [![License](https://img.shields.io/badge/License-Apache--2.0-yellow.svg)](LICENSE)
 
@@ -134,7 +134,8 @@ Below is an overview of how the core subsystems interact to turn chaotic inputs 
 |---|---|---|---|
 | **Ingest & Promotion Pipeline** | [`INGEST-PIPELINE.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/INGEST-PIPELINE.md), [`INGEST.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/INGEST.md), [`REVIEW-PROMOTION.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/REVIEW-PROMOTION.md) | Captures untrusted raw sources, sanitizes prompts, routes scopes, stages candidate proposals, and executes atomic DPCP promotion. | Immutable `raw/` captures & canonical notes in `personal/` or `engineering/` |
 | **Hybrid & Graph Retrieval** | [`RETRIEVAL.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/RETRIEVAL.md), [`GRAPH-RETRIEVAL.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/GRAPH-RETRIEVAL.md) | 8-stage search pipeline combining BM25, BFS graph traversal, offline dense vectors, and AST symbols via Reciprocal Rank Fusion ($k=60$). | Grounded, bounded Evidence Bundles with full cryptographic provenance |
-| **Graph Intelligence** | [`GRAPH-INTELLIGENCE.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/GRAPH-INTELLIGENCE.md), [`DISCOVERY.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/DISCOVERY.md) | Read-only graph analysis: centrality, community detection, dialectic tension/contradiction discovery, cycle detection, and orphan audits. | Derived analytical indexes, graph metrics, and discovery proposals |
+| **Graph Intelligence** | [`GRAPH-INTELLIGENCE.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/GRAPH-INTELLIGENCE.md) | Read-only graph analysis: centrality, community detection, dialectic tension/contradiction discovery, cycle detection, and orphan audits. | Derived analytical indexes, graph metrics, and discovery proposals |
+| **Discovery & Literature Engine** | [`DISCOVERY.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/DISCOVERY.md) | Governed candidate lifecycle management (`pending` $\to$ `promoted`), multi-predicate gap detection, and high-scale Swanson ABC literature discovery. | Candidate proposals (`discovery/candidates.jsonl`), audit logs, and literature bridge rankings |
 | **Structural Knowledge Graph (SKG)** | [`STRUCTURAL-GRAPH.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/STRUCTURAL-GRAPH.md) | Deterministic AST code intelligence linking source code symbols (`FILE`, `CLASS`, `FUNCTION`) directly to knowledge specifications. | Code-to-spec traceability graph ([`structural_registry.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/schemas/registry/structural_registry.yaml)) |
 | **Multi-Layer Validation Gate** | [`VALIDATION.md`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/specs/VALIDATION.md) | 3-layer deterministic compilation gate checking schema syntax, relational invariants, and epistemic policies with 50+ fail-closed error codes. | Bit-for-bit conformance gate ([`conformance_matrix.yaml`](https://github.com/skelutten/omniscient-trash-heap-spec/blob/master/conformance_matrix.yaml)) |
 
@@ -230,14 +231,43 @@ uv run trashheap graph manifest --corpus-root /home/$USER/wiki/personal --output
 
 # Analyze topology, node metrics, and derive semantic edges
 uv run trashheap graph analyze --corpus-root /home/$USER/wiki/personal --output-dir derived/graph
-
-# Scan for duplicate candidates, topological bottlenecks, and ontological gaps
-uv run trashheap discover scan --corpus-root /home/$USER/wiki/personal --discovery-dir discovery
 ```
 
 ---
 
-### 4. 🧬 Structural Knowledge Graph (SKG): Code-to-Knowledge Traceability
+### 4. 🔭 Governed Discovery & Swanson Literature-Based Discovery
+
+The Discovery engine ([`specs/DISCOVERY.md`](specs/DISCOVERY.md)) operates across both the curated local wiki and external high-scale knowledge graphs:
+
+- **Governed Local Discovery (`trashheap discover`):**
+  - **Automated Gap Scanning:** Evaluates 2-of-3 predicates ($A$: community partition, $B$: $\ge 3$ chunk co-occurrences, $C$: cosine similarity $\ge 0.80$) to surface hidden knowledge gaps without hallucination (`DISC-003`).
+  - **Ontological Gap Auditing:** Automatically identifies unresolved incidents (`unresolved_event`) and unexecuted recommendations (`unimplemented_lesson`) (`DISC-004`).
+  - **Formal Candidate Lifecycle:** Tracks candidate proposals through an immutable audit journal (`pending → reviewed → approved → promoted → expired` under 90-day TTL rules, `DISC-001`–`DISC-005`).
+- **Large-Scale Literature-Based Discovery (Swanson ABC Model):**
+  - Implements Don Swanson's classic literature discovery paradigm ($A \to B \to C$) directly over the **38.16 million node, 1.083 billion edge** biomedical graph.
+  - Computes degree-normalized mutual information across intermediate concepts to uncover latent hypotheses, drug repurposing pathways, and cross-disciplinary bridges in $< 4$ seconds.
+
+```bash
+# Scan local corpus for topological and ontological gaps
+uv run trashheap discover scan --corpus-root fixtures/canonical
+
+# List pending discovery candidates
+uv run trashheap discover list --status pending
+
+# Review and approve a candidate proposal
+uv run trashheap discover review DISC-GAP-ONTO-UNRESOLVED-ENG-INC-2026-0001 \
+  --decision approved --actor "lead-architect" --reason "Formal resolution required"
+
+# Promote approved candidate with cryptographic provenance
+uv run trashheap discover promote DISC-GAP-ONTO-UNRESOLVED-ENG-INC-2026-0001 --actor "lead-architect"
+
+# Run Swanson ABC literature discovery over 1.083B edges (Raynaud <-> Fish Oil)
+uv run trashheap discover literature --concept-a MESH_D011928 --concept-c MESH_D005395 --top-k 5
+```
+
+---
+
+### 5. 🧬 Structural Knowledge Graph (SKG): Code-to-Knowledge Traceability
 
 Most software documentation drifts away from the implementation within weeks. The Structural Knowledge Graph constructs a deterministic bridge between source code and knowledge objects:
 
@@ -256,9 +286,20 @@ Source Code (AST / Treesitter)          Canonical Knowledge Base
 - **Deterministic AST Extraction:** Machine-builds language syntax graphs from Python/TypeScript codebases.
 - **Bidirectional Traceability:** Enables answering questions like *"Which architectural requirements are affected if we alter `HybridRetriever.fuse()`?"* or *"Which unit tests verify `REQ-RRF-K60`?"*.
 
+```bash
+# Index codebase AST into structural graph (1,129 nodes, 3,726 edges)
+uv run trashheap structural index
+
+# Discover candidate bridges between code symbols and architectural notes
+uv run trashheap structural bridge scan
+
+# Calculate transitive blast radius impact of modifying a symbol/file
+uv run trashheap structural impact "repo=canonical;path=trashheap/models.py"
+```
+
 ---
 
-### 5. 🛡️ Multi-Layer Validation Gate: The Zero-Tolerance Compiler
+### 6. 🛡️ Multi-Layer Validation Gate: The Zero-Tolerance Compiler
 
 Knowledge is continuously compiled and verified through a 3-layer deterministic validation gate:
 
@@ -464,9 +505,9 @@ mywikishow PERS-DOC-MIG_DOYLE_BRUNSON_SUPER_SYSTEM_1_2CC294-0001
 | `validate` | Validate a single note within corpus context | `uv run trashheap validate <path/to/note.md>` |
 | `check-registries` | Validate all 11 YAML schemas and registries | `uv run trashheap check-registries` |
 | `staging` | Parquet/DuckDB staging status and equivalence | `uv run trashheap staging status` |
-| `structural` | AST code graph indexing and blast radius impact | `uv run trashheap structural impact --symbol HybridRetriever` |
+| `structural` | AST code graph indexing, bridging, and blast radius | `uv run trashheap structural impact "repo=canonical;path=trashheap/models.py"` |
 | `graph` | Analyze graph topology, metrics, and derived edges | `uv run trashheap graph analyze --corpus-root ~/wiki/personal` |
-| `discover` | Discover duplicates, ontological/topological gaps | `uv run trashheap discover scan --corpus-root ~/wiki/personal` |
+| `discover` | Governed discovery, gap detection, and literature search | `uv run trashheap discover literature --concept-a MESH_D011928 --concept-c MESH_D005395` |
 | `ingest` | Safe source ingestion with path-sandboxing | `uv run trashheap ingest <source-path> --profile document` |
 | `stage-lint` | Inspect and validate staging candidate proposals | `uv run trashheap stage-lint` |
 | `review` | Review candidate proposals before promotion | `uv run trashheap review list` |
@@ -477,24 +518,30 @@ mywikishow PERS-DOC-MIG_DOYLE_BRUNSON_SUPER_SYSTEM_1_2CC294-0001
 | `rebuild` | Throw away derived indexes and rebuild from Markdown | `uv run trashheap rebuild` |
 | `status` | Display system status, durability, and knowledge debt | `uv run trashheap status` |
 | `reap` | Purge expired proposals according to TTL rules | `uv run trashheap reap` |
-| `conformance` | Generate the 37-family architectural conformance matrix | `uv run trashheap conformance` |
+| `conformance` | Generate the 45-family architectural conformance matrix | `uv run trashheap conformance` |
 
 ---
 
-## 🧪 Verification & Testing
+## 🧪 Verification, Testing & Reports
 
-The entire system's integrity is guaranteed by automated test suites and validation gates:
+The entire system's integrity is guaranteed by automated test suites, validation gates, and empirical scale benchmarks:
 
 ```bash
 # Run the complete validation gate (Ruff, pytest, and check-registries)
 bash tools/check.sh
 
-# Run pytest unit and integration tests (130 passing)
+# Run pytest unit and integration tests (208 passing)
 uv run pytest -v
 
 # Run Ruff linter
 uv run ruff check
 ```
+
+### Comprehensive Technical & Test Reports:
+- **[Comprehensive Test & Conformance Report (`docs/TEST_REPORT.md`)](docs/TEST_REPORT.md):** Detailed pass rates across all 208 tests, 45 conformance families, and PubMedQA retrieval evaluations.
+- **[Examples & Discovery User Guide (`docs/DISCOVERY_AND_EXAMPLES.md`)](docs/DISCOVERY_AND_EXAMPLES.md):** Step-by-step practical recipes for note lifecycle, structural graphs, and Swanson literature discovery.
+- **[Full PubMed 40M Scale Ingestion Report (`docs/FULL_PUBMED_40M_SCALE_REPORT.md`)](docs/FULL_PUBMED_40M_SCALE_REPORT.md):** Ingestion of 1,334 XML shards, 38.16M vertices, 1.083B edges, and out-of-core CSR binary compilation.
+- **[Advanced Graph Topology & Discovery Report (`docs/PUBMED_ADVANCED_TOPOLOGY_EXPERIMENTS.md`)](docs/PUBMED_ADVANCED_TOPOLOGY_EXPERIMENTS.md):** Global top-20 citation hits, scale-free power law MLE ($\gamma=2.569$), and 4-hop CRISPR lineage tracing.
 
 ---
 
