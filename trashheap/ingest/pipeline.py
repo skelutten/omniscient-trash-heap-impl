@@ -199,7 +199,9 @@ def intake_source(
     fenced_text = fence_untrusted_content(text_content)
 
     # Step 5: Profile Validation against source_registry.yaml
-    reg_dir = ws_root / "schemas" / "registry" if (ws_root / "schemas" / "registry").exists() else None
+    reg_dir = (
+        ws_root / "schemas" / "registry" if (ws_root / "schemas" / "registry").exists() else None
+    )
     registries = load_registries(reg_dir)
     source_reg = registries.source_registry
 
@@ -394,7 +396,9 @@ def stage_lint(staging_dir: Union[str, Path]) -> StageLintReport:
                     StageLintItem(
                         evidence_unit_ref=f_path.stem,
                         source_refs=data.get("source_refs", []) if isinstance(data, dict) else [],
-                        representation_refs=data.get("representation_refs", []) if isinstance(data, dict) else [],
+                        representation_refs=data.get("representation_refs", [])
+                        if isinstance(data, dict)
+                        else [],
                         suggested_object_type="error",
                         candidate_relations=[],
                         injections_detected=[],

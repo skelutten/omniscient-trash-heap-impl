@@ -104,9 +104,7 @@ def test_promotion_requires_deterministic_linter(temp_workspace):
     create_candidate_proposal(
         candidate_id="CAND-VAL013",
         workspace_root=temp_workspace,
-        frontmatter_overrides={
-            "relations": [{"type": "RELATES_TO", "target": "ENG-MISSING-0000"}]
-        },
+        frontmatter_overrides={"relations": [{"type": "RELATES_TO", "target": "ENG-MISSING-0000"}]},
     )
     approve_candidate("CAND-VAL013", "human:reviewer", "ok", temp_workspace)
     with pytest.raises(ValidationRollbackError):

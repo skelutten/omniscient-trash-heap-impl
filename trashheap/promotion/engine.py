@@ -514,7 +514,9 @@ def promote_candidate(
             # Validate against intended canonical target location (TAX-002, E002)
             ko.path = target_file
 
-            reg_dir = ws / "schemas" / "registry" if (ws / "schemas" / "registry").exists() else None
+            reg_dir = (
+                ws / "schemas" / "registry" if (ws / "schemas" / "registry").exists() else None
+            )
             registries = load_registries(reg_dir)
             linter = Linter(registries)
             findings = []

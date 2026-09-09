@@ -40,7 +40,9 @@ def span_entailment_score(claim: str, span_text: str) -> float:
     return len(claim_tokens & span_tokens) / len(claim_tokens)
 
 
-def pre_score(claim: str, span_text: str, tau_pre_score: float = DEFAULT_TAU_PRE_SCORE) -> Dict[str, object]:
+def pre_score(
+    claim: str, span_text: str, tau_pre_score: float = DEFAULT_TAU_PRE_SCORE
+) -> Dict[str, object]:
     """Compute the span-entailment score and apply the hallucination fence."""
     score = span_entailment_score(claim, span_text)
     flagged = score < tau_pre_score

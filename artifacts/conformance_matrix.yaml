@@ -1,6 +1,6 @@
 schema_version: 1.0.0
 matrix_id: conformance_matrix
-generated_at: '2026-09-09T15:28:31.724861+00:00'
+generated_at: '2026-09-09T15:42:50.541370+00:00'
 evidence_type: generated_projection
 note: "Generated evidence per VALIDATION.md \xA710.5 and CONFORM-001. Not a normative\
   \ specification."
@@ -10,7 +10,7 @@ summary:
   implemented: 0
   unimplemented: 2
   total_invariants_tracked: 214
-  total_executable_tests: 126
+  total_executable_tests: 127
   corpus_hash: sha256:1a5cd20e297a2d8b24cea263a6a2387f7a894b4db7559dd3e8cb42f438ebc356
 families:
 - family_id: CANON

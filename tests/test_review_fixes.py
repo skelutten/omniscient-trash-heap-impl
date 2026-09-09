@@ -76,9 +76,7 @@ def test_promotion_rejects_broken_relation(temp_workspace):
     proposal = create_candidate_proposal(
         candidate_id="CAND-BROKEN",
         workspace_root=temp_workspace,
-        frontmatter_overrides={
-            "relations": [{"type": "RELATES_TO", "target": "ENG-MISSING-9999"}]
-        },
+        frontmatter_overrides={"relations": [{"type": "RELATES_TO", "target": "ENG-MISSING-9999"}]},
     )
     approve_candidate("CAND-BROKEN", "human:reviewer", "ok", temp_workspace)
 
@@ -124,7 +122,9 @@ def test_bundle_publish_interrupt_preserves_previous_bundle(tmp_path):
     output = tmp_path / "bundle"
 
     # Initial successful build.
-    build_bundle(Corpus(tmp_path / "corpus"), BundleSelector("BND-TEST", "Test"), output, registries)
+    build_bundle(
+        Corpus(tmp_path / "corpus"), BundleSelector("BND-TEST", "Test"), output, registries
+    )
     (output / "old-sentinel.txt").write_text("previous published bundle")
 
     original_rename = os.rename
@@ -250,7 +250,9 @@ def test_conformance_does_not_upgrade_substanceless_implementation(tmp_path):
     (ws / "trashheap").mkdir(parents=True)
     (ws / "trashheap" / "linter.py").write_text("# No implementation\n", encoding="utf-8")
     (ws / "tests").mkdir(parents=True)
-    (ws / "tests" / "test_linter.py").write_text("def test_negative_control():\n    assert False\n", encoding="utf-8")
+    (ws / "tests" / "test_linter.py").write_text(
+        "def test_negative_control():\n    assert False\n", encoding="utf-8"
+    )
 
     matrix = generate_conformance_matrix(ws)
     val_family = [f for f in matrix.families if f.family_id == "VAL"][0]

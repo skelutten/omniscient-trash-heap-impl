@@ -9,8 +9,14 @@ from trashheap.rcva import (
 )
 
 PASSAGES = [
-    {"source_ref": "SRC-1#L1-L3", "text": "The transformer uses multi-head self-attention for sequence modeling."},
-    {"source_ref": "SRC-2#L4-L6", "text": "Retrieval augmented generation grounds answers in cited evidence."},
+    {
+        "source_ref": "SRC-1#L1-L3",
+        "text": "The transformer uses multi-head self-attention for sequence modeling.",
+    },
+    {
+        "source_ref": "SRC-2#L4-L6",
+        "text": "Retrieval augmented generation grounds answers in cited evidence.",
+    },
 ]
 
 

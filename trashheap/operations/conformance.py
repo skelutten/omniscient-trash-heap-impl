@@ -790,7 +790,10 @@ def generate_conformance_matrix(
                     existing_generated_at = old_data.get("generated_at")
         except Exception as exc:
             import logging
-            logging.getLogger(__name__).warning("Failed to parse existing matrix at %s: %s", output_path, exc)
+
+            logging.getLogger(__name__).warning(
+                "Failed to parse existing matrix at %s: %s", output_path, exc
+            )
 
     matrix = ConformanceMatrix(
         schema_version="1.0.0",

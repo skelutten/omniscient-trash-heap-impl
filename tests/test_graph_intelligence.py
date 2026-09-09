@@ -360,3 +360,61 @@ def test_graph_and_discover_cli(tmp_path: Path):
     # 7. query --graph-enhanced
     rc = main(["query", "architecture", "--graph-enhanced", "--json"])
     assert rc == 0
+
+
+def test_literature_discovery(tmp_path: Path) -> None:
+    """Test literature discovery function and CLI error handling."""
+    from trashheap.cli import main
+    from trashheap.graph.discovery import discover_literature_bridges
+
+    # Non-existent CSR dir throws FileNotFoundError
+    with pytest.raises(FileNotFoundError):
+        discover_literature_bridges(
+            tmp_path / "nonexistent",
+            concept_a_id="MESH_D011928",
+            concept_c_id="MESH_D005395",
+        )
+
+    # CLI handles missing CSR gracefully
+    rc = main(
+        [
+            "discover",
+            "literature",
+            "--concept-a",
+            "MESH_D011928",
+            "--concept-c",
+            "MESH_D005395",
+            "--csr-dir",
+            str(tmp_path / "nonexistent"),
+        ]
+    )
+    assert rc != 0
+
+    # If full CSR cache exists in workspace, verify real discovery execution
+    csr_dir = Path(".cache/pubmed/csr_full")
+    if csr_dir.exists() and (csr_dir / "node_mapping.parquet").exists():
+        res = discover_literature_bridges(
+            csr_dir=csr_dir,
+            concept_a_id="MESH_D011928",
+            concept_c_id="MESH_D005395",
+            top_k=3,
+        )
+        assert res["concept_a"] == "MESH_D011928"
+        assert res["concept_c"] == "MESH_D005395"
+        assert len(res["top_bridges"]) <= 3
+        assert res["total_intermediate_bridges"] > 0
+
+        rc = main(
+            [
+                "discover",
+                "literature",
+                "--concept-a",
+                "MESH_D011928",
+                "--concept-c",
+                "MESH_D005395",
+                "--top-k",
+                "2",
+                "--json",
+            ]
+        )
+        assert rc == 0

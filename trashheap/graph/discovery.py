@@ -9,7 +9,7 @@ import os
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from trashheap.corpus import Corpus
 from trashheap.graph.analysis import (
@@ -672,3 +672,122 @@ class DiscoveryLifecycleManager:
         if expired_count > 0:
             self.save()
         return expired_count
+
+
+def discover_literature_bridges(
+    csr_dir: Path,
+    concept_a_id: str,
+    concept_c_id: str,
+    top_k: int = 15,
+    max_background_degree: int = 2_000_000,
+) -> Dict[str, Any]:
+    """Execute Swanson's ABC literature-based discovery over a memory-mapped CSR graph.
+
+    Given two endpoint concepts A and C (e.g. MESH_D011928 and MESH_D005395),
+    uncovers intermediate functional bridges B such that A -> B and C -> B,
+    scoring each bridge using mutual information / degree-normalized co-occurrence.
+    """
+    import collections
+
+    import duckdb
+    import numpy as np
+
+    mapping_path = csr_dir / "node_mapping.parquet"
+    indptr_path = csr_dir / "indptr.npy"
+    indices_path = csr_dir / "indices.npy"
+
+    if not mapping_path.exists():
+        raise FileNotFoundError(f"Node mapping not found at {mapping_path}")
+    if not indptr_path.exists() or not indices_path.exists():
+        raise FileNotFoundError(f"CSR binary files not found in {csr_dir}")
+
+    con = duckdb.connect()
+    nodes = dict(
+        con.execute(
+            f"""
+        SELECT node_id, node_idx
+        FROM read_parquet('{mapping_path}')
+        WHERE node_id IN ('{concept_a_id}', '{concept_c_id}')
+    """
+        ).fetchall()
+    )
+
+    if concept_a_id not in nodes:
+        raise KeyError(f"Concept '{concept_a_id}' not found in node mapping")
+    if concept_c_id not in nodes:
+        raise KeyError(f"Concept '{concept_c_id}' not found in node mapping")
+
+    idx_a = nodes[concept_a_id]
+    idx_c = nodes[concept_c_id]
+
+    indptr = np.load(indptr_path, mmap_mode="r")
+    indices = np.memmap(indices_path, dtype=np.int64, mode="r")
+
+    arts_a = indices[indptr[idx_a] : indptr[idx_a + 1]]
+    arts_c = indices[indptr[idx_c] : indptr[idx_c + 1]]
+
+    # Aggregate co-occurring MeSH descriptors for articles in A and C
+    b_counts_a: collections.Counter[int] = collections.Counter()
+    for art in arts_a:
+        nbrs = indices[indptr[art] : indptr[art + 1]]
+        mesh_nbrs = nbrs[nbrs < 30768]
+        b_counts_a.update(mesh_nbrs)
+
+    b_counts_c: collections.Counter[int] = collections.Counter()
+    for art in arts_c:
+        nbrs = indices[indptr[art] : indptr[art + 1]]
+        mesh_nbrs = nbrs[nbrs < 30768]
+        b_counts_c.update(mesh_nbrs)
+
+    shared_b = set(b_counts_a.keys()) & set(b_counts_c.keys())
+    shared_b.discard(idx_a)
+    shared_b.discard(idx_c)
+
+    deg = np.diff(indptr)
+    scores = []
+    for b in shared_b:
+        if deg[b] > max_background_degree:
+            continue
+        score = (b_counts_a[b] * b_counts_c[b]) / (deg[b] ** 0.5)
+        scores.append((score, int(b), int(b_counts_a[b]), int(b_counts_c[b]), int(deg[b])))
+
+    scores.sort(reverse=True)
+    top_scores = scores[:top_k]
+
+    if top_scores:
+        top_b_indices = [s[1] for s in top_scores]
+        id_map = dict(
+            con.execute(
+                f"""
+            SELECT node_idx, node_id
+            FROM read_parquet('{mapping_path}')
+            WHERE node_idx IN ({",".join(str(x) for x in top_b_indices)})
+        """
+            ).fetchall()
+        )
+    else:
+        id_map = {}
+
+    con.close()
+
+    bridges = [
+        {
+            "rank": rank,
+            "bridge_id": id_map.get(b_idx, f"NODE_{b_idx}"),
+            "node_idx": b_idx,
+            "score": round(score, 2),
+            "cooccurrences_with_a": ca,
+            "cooccurrences_with_c": cc,
+            "background_degree": bg_deg,
+        }
+        for rank, (score, b_idx, ca, cc, bg_deg) in enumerate(top_scores, 1)
+    ]
+
+    return {
+        "concept_a": concept_a_id,
+        "concept_c": concept_c_id,
+        "articles_a": int(len(arts_a)),
+        "articles_c": int(len(arts_c)),
+        "total_intermediate_bridges": len(shared_b),
+        "top_bridges": bridges,
+    }

@@ -250,9 +250,7 @@ class DPCPJournal:
                     if not target_path.exists():
                         all_present = False
                         break
-                    actual_hash = compute_content_sha256(
-                        target_path.read_text(encoding="utf-8")
-                    )
+                    actual_hash = compute_content_sha256(target_path.read_text(encoding="utf-8"))
                     if actual_hash != expected_hash:
                         all_present = False
                         break

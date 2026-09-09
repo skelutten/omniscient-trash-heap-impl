@@ -130,7 +130,9 @@ class PubmedBatchIngestor:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.year = year
         self.download_workers = max(1, download_workers)
-        self.parse_workers = parse_workers if parse_workers is not None else min(os.cpu_count() or 1, 4)
+        self.parse_workers = (
+            parse_workers if parse_workers is not None else min(os.cpu_count() or 1, 4)
+        )
 
     def shard_filename(self, shard_num: int) -> str:
         return f"pubmed{self.year:02d}n{shard_num:04d}.xml.gz"

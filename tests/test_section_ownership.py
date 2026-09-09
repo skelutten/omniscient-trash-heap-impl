@@ -117,4 +117,3 @@ My notes.
     regenerated = regenerate_page(existing_page, updated_sections, allow_conflict_overwrite=True)
     assert "New compiler summary generated from data." in regenerated
     assert "My notes." in regenerated
-

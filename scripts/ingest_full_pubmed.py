@@ -219,9 +219,7 @@ def compile_csr_from_parquet(
 
     # Step 4: Indices.npy memmap streaming
     if not indices_npy.exists() or indices_npy.stat().st_size != total_edges * 8:
-        log_func(
-            "DuckDB: Streaming indices binary array directly to disk via memory mapping..."
-        )
+        log_func("DuckDB: Streaming indices binary array directly to disk via memory mapping...")
         indices = np.memmap(
             indices_npy,
             dtype=np.int64,

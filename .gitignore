@@ -39,3 +39,5 @@ tools/cat-all.sh
 derived/
 discovery/
 .cache/
+.trashheap/
+

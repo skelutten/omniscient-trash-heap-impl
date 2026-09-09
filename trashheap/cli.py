@@ -676,6 +676,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     d_sweep.add_argument("--json", action="store_true", help="Emit JSON output")
 
+    d_literature = discover_subs.add_parser(
+        "literature", help="Run Swanson's ABC literature-based discovery over a large graph CSR"
+    )
+    d_literature.add_argument(
+        "--concept-a", type=str, required=True, help="First concept ID (e.g. MESH_D011928)"
+    )
+    d_literature.add_argument(
+        "--concept-c", type=str, required=True, help="Second concept ID (e.g. MESH_D005395)"
+    )
+    d_literature.add_argument(
+        "--csr-dir", type=str, default=".cache/pubmed/csr_full", help="CSR directory"
+    )
+    d_literature.add_argument(
+        "--top-k", type=int, default=15, help="Number of top bridges to return (default: 15)"
+    )
+    d_literature.add_argument("--json", action="store_true", help="Emit JSON output")
+
     # Structural commands (specs/STRUCTURAL-GRAPH.md, SG-001..SG-020)
     structural_parser = subparsers.add_parser(
         "structural", help="Structural Knowledge Graph commands (SG-001..SG-020)"
@@ -1741,8 +1758,12 @@ def handle_benchmark(args: argparse.Namespace) -> int:
             print(json.dumps(s_report.to_dict(), indent=2))
         else:
             print(f"=== PubMed Baseline Batch Ingestion Report ({num_shards} Shards) ===")
-            print(f"Shard Range: {shard_start}..{shard_start + num_shards - 1} ({len(shard_paths)} shards)")
-            print(f"Workers: {s_report.download_workers} download threads, {s_report.parse_workers} CPU parse processes")
+            print(
+                f"Shard Range: {shard_start}..{shard_start + num_shards - 1} ({len(shard_paths)} shards)"
+            )
+            print(
+                f"Workers: {s_report.download_workers} download threads, {s_report.parse_workers} CPU parse processes"
+            )
             print(f"Total Articles Processed: {s_report.total_articles:,}")
             print(
                 f"Total MeSH Headings: {s_report.total_mesh_headings:,} ({s_report.unique_mesh_concepts:,} unique)"
@@ -1923,8 +1944,42 @@ def handle_graph(args: argparse.Namespace) -> int:
 
 
 def handle_discover(args: argparse.Namespace) -> int:
-    """Handle discovery commands (scan, list, review, promote, sweep)."""
+    """Handle discovery commands (scan, list, review, promote, sweep, literature)."""
     action = args.discover_action
+    if action == "literature":
+        from trashheap.graph.discovery import discover_literature_bridges
+
+        csr_dir = Path(args.csr_dir)
+        if not csr_dir.exists():
+            print(f"Error: CSR directory '{csr_dir}' not found", file=sys.stderr)
+            return ExitCode.NOT_FOUND
+        try:
+            res = discover_literature_bridges(
+                csr_dir=csr_dir,
+                concept_a_id=args.concept_a,
+                concept_c_id=args.concept_c,
+                top_k=args.top_k,
+            )
+            if args.json:
+                print(json.dumps(res, indent=2))
+            else:
+                print(f"=== Swanson ABC Discovery ({res['concept_a']} <-> {res['concept_c']}) ===")
+                print(f"  Articles tagged with {res['concept_a']}: {res['articles_a']:,}")
+                print(f"  Articles tagged with {res['concept_c']}: {res['articles_c']:,}")
+                print(f"  Total intermediate bridges found: {res['total_intermediate_bridges']:,}")
+                print(f"  Top {len(res['top_bridges'])} intermediate functional bridges:")
+                for b in res["top_bridges"]:
+                    print(
+                        f"    #{b['rank']:2d} | Score: {b['score']:8.2f} | {b['bridge_id']:16s} (co-A: {b['cooccurrences_with_a']:4d}, co-C: {b['cooccurrences_with_c']:4d}, bg: {b['background_degree']:7,d})"
+                    )
+            return ExitCode.SUCCESS
+        except KeyError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return ExitCode.NOT_FOUND
+        except Exception as e:
+            print(f"Discovery error: {e}", file=sys.stderr)
+            return ExitCode.INTERNAL_ERROR
+
     disc_dir = Path(args.discovery_dir)
     ws_root = Path(getattr(args, "workspace_root", "."))
     corpus_root = (

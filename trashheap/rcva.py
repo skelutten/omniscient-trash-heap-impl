@@ -59,7 +59,9 @@ def constrain_passages(
     return out
 
 
-def verify_claim(claim: str, passages: List[Dict[str, Any]], min_entailment: float = 0.5) -> Dict[str, Any]:
+def verify_claim(
+    claim: str, passages: List[Dict[str, Any]], min_entailment: float = 0.5
+) -> Dict[str, Any]:
     """Verify an atomic claim against every cited passage (Phase 3)."""
     best = 0.0
     best_ref: Optional[str] = None
@@ -95,15 +97,15 @@ def rcva_answer(
     bounded = constrain_passages(passages, token_budget=token_budget)
     verification = verify_claim(claim, bounded, min_entailment=min_entailment)
 
-    confidence_passed = (
-        calibrated_confidence is None or calibrated_confidence >= tau_abstain
-    )
+    confidence_passed = calibrated_confidence is None or calibrated_confidence >= tau_abstain
 
     if not verification["passed"] or not confidence_passed:
         return {
             "decision": EPISTEMIC_ABSTENTION,
             "reason": (
-                "verification failed" if not verification["passed"] else "confidence below abstain threshold"
+                "verification failed"
+                if not verification["passed"]
+                else "confidence below abstain threshold"
             ),
             "phases": {
                 "retrieve": {"candidate_count": len(passages)},

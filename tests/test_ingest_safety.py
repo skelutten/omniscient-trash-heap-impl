@@ -367,4 +367,3 @@ def test_k4_corrupt_manifest_fail_closed(temp_workspace):
 
     backups = list((temp_workspace / "raw" / "manifests").glob("capture_manifest.corrupt.*.json"))
     assert len(backups) >= 1
-

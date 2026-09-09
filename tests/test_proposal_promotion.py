@@ -337,4 +337,3 @@ def test_k3_promotion_path_traversal_rejection(temp_workspace):
             proposed_content="---\nid: ENG-TRV-0002\n---\nContent",
             proposal_hash="sha256:" + "b" * 64,
         )
-

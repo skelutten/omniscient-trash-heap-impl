@@ -143,4 +143,3 @@ class CandidateProposal(BaseModel):
         if p.is_absolute() or ".." in p.parts:
             raise ValueError(f"target_path must be relative and cannot contain traversal '..': {v}")
         return v
-

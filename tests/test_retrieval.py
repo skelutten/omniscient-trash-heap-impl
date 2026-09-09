@@ -210,4 +210,3 @@ Claim content for {nid}
     losers1 = [s["node_id"] for s in bundle1["suppressed_nodes"]]
     losers2 = [s["node_id"] for s in bundle2["suppressed_nodes"]]
     assert losers1 == losers2 == ["ENG-CLM-TEST-0002", "ENG-CLM-TEST-0003", "ENG-CLM-TEST-0004"]
-

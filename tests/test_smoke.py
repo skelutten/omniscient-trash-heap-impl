@@ -44,4 +44,3 @@ def test_cli_bogus_flag_exit_code():
     code = main(["--bogus-flag"])
     assert code == ExitCode.CONFIG_OR_ARG_ERROR
     assert code == 3
-
