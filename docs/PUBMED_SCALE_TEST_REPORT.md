@@ -182,6 +182,10 @@ trashheap benchmark --pubmed-shards 20 --shard-start 1 --download-workers 4 --pa
 
 ## 8. Benchmark Suite 6: Full PubMed Knowledge Graph (40 Million Articles) Extrapolation Model
 
+> [!NOTE]
+> **Empirical Execution Update (September 9, 2026):**
+> This extrapolation model has been **empirically executed and verified across all 1,334 baseline shards** (38,130,067 articles, 1,083,057,976 edges). See [`docs/FULL_PUBMED_40M_SCALE_REPORT.md`](file:///home/daniel6651/omniscient-trash-heap-impl/docs/FULL_PUBMED_40M_SCALE_REPORT.md) (`REP-SCALE-002`) for the full telemetry, crash-recovery, and out-of-core CSR compilation benchmarks.
+
 Based on our empirical multi-worker throughput (**2,167 – 2,508 articles/sec** across 4 CPU cores, ~20.8 edges per article/MeSH association, and 8 bytes per CSR index pointer and index entry), the architectural requirements for ingesting and serving the **entire PubMed collection** (all 1,334 baseline shards, ~38–40 million articles) are:
 
 ### Hardware & Resource Extrapolation for Full PubMed (40M Docs)
