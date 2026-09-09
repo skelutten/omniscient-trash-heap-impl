@@ -273,6 +273,18 @@ def build_parser() -> argparse.ArgumentParser:
     show_parser.add_argument(
         "--corpus-root", type=str, default="fixtures/canonical", help="Corpus root directory"
     )
+    show_parser.add_argument(
+        "--section",
+        type=str,
+        default=None,
+        help="Extract only the named H2 section using the Document Card (RET-010)",
+    )
+    show_parser.add_argument(
+        "--lines",
+        type=str,
+        default=None,
+        help="Extract only the given 1-indexed line range 'N' or 'N-M' (RET-010)",
+    )
 
     # 6. rebuild
     rebuild_parser = subparsers.add_parser(
@@ -1123,33 +1135,69 @@ def handle_query(args: argparse.Namespace) -> int:
 
 
 def handle_show(args: argparse.Namespace) -> int:
-    """Handle show command displaying full Knowledge Object content."""
+    """Handle show command displaying full Knowledge Object content.
+
+    Supports section-targeted and line-bounded extraction (RET-010) via
+    ``--section <heading>`` and ``--lines <start>-<end>``.
+    """
+    from trashheap.section_map import extract_lines, extract_section, parse_line_range
+
     target = args.target
     p = Path(target)
+    body: Optional[str] = None
     if p.exists() and p.is_file():
-        print(p.read_text(encoding="utf-8"))
+        body = p.read_text(encoding="utf-8")
+    else:
+        corpus_root = Path(args.corpus_root)
+        if not corpus_root.exists():
+            print(f"Corpus root '{corpus_root}' not found", file=sys.stderr)
+            return ExitCode.NOT_FOUND
+
+        corpus = load_corpus(corpus_root)
+        found = None
+        for ko in corpus.objects:
+            if ko.id == target or (ko.path and ko.path.stem == target):
+                found = ko
+                break
+
+        if not found:
+            print(f"Object '{target}' not found in corpus '{corpus_root}'", file=sys.stderr)
+            return ExitCode.NOT_FOUND
+
+        if found.path and found.path.exists():
+            body = found.path.read_text(encoding="utf-8")
+        else:
+            body = found.raw_body
+
+    # Apply section-targeted / line-bounded extraction (RET-010).
+    if args.section is not None:
+        section = extract_section(body, args.section)
+        if section is None:
+            print(
+                f"Section '{args.section}' not found in '{target}'",
+                file=sys.stderr,
+            )
+            return ExitCode.NOT_FOUND
+        print(section)
         return ExitCode.SUCCESS
 
-    corpus_root = Path(args.corpus_root)
-    if not corpus_root.exists():
-        print(f"Corpus root '{corpus_root}' not found", file=sys.stderr)
-        return ExitCode.NOT_FOUND
+    if args.lines is not None:
+        parsed = parse_line_range(args.lines)
+        if parsed is None:
+            print(f"Invalid --lines range '{args.lines}'", file=sys.stderr)
+            return ExitCode.CONFIG_OR_ARG_ERROR
+        start, end = parsed
+        sliced = extract_lines(body, start, end)
+        if sliced is None:
+            print(
+                f"Line range '{args.lines}' out of bounds for '{target}'",
+                file=sys.stderr,
+            )
+            return ExitCode.NOT_FOUND
+        print(sliced)
+        return ExitCode.SUCCESS
 
-    corpus = load_corpus(corpus_root)
-    found = None
-    for ko in corpus.objects:
-        if ko.id == target or (ko.path and ko.path.stem == target):
-            found = ko
-            break
-
-    if not found:
-        print(f"Object '{target}' not found in corpus '{corpus_root}'", file=sys.stderr)
-        return ExitCode.NOT_FOUND
-
-    if found.path and found.path.exists():
-        print(found.path.read_text(encoding="utf-8"))
-    else:
-        print(found.raw_body)
+    print(body)
     return ExitCode.SUCCESS
 
 

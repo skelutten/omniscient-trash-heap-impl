@@ -1,16 +1,16 @@
 schema_version: 1.0.0
 matrix_id: conformance_matrix
-generated_at: '2026-09-09T15:13:38.554746+00:00'
+generated_at: '2026-09-09T15:28:31.724861+00:00'
 evidence_type: generated_projection
 note: "Generated evidence per VALIDATION.md \xA710.5 and CONFORM-001. Not a normative\
   \ specification."
 summary:
   total_families: 45
-  conformance_tested: 38
+  conformance_tested: 43
   implemented: 0
-  unimplemented: 7
+  unimplemented: 2
   total_invariants_tracked: 214
-  total_executable_tests: 87
+  total_executable_tests: 126
   corpus_hash: sha256:1a5cd20e297a2d8b24cea263a6a2387f7a894b4db7559dd3e8cb42f438ebc356
 families:
 - family_id: CANON
@@ -542,29 +542,30 @@ families:
 - family_id: RET-RCVA
   owner: specs/RETRIEVAL.md
   invariant_id: RET-010..RET-011
-  implementation: UNIMPLEMENTED
-  test: planned
-  verification: planned
-  status: UNIMPLEMENTED
+  implementation: trashheap/section_map.py, trashheap/rcva.py, trashheap/cli.py
+  test: tests/test_section_map.py, tests/test_rcva.py, tests/test_section_retrieval.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
   invariants:
   - RET-010
   - RET-011
 - family_id: SCHEMA-CARD
   owner: specs/SCHEMA.md
   invariant_id: SCHEMA-005
-  implementation: UNIMPLEMENTED
-  test: planned
-  verification: planned
-  status: UNIMPLEMENTED
+  implementation: trashheap/section_map.py
+  test: tests/test_section_map.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
   invariants:
   - SCHEMA-005
 - family_id: VAL-EXT
   owner: specs/VALIDATION.md
   invariant_id: VAL-011..VAL-014
-  implementation: UNIMPLEMENTED
-  test: planned
-  verification: planned
-  status: UNIMPLEMENTED
+  implementation: trashheap/link_mirror.py, trashheap/mermaid.py, trashheap/runaway.py,
+    trashheap/promotion/engine.py
+  test: tests/test_val_extensions.py, tests/test_runaway.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
   invariants:
   - VAL-011
   - VAL-012
@@ -573,18 +574,18 @@ families:
 - family_id: REVIEW-MOD
   owner: specs/REVIEW-PROMOTION.md
   invariant_id: REVIEW-011
-  implementation: UNIMPLEMENTED
-  test: planned
-  verification: planned
-  status: UNIMPLEMENTED
+  implementation: trashheap/promotion/pre_score.py
+  test: tests/test_moderator_prescore.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
   invariants:
   - REVIEW-011
 - family_id: DISC-FENCE
   owner: specs/DISCOVERY.md
   invariant_id: DISC-009
-  implementation: UNIMPLEMENTED
-  test: planned
-  verification: planned
-  status: UNIMPLEMENTED
+  implementation: trashheap/instruction_fence.py
+  test: tests/test_instruction_fence.py
+  verification: tools/check.sh
+  status: CONFORMANCE_TESTED
   invariants:
   - DISC-009

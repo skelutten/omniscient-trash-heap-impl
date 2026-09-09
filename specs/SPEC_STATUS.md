@@ -124,8 +124,8 @@ Conformance maturity:  verified by automated test suite, check.sh gate, and conf
 | `DATA_MODEL.md` | `LOCKED` | `CONFORMANCE_TESTED` | Knowledge Object types, IDs, facets, scope and domain (`trashheap/models.py`, `trashheap/linter.py`) |
 | `ONTOLOGY.md` | `LOCKED` | `CONFORMANCE_TESTED` | Relations, graph invariants and relation registry ownership (`trashheap/linter.py`, `trashheap/retrieval.py`) |
 | `EPISTEMOLOGY.md` | `LOCKED` | `CONFORMANCE_TESTED` | Epistemic dimensions, provenance and governance boundary (`trashheap/linter.py`) |
-| `RETRIEVAL.md` | `LOCKED` | `PARTIAL` | Baseline hybrid retrieval algorithms and evidence bundles (`trashheap/retrieval.py`); RET-010/011 (section-targeted retrieval + RCVA) pending |
-| `VALIDATION.md` | `LOCKED` | `PARTIAL` | Validation layers, error allocation and conformance rules (`trashheap/linter.py`, `trashheap/operations/conformance.py`); VAL-011..014 pending |
+| `RETRIEVAL.md` | `LOCKED` | `CONFORMANCE_TESTED` | Baseline hybrid retrieval algorithms and evidence bundles (`trashheap/retrieval.py`); section-targeted retrieval + RCVA (`trashheap/section_map.py`, `trashheap/rcva.py`) |
+| `VALIDATION.md` | `LOCKED` | `CONFORMANCE_TESTED` | Validation layers, error allocation and conformance rules (`trashheap/linter.py`, `trashheap/operations/conformance.py`); VAL-011..014 (`trashheap/link_mirror.py`, `trashheap/mermaid.py`, `trashheap/runaway.py`) |
 | `SCHEMA.md` | `LOCKED` reader-facing overview | `NOT_APPLICABLE` | Reader-facing schema and templates; normative ownership is delegated where stated |
 
 ### 4.2 Extensions and operational specifications
@@ -134,7 +134,7 @@ Conformance maturity:  verified by automated test suite, check.sh gate, and conf
 |---|---|---|---|
 | `GRAPH-INTELLIGENCE.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Graph intelligence delta; error range `E201–E299` (`trashheap/graph/`, `tests/test_graph_intelligence.py`) |
 | `GRAPH-RETRIEVAL.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Opt-in graph-enhanced retrieval (`trashheap/graph/retrieval.py`, `tests/test_graph_intelligence.py`) |
-| `DISCOVERY.md` | `PROPOSED` | `PARTIAL` | Candidate discovery, clustering and promotion boundary (`trashheap/graph/discovery.py`, `tests/test_graph_intelligence.py`); DISC-009 (delimited instruction fence) pending |
+| `DISCOVERY.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Candidate discovery, clustering and promotion boundary (`trashheap/graph/discovery.py`, `tests/test_graph_intelligence.py`); DISC-009 (`trashheap/instruction_fence.py`) |
 | `STRUCTURAL-GRAPH.md` | `PROPOSED` | `CONFORMANCE_TESTED` | Structural graph extension; error range `E301–E399` (`trashheap/structural/`, `tests/test_structural_graph.py`) |
 | `OKF-INTEROP.md` | `PROPOSED` | `CONFORMANCE_TESTED` | OKF adapter and bundle contracts; error range `E401–E499` (`trashheap/bundle/`, `tests/test_bundles_and_okf.py`) |
 | `INGEST.md` | `DRAFT` | `CONFORMANCE_TESTED` | Trajectory ingestion specialization; error range `E101–E199` (`trashheap/ingest/`) |
@@ -147,7 +147,7 @@ Conformance maturity:  verified by automated test suite, check.sh gate, and conf
 | `VISUALIZE.md` | `PROPOSED` | `UNIMPLEMENTED` | Offline interactive graph visualization; error range `E250–E269` (allocated `E250–E259`) (`plans/94-OPT-IN-GRAPH-VISUALIZATION.md`) |
 | `RELATION-EXTRACTION.md` | `PROPOSED` | `UNIMPLEMENTED` | Automated closed-ontology relation extraction & entity linking; error range `E150–E169` (allocated `E150–E162`) (`plans/95-RELATION-EXTRACTION-AND-LINKING.md`) |
 | `TOOL-INTEGRATION.md` | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan |
-| `REVIEW-PROMOTION.md` | `DRAFT` | `PARTIAL` | Review decisions, deterministic promotion, provenance and recovery contract (`trashheap/promotion/`); REVIEW-011 (moderator pre-scoring) pending |
+| `REVIEW-PROMOTION.md` | `DRAFT` | `CONFORMANCE_TESTED` | Review decisions, deterministic promotion, provenance and recovery contract (`trashheap/promotion/`); REVIEW-011 (`trashheap/promotion/pre_score.py`) |
 
 ### 4.3 Registries and policy sources
 
