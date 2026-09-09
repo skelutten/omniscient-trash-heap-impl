@@ -97,6 +97,24 @@ invariant_families:
     owner: specs/VALIDATION.md
   - family_id: G
     owner: specs/INGEST-PIPELINE.md
+  # --- families added 2026-09-09 (pending invariants, implementation in progress) ---
+  # RET-010/011 (section-targeted retrieval + RCVA), SCHEMA-005 (Document Card),
+  # VAL-011..014 (link mirroring, mermaid degradation, non-neural verifier,
+  # runaway-loop fence), REVIEW-011 (moderator pre-scoring) and DISC-009
+  # (delimited instruction fence) were codified 2026-09-08 and are tracked as
+  # their own families until runtime implementation + tests land. This keeps the
+  # conformance projection from over-reporting families whose newer invariants
+  # are not yet implemented (VALIDATION.md §10.5, CONFORM-001).
+  - family_id: RET-RCVA
+    owner: specs/RETRIEVAL.md
+  - family_id: SCHEMA-CARD
+    owner: specs/SCHEMA.md
+  - family_id: VAL-EXT
+    owner: specs/VALIDATION.md
+  - family_id: REVIEW-MOD
+    owner: specs/REVIEW-PROMOTION.md
+  - family_id: DISC-FENCE
+    owner: specs/DISCOVERY.md
 
 validation:
   duplicate_family_owners: error

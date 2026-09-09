@@ -247,7 +247,7 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "DISC": {
         "owner": "specs/DISCOVERY.md",
-        "invariants": ["DISC-001", "DISC-002", "DISC-003", "DISC-004", "DISC-005", "DISC-009"],
+        "invariants": ["DISC-001", "DISC-002", "DISC-003", "DISC-004", "DISC-005"],
         "implementation": "trashheap/graph/discovery.py, trashheap/graph/analysis.py",
         "test": "tests/test_graph_intelligence.py",
         "verification": "tools/check.sh",
@@ -351,7 +351,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
             "REVIEW-008",
             "REVIEW-009",
             "REVIEW-010",
-            "REVIEW-011",
         ],
         "implementation": "trashheap/promotion/engine.py, trashheap/promotion/models.py",
         "test": "tests/test_proposal_promotion.py",
@@ -462,8 +461,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
             "RET-007",
             "RET-008",
             "RET-009",
-            "RET-010",
-            "RET-011",
         ],
         "implementation": "trashheap/retrieval.py, trashheap/vector/",
         "test": "tests/test_retrieval.py, tests/test_vector_retrieval.py",
@@ -496,7 +493,7 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
     },
     "VAL": {
         "owner": "specs/VALIDATION.md",
-        "invariants": ["VAL-001", "VAL-011", "VAL-012", "VAL-013", "VAL-014"],
+        "invariants": ["VAL-001"],
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
@@ -525,6 +522,50 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "test": "tests/test_ingest_safety.py",
         "verification": "tools/check.sh",
         "status": "CONFORMANCE_TESTED",
+    },
+    # --- families added 2026-09-09: pending invariants (implementation in progress) ---
+    # These were codified 2026-09-08 (RET-010/011, SCHEMA-005, VAL-011..014,
+    # REVIEW-011, DISC-009) and are tracked separately so the projection does not
+    # over-report them as CONFORMANCE_TESTED before runtime + tests land.
+    "RET-RCVA": {
+        "owner": "specs/RETRIEVAL.md",
+        "invariants": ["RET-010", "RET-011"],
+        "implementation": "UNIMPLEMENTED",
+        "test": "planned",
+        "verification": "planned",
+        "status": "UNIMPLEMENTED",
+    },
+    "SCHEMA-CARD": {
+        "owner": "specs/SCHEMA.md",
+        "invariants": ["SCHEMA-005"],
+        "implementation": "UNIMPLEMENTED",
+        "test": "planned",
+        "verification": "planned",
+        "status": "UNIMPLEMENTED",
+    },
+    "VAL-EXT": {
+        "owner": "specs/VALIDATION.md",
+        "invariants": ["VAL-011", "VAL-012", "VAL-013", "VAL-014"],
+        "implementation": "UNIMPLEMENTED",
+        "test": "planned",
+        "verification": "planned",
+        "status": "UNIMPLEMENTED",
+    },
+    "REVIEW-MOD": {
+        "owner": "specs/REVIEW-PROMOTION.md",
+        "invariants": ["REVIEW-011"],
+        "implementation": "UNIMPLEMENTED",
+        "test": "planned",
+        "verification": "planned",
+        "status": "UNIMPLEMENTED",
+    },
+    "DISC-FENCE": {
+        "owner": "specs/DISCOVERY.md",
+        "invariants": ["DISC-009"],
+        "implementation": "UNIMPLEMENTED",
+        "test": "planned",
+        "verification": "planned",
+        "status": "UNIMPLEMENTED",
     },
 }
 
