@@ -144,3 +144,57 @@ def test_pubmed_ingest_adapter_staging():
         assert res.source_id is not None
         assert res.evidence_unit_path.exists()
         assert res.capture_result.content_path.exists()
+
+
+def test_et_fallback_rejects_internal_entity_bomb(monkeypatch):
+    """Without lxml, internal <!ENTITY declarations must be rejected fail-closed."""
+    import sys
+
+    import pytest
+
+    from trashheap.ingest.exceptions import QuarantineError
+    from trashheap.operations.pubmed import stream_pubmed_xml
+
+    monkeypatch.setitem(sys.modules, "lxml", None)
+    monkeypatch.setitem(sys.modules, "lxml.etree", None)
+
+    bomb = (
+        b'<?xml version="1.0"?>'
+        b'<!DOCTYPE PubmedArticleSet ['
+        b'<!ENTITY a "aaaaaaaaaa">'
+        b'<!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">'
+        b']>'
+        b"<PubmedArticleSet></PubmedArticleSet>"
+    )
+    with pytest.raises(QuarantineError):
+        list(stream_pubmed_xml(bomb))
+
+
+def test_et_fallback_accepts_legitimate_doctype(monkeypatch):
+    """The stdlib fallback must still parse real PubMed XML (DOCTYPE PUBLIC prologue)."""
+    import sys
+
+    from trashheap.operations.pubmed import stream_pubmed_xml
+
+    monkeypatch.setitem(sys.modules, "lxml", None)
+    monkeypatch.setitem(sys.modules, "lxml.etree", None)
+
+    xml_bytes = (
+        b'<?xml version="1.0"?>\n'
+        b'<!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2024//EN"'
+        b' "https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_240101.dtd">\n'
+        b"<PubmedArticleSet>\n"
+        b"  <PubmedArticle>\n"
+        b"    <MedlineCitation Status=\"MEDLINE\" Owner=\"NLM\">\n"
+        b"      <PMID Version=\"1\">42</PMID>\n"
+        b"      <Article PubModel=\"Print\">\n"
+        b"        <ArticleTitle>Test title</ArticleTitle>\n"
+        b"        <Abstract><AbstractText>Test abstract.</AbstractText></Abstract>\n"
+        b"      </Article>\n"
+        b"    </MedlineCitation>\n"
+        b"  </PubmedArticle>\n"
+        b"</PubmedArticleSet>\n"
+    )
+    records = list(stream_pubmed_xml(xml_bytes))
+    assert len(records) == 1
+    assert records[0].pmid == 42

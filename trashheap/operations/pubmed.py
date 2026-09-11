@@ -95,18 +95,20 @@ def stream_pubmed_xml(
                 load_dtd=False,
             )
         else:
-            # The stdlib ElementTree parser cannot disable entity resolution, so a
-            # DTD/ENTITY declaration is an unmitigated billion-laughs / XXE risk.
-            # Pre-scan the first 64KB and reject fail-closed (INGEST-ADAPTERS.md §3.1).
+            # The stdlib ElementTree parser never fetches external DTDs (expat
+            # has no external-entity handler), so a plain <!DOCTYPE ... SYSTEM/PUBLIC>
+            # prologue — which every legitimate NLM PubMed release carries — is
+            # safe. Internal <!ENTITY declarations ARE the billion-laughs vector
+            # (expat expands them), so they are rejected fail-closed
+            # (INGEST-ADAPTERS.md §3.1).
             head = fh.read(65536)
             fh.seek(0)
-            head_lower = head.lower()
-            if b"<!doctype" in head_lower or b"<!entity" in head_lower:
+            if b"<!entity" in head.lower():
                 raise QuarantineError(
-                    "DTD or entity declaration detected in XML source; the stdlib "
-                    "ElementTree fallback cannot disable entity resolution, so the "
-                    "source is rejected fail-closed.",
-                    reason="dtd_entity_forbidden",
+                    "Internal entity declaration detected in XML source; the stdlib "
+                    "ElementTree fallback cannot disable entity expansion, so the "
+                    "source is rejected fail-closed (billion-laughs defense).",
+                    reason="entity_declaration_forbidden",
                 )
             context = etree.iterparse(fh, events=("end",))
         count = 0
