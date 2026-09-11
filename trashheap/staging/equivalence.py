@@ -1,7 +1,7 @@
 """Dual-backend equivalence checks and synchronization (plans/93-OPT-IN-PARQUET-STAGING.md)."""
 
 import json
-from typing import Optional
+from typing import Any, Optional
 
 from trashheap.promotion.models import CandidateProposal
 from trashheap.staging.baseline import BaselineStagingBackend
@@ -9,9 +9,23 @@ from trashheap.staging.models import (
     EquivalenceDiff,
     EquivalenceReport,
     ParquetProposalRecord,
-    current_iso_timestamp,
 )
 from trashheap.staging.parquet import ParquetStagingBackend
+from trashheap.timeutil import current_iso_timestamp
+
+
+def _as_confidence(value: Any, default: float) -> float:
+    """Coerce a frontmatter confidence value to float.
+
+    Explicit ``None`` (``confidence:`` with no value in YAML) and other
+    non-numeric garbage fall back to ``default`` instead of raising TypeError.
+    """
+    if value is None or isinstance(value, bool):
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def sync_baseline_to_parquet(
@@ -27,6 +41,7 @@ def sync_baseline_to_parquet(
         candidate = CandidateProposal.model_validate(p_dict)
         fm = candidate.proposed_frontmatter or {}
         scope = fm.get("scope", "ambiguous")
+        confidence = _as_confidence(fm.get("confidence"), 0.9)
 
         # Scope-conditioned root object (E104)
         incident_json: Optional[str] = None
@@ -44,7 +59,7 @@ def sync_baseline_to_parquet(
             ingestion_id=f"ING-{candidate.candidate_id}",
             schema_version="0.5.2",
             inferred_scope=scope,
-            scope_confidence=float(fm.get("confidence", 0.9)),
+            scope_confidence=confidence,
             scope_method="trajectory_observed",
             scope_status="inferred",
             cross_scope=False,
@@ -65,8 +80,8 @@ def sync_baseline_to_parquet(
             evidence_bundle="{}",
             incident=incident_json,
             observation=observation_json,
-            model_confidence=float(fm.get("confidence", 0.9)),
-            quality_score=float(fm.get("confidence", 0.9)),
+            model_confidence=confidence,
+            quality_score=confidence,
             status=candidate.state,
             created_at=candidate.created_at,
             input_sha256=candidate.proposal_hash,

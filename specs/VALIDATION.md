@@ -112,7 +112,7 @@ cost by five.
 | **E085** | UnknownSourceTaxonomyRootError | Root element of `source_taxonomy` not found in `source_registry.yaml` |
 | **E086** | UnknownSourceTaxonomyChildError | Child element of `source_taxonomy` not found under its root in `source_registry.yaml` |
 
-#### WARNING Codes (W001-W015)
+#### WARNING Codes (W001-W017)
 
 | Warning code | Linter class | Triggering condition |
 |---|---|---|
@@ -130,14 +130,16 @@ cost by five.
 | **W012** | FutureLastModifiedWarning | `last_modified` lies in the future |
 | **W013** | UnverifiedChangesWarning | `last_modified` is later than `last_verified`: content changed without re-confirmation |
 | **W014** | SectionOwnershipViolationWarning | Static linter detected unrecognized template heading or multiple `## Notes` sections during read-only pass (OWN-001..003) |
-| **W015** | HighDegreeWarning | Outbound link count exceeds threshold ($k > 20$) on a single node (GRAPH-004) |
+| **W015** | HighDegreeWarning | Outbound link count exceeds threshold ($k > 20$) on a single node (GRAPH-004). Promotion-blocking: DPCP rejects candidates violating the cap |
+| **W016** | LinkMirrorWarning | A frontmatter relation target is not mirrored as a Markdown/wikilink in body prose (VAL-011, the Redundancy Rule) |
+| **W017** | MermaidSyntaxWarning | A ```mermaid block in body prose fails deterministic syntax validation (VAL-012); degrade in place to a ```text fence with the LINT_FAILURE marker |
 
 ---
 
 ### 10.3 Error Code Allocation (Normative Registry)
 
 The base linter (`linter.py`) owns the range `E000`–`E052`, registry validation owns
-`E080`–`E086`, and the base warning framework owns `W001`–`W015`. Every
+`E080`–`E086`, and the base warning framework owns `W001`–`W017`. Every
 additive pipeline SHALL implement its errors in its own validator/pipeline
 namespace and SHALL NOT mix them into the base linter's error code contract.
 
@@ -153,8 +155,8 @@ namespace and SHALL NOT mix them into the base linter's error code contract.
 | `E250`–`E269` | Interactive Graph Visualization | `VISUALIZE.md` §2 | `E250`–`E259` |
 | `E301`–`E399` | Structural Knowledge Graph | `STRUCTURAL-GRAPH.md` §15.6 | — (none in v0.1.0) |
 | `E401`–`E499` | OKF interoperability adapter | `OKF-INTEROP.md` §16.8 | — (none in v0.1.0) |
-| `W001`–`W015` | Base linter | `VALIDATION.md` §10.2 | `W001`–`W015` (all) |
-| `W016`–`W099` | Reserved for extensions | — | — |
+| `W001`–`W017` | Base linter | `VALIDATION.md` §10.2 | `W001`–`W017` (all) |
+| `W018`–`W099` | Reserved for extensions | — | — |
 
 **Allocation invariants:**
 
@@ -165,7 +167,7 @@ namespace and SHALL NOT mix them into the base linter's error code contract.
 - **ERR-003**: Each new code SHALL be registered in the table above in the same change
   as it is introduced.
 - **ERR-004**: Warning codes SHALL NOT be introduced by extensions before
-  the base system's warning framework (`W001`–`W015`) is implemented
+  the base system's warning framework (`W001`–`W017`) is implemented
   (cf. `GRAPH-INTELLIGENCE.md` §14).
 
 ### 10.4 Specification status versus implementation status
@@ -353,7 +355,7 @@ Owning document: `ARCHITECTURE.md` §2.2–§2.3.
 | **GRAPH-001** | Graph | Cycle detection SHALL be executed separately per relation type where dag: true is specified in relation_registry.yaml, and across the composite transitive closure of the hierarchical edges (`PART_OF`, `INSTANCE_OF`, `TYPE_OF`). Restated from the owning document `ONTOLOGY.md` §Graph Invariants (D96) | E010 |
 | **GRAPH-002** | Graph | Self-references (target == id) and identical duplicate relations (type, target) SHALL be rejected | E011/E012 |
 | **GRAPH-003** | Graph | Ontology links without soft_link: true MUST point to an existing object ID in the repository | E009 |
-| **GRAPH-004** | Graph | Outbound relations from a single node SHALL NOT exceed the policy threshold `GRAPH-MAX-OUTBOUND-DEGREE` in threshold_policy.yaml | W015 |
+| **GRAPH-004** | Graph | Outbound relations from a single node SHALL NOT exceed the policy threshold `GRAPH-MAX-OUTBOUND-DEGREE` in threshold_policy.yaml. The cap is promotion-blocking: canonical promotion (DPCP) MUST reject candidates violating it | W015 |
 | **RET-001** | Retrieval | Search results SHALL be deterministic. Fusion and conflict ranking SHALL execute the formal algorithms in §9.1–§9.3 | - |
 | **RET-002** | Retrieval | The same query with the same parameters SHALL produce identical results | - |
 | **RET-003** | Retrieval | An evidence bundle SHALL contain all fields necessary for LLM grounding | - |

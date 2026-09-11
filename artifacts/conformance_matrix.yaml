@@ -1,6 +1,6 @@
 schema_version: 1.0.0
 matrix_id: conformance_matrix
-generated_at: '2026-09-09T15:42:50.541370+00:00'
+generated_at: '2026-09-10T22:29:45Z'
 evidence_type: generated_projection
 note: "Generated evidence per VALIDATION.md \xA710.5 and CONFORM-001. Not a normative\
   \ specification."
@@ -9,9 +9,9 @@ summary:
   conformance_tested: 43
   implemented: 0
   unimplemented: 2
-  total_invariants_tracked: 214
-  total_executable_tests: 127
-  corpus_hash: sha256:1a5cd20e297a2d8b24cea263a6a2387f7a894b4db7559dd3e8cb42f438ebc356
+  total_invariants_tracked: 215
+  total_executable_tests: 165
+  corpus_hash: sha256:379653ffed98caf8ebab3c4226f0ed00162406bd62f160b4364d807bbe6811b5
 families:
 - family_id: CANON
   owner: specs/ARCHITECTURE.md
@@ -219,9 +219,9 @@ families:
   - DPCP-010
 - family_id: DISC
   owner: specs/DISCOVERY.md
-  invariant_id: DISC-001..DISC-005
+  invariant_id: DISC-001..DISC-010
   implementation: trashheap/graph/discovery.py, trashheap/graph/analysis.py
-  test: tests/test_graph_intelligence.py
+  test: tests/test_graph_intelligence.py, tests/test_remediation_2026_09.py
   verification: tools/check.sh
   status: CONFORMANCE_TESTED
   invariants:
@@ -230,6 +230,7 @@ families:
   - DISC-003
   - DISC-004
   - DISC-005
+  - DISC-010
 - family_id: GRAPH
   owner: specs/ONTOLOGY.md
   invariant_id: GRAPH-001..GRAPH-004
@@ -421,8 +422,8 @@ families:
 - family_id: SCALE
   owner: specs/ARCHITECTURE.md
   invariant_id: SCALE-001..SCALE-003
-  implementation: trashheap/operations/benchmark.py
-  test: tests/test_operations_and_ci.py
+  implementation: trashheap/operations/benchmark.py, scripts/ingest_full_pubmed.py
+  test: tests/test_operations_and_ci.py, tests/test_csr_compile.py
   verification: tools/check.sh
   status: CONFORMANCE_TESTED
   invariants:
@@ -543,7 +544,8 @@ families:
   owner: specs/RETRIEVAL.md
   invariant_id: RET-010..RET-011
   implementation: trashheap/section_map.py, trashheap/rcva.py, trashheap/cli.py
-  test: tests/test_section_map.py, tests/test_rcva.py, tests/test_section_retrieval.py
+  test: tests/test_section_map.py, tests/test_rcva.py, tests/test_section_retrieval.py,
+    tests/test_remediation_2026_09.py
   verification: tools/check.sh
   status: CONFORMANCE_TESTED
   invariants:
@@ -563,7 +565,7 @@ families:
   invariant_id: VAL-011..VAL-014
   implementation: trashheap/link_mirror.py, trashheap/mermaid.py, trashheap/runaway.py,
     trashheap/promotion/engine.py
-  test: tests/test_val_extensions.py, tests/test_runaway.py
+  test: tests/test_val_extensions.py, tests/test_runaway.py, tests/test_remediation_2026_09.py
   verification: tools/check.sh
   status: CONFORMANCE_TESTED
   invariants:
@@ -574,8 +576,8 @@ families:
 - family_id: REVIEW-MOD
   owner: specs/REVIEW-PROMOTION.md
   invariant_id: REVIEW-011
-  implementation: trashheap/promotion/pre_score.py
-  test: tests/test_moderator_prescore.py
+  implementation: trashheap/promotion/pre_score.py, trashheap/cli.py
+  test: tests/test_moderator_prescore.py, tests/test_remediation_2026_09.py
   verification: tools/check.sh
   status: CONFORMANCE_TESTED
   invariants:
@@ -583,8 +585,8 @@ families:
 - family_id: DISC-FENCE
   owner: specs/DISCOVERY.md
   invariant_id: DISC-009
-  implementation: trashheap/instruction_fence.py
-  test: tests/test_instruction_fence.py
+  implementation: trashheap/instruction_fence.py, trashheap/init.py
+  test: tests/test_instruction_fence.py, tests/test_remediation_2026_09.py
   verification: tools/check.sh
   status: CONFORMANCE_TESTED
   invariants:

@@ -42,3 +42,5 @@ next_review: '2027-02-17'
 
 ## Summary
 The primitive mapping S(n) defining order in Peano arithmetic.
+
+Related: [PERS-CON-MATH-0001](PERS-CON-MATH-0001.md).

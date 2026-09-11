@@ -18,9 +18,12 @@ from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Union
 
 import yaml
 
+from trashheap.constants import DEFAULT_SCHEMA_VERSION
+from trashheap.ingest.exceptions import QuarantineError
 from trashheap.ingest.models import compute_sha256
 from trashheap.ingest.pipeline import IngestionResult, intake_source
 from trashheap.operations.connector import BaseAdapter, RawPayload
+from trashheap.registry.loader import load_registries
 
 # Multi-citation bracket pattern: matches [ID1, ID2, ...] with comma/whitespace delimiters
 _CITE_BLOCK = re.compile(r"\[([A-Za-z0-9_\-:\.]+(?:\s*,\s*[A-Za-z0-9_\-:\.]+)*)\]")
@@ -84,9 +87,27 @@ def stream_pubmed_xml(
     try:
         if use_lxml:
             context = etree.iterparse(
-                fh, events=("end",), tag="PubmedArticle", resolve_entities=False
+                fh,
+                events=("end",),
+                tag="PubmedArticle",
+                resolve_entities=False,
+                no_network=True,
+                load_dtd=False,
             )
         else:
+            # The stdlib ElementTree parser cannot disable entity resolution, so a
+            # DTD/ENTITY declaration is an unmitigated billion-laughs / XXE risk.
+            # Pre-scan the first 64KB and reject fail-closed (INGEST-ADAPTERS.md §3.1).
+            head = fh.read(65536)
+            fh.seek(0)
+            head_lower = head.lower()
+            if b"<!doctype" in head_lower or b"<!entity" in head_lower:
+                raise QuarantineError(
+                    "DTD or entity declaration detected in XML source; the stdlib "
+                    "ElementTree fallback cannot disable entity resolution, so the "
+                    "source is rejected fail-closed.",
+                    reason="dtd_entity_forbidden",
+                )
             context = etree.iterparse(fh, events=("end",))
         count = 0
 
@@ -258,10 +279,7 @@ class PubmedXmlAdapter(BaseAdapter):
             )
 
         for corr in record.corrections:
-            rtype = corr["ref_type"].lower()
             rel_type = "SUPERSEDES"
-            if "retract" in rtype or "errat" in rtype:
-                rel_type = "SUPERSEDES"
             try:
                 target_pmid = int(corr["pmid"])
                 relations.append(
@@ -286,7 +304,7 @@ class PubmedXmlAdapter(BaseAdapter):
         fm_dict: Dict[str, Any] = {
             "id": record.canonical_id,
             "title": record.title,
-            "schema_version": "3.8.10",
+            "schema_version": DEFAULT_SCHEMA_VERSION,
             "aliases": aliases,
             "keywords": keywords,
             "scope": self.default_scope,
@@ -330,7 +348,18 @@ class PubmedXmlAdapter(BaseAdapter):
         payload: RawPayload,
         workspace_root: Path,
     ) -> IngestionResult:
-        """Parse raw XML payload and ingest through standard intake pipeline."""
+        """Parse raw XML payload and ingest through standard intake pipeline.
+
+        Registries are loaded once here and threaded into ``intake_source`` so a
+        batch of PubMed payloads does not re-parse every registry YAML per source.
+        """
+        reg_dir = (
+            workspace_root / "schemas" / "registry"
+            if (workspace_root / "schemas" / "registry").exists()
+            else None
+        )
+        registries = load_registries(reg_dir)
+
         articles = list(stream_pubmed_xml(payload.content_bytes, max_records=1))
         if not articles:
             return intake_source(
@@ -345,6 +374,7 @@ class PubmedXmlAdapter(BaseAdapter):
                     "resource": payload.source_path,
                     "representation_hash": payload.content_hash,
                 },
+                registries=registries,
             )
 
         art = articles[0]
@@ -358,4 +388,37 @@ class PubmedXmlAdapter(BaseAdapter):
             workspace_root=workspace_root,
             identity={"resource": f"pmid:{art.pmid}", "representation_hash": h},
             provenance={"resource": f"pmid:{art.pmid}", "representation_hash": h, "pmid": art.pmid},
+            registries=registries,
+        )
+        registries = load_registries(reg_dir)
+
+        articles = list(stream_pubmed_xml(payload.content_bytes, max_records=1))
+        if not articles:
+            return intake_source(
+                source_input=payload.content_bytes,
+                source_type="document",
+                workspace_root=workspace_root,
+                identity={
+                    "resource": payload.source_path,
+                    "representation_hash": payload.content_hash,
+                },
+                provenance={
+                    "resource": payload.source_path,
+                    "representation_hash": payload.content_hash,
+                },
+                registries=registries,
+            )
+
+        art = articles[0]
+        md_text = self.record_to_markdown(art)
+        md_bytes = md_text.encode("utf-8")
+        h = compute_sha256(md_bytes)
+
+        return intake_source(
+            source_input=md_bytes,
+            source_type="document",
+            workspace_root=workspace_root,
+            identity={"resource": f"pmid:{art.pmid}", "representation_hash": h},
+            provenance={"resource": f"pmid:{art.pmid}", "representation_hash": h, "pmid": art.pmid},
+            registries=registries,
         )

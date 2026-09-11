@@ -681,16 +681,24 @@ def discover_literature_bridges(
     top_k: int = 15,
     max_background_degree: int = 2_000_000,
 ) -> Dict[str, Any]:
-    """Execute Swanson's ABC literature-based discovery over a memory-mapped CSR graph.
+    """Execute Swanson-style ABC literature-based discovery over a memory-mapped CSR graph.
 
     Given two endpoint concepts A and C (e.g. MESH_D011928 and MESH_D005395),
-    uncovers intermediate functional bridges B such that A -> B and C -> B,
-    scoring each bridge using mutual information / degree-normalized co-occurrence.
+    uncovers intermediate bridges B co-tagged with articles of both A and C,
+    scoring each bridge with the degree-normalized co-occurrence score
+    ``(co_a * co_c) / sqrt(deg_b)``.
+
+    The MeSH/article partition is derived from ``node_mapping.parquet`` at call
+    time (no hardcoded index boundary), all SQL is parameterized, and the
+    Swanson disjointness precondition is measured and reported honestly via
+    ``articles_discussing_both`` rather than assumed.
     """
     import collections
 
     import duckdb
     import numpy as np
+
+    from trashheap.graph.csr import _load_int64_memmap
 
     mapping_path = csr_dir / "node_mapping.parquet"
     indptr_path = csr_dir / "indptr.npy"
@@ -702,73 +710,91 @@ def discover_literature_bridges(
         raise FileNotFoundError(f"CSR binary files not found in {csr_dir}")
 
     con = duckdb.connect()
-    nodes = dict(
-        con.execute(
-            f"""
-        SELECT node_id, node_idx
-        FROM read_parquet('{mapping_path}')
-        WHERE node_id IN ('{concept_a_id}', '{concept_c_id}')
-    """
+    try:
+        nodes = dict(
+            con.execute(
+                "SELECT node_id, node_idx FROM read_parquet(?) "
+                "WHERE node_id = ? OR node_id = ?",
+                [str(mapping_path), concept_a_id, concept_c_id],
+            ).fetchall()
+        )
+
+        if concept_a_id not in nodes:
+            raise KeyError(f"Concept '{concept_a_id}' not found in node mapping")
+        if concept_c_id not in nodes:
+            raise KeyError(f"Concept '{concept_c_id}' not found in node mapping")
+
+        # Derive the MeSH partition from the mapping itself instead of a
+        # hardcoded index boundary: robust across recompilations.
+        mesh_rows = con.execute(
+            "SELECT node_idx FROM read_parquet(?) WHERE starts_with(node_id, ?)",
+            [str(mapping_path), "MESH_"],
         ).fetchall()
-    )
+    finally:
+        con.close()
 
-    if concept_a_id not in nodes:
-        raise KeyError(f"Concept '{concept_a_id}' not found in node mapping")
-    if concept_c_id not in nodes:
-        raise KeyError(f"Concept '{concept_c_id}' not found in node mapping")
-
-    idx_a = nodes[concept_a_id]
-    idx_c = nodes[concept_c_id]
+    idx_a = int(nodes[concept_a_id])
+    idx_c = int(nodes[concept_c_id])
 
     indptr = np.load(indptr_path, mmap_mode="r")
-    indices = np.memmap(indices_path, dtype=np.int64, mode="r")
+    indices = _load_int64_memmap(indices_path)
+    num_nodes = len(indptr) - 1
 
-    arts_a = indices[indptr[idx_a] : indptr[idx_a + 1]]
-    arts_c = indices[indptr[idx_c] : indptr[idx_c + 1]]
+    is_mesh = np.zeros(num_nodes, dtype=bool)
+    if mesh_rows:
+        mesh_indices = np.fromiter(
+            (int(r[0]) for r in mesh_rows), dtype=np.int64, count=len(mesh_rows)
+        )
+        is_mesh[mesh_indices] = True
+
+    articles_a = indices[indptr[idx_a] : indptr[idx_a + 1]]
+    articles_c = indices[indptr[idx_c] : indptr[idx_c + 1]]
+
+    id_map: Dict[int, str] = {}
 
     # Aggregate co-occurring MeSH descriptors for articles in A and C
-    b_counts_a: collections.Counter[int] = collections.Counter()
-    for art in arts_a:
+    b_counts_a: collections.Counter = collections.Counter()
+    for art in articles_a:
         nbrs = indices[indptr[art] : indptr[art + 1]]
-        mesh_nbrs = nbrs[nbrs < 30768]
-        b_counts_a.update(mesh_nbrs)
+        b_counts_a.update(nbrs[is_mesh[nbrs]].tolist())
 
-    b_counts_c: collections.Counter[int] = collections.Counter()
-    for art in arts_c:
+    b_counts_c: collections.Counter = collections.Counter()
+    for art in articles_c:
         nbrs = indices[indptr[art] : indptr[art + 1]]
-        mesh_nbrs = nbrs[nbrs < 30768]
-        b_counts_c.update(mesh_nbrs)
+        b_counts_c.update(nbrs[is_mesh[nbrs]].tolist())
 
     shared_b = set(b_counts_a.keys()) & set(b_counts_c.keys())
     shared_b.discard(idx_a)
     shared_b.discard(idx_c)
 
-    deg = np.diff(indptr)
     scores = []
-    for b in shared_b:
-        if deg[b] > max_background_degree:
+    for b in sorted(shared_b):
+        deg_b = int(indptr[b + 1]) - int(indptr[b])
+        if deg_b > max_background_degree:
             continue
-        score = (b_counts_a[b] * b_counts_c[b]) / (deg[b] ** 0.5)
-        scores.append((score, int(b), int(b_counts_a[b]), int(b_counts_c[b]), int(deg[b])))
+        score = (b_counts_a[b] * b_counts_c[b]) / (deg_b**0.5)
+        scores.append((score, int(b), int(b_counts_a[b]), int(b_counts_c[b]), deg_b))
 
     scores.sort(reverse=True)
-    top_scores = scores[:top_k]
+    top_scores = scores[: max(0, top_k)]
 
     if top_scores:
         top_b_indices = [s[1] for s in top_scores]
-        id_map = dict(
-            con.execute(
-                f"""
-            SELECT node_idx, node_id
-            FROM read_parquet('{mapping_path}')
-            WHERE node_idx IN ({",".join(str(x) for x in top_b_indices)})
-        """
-            ).fetchall()
-        )
-    else:
-        id_map = {}
+        con = duckdb.connect()
+        try:
+            id_map = dict(
+                con.execute(
+                    "SELECT node_idx, node_id FROM read_parquet(?) "
+                    "WHERE node_idx IN (SELECT UNNEST(?))",
+                    [str(mapping_path), top_b_indices],
+                ).fetchall()
+            )
+        finally:
+            con.close()
 
-    con.close()
+    # Swanson disjointness precondition, measured not assumed: articles tagged
+    # with BOTH concepts mean A and C are already co-discussed in the literature.
+    overlap = len(set(articles_a.tolist()) & set(articles_c.tolist()))
 
     bridges = [
         {
@@ -786,8 +812,10 @@ def discover_literature_bridges(
     return {
         "concept_a": concept_a_id,
         "concept_c": concept_c_id,
-        "articles_a": int(len(arts_a)),
-        "articles_c": int(len(arts_c)),
-        "total_intermediate_bridges": len(shared_b),
+        "articles_a": int(len(articles_a)),
+        "articles_c": int(len(articles_c)),
+        "articles_discussing_both": overlap,
+        "disjointness_holds": overlap == 0,
+        "total_intermediate_bridges": len(scores),
         "top_bridges": bridges,
     }

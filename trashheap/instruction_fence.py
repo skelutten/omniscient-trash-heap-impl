@@ -21,22 +21,28 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
+from trashheap.fsutil import atomic_write_text
+
 FENCE_START = "<!-- TRASHHEAP:START -->"
 FENCE_END = "<!-- TRASHHEAP:END -->"
 
 
 def _find_fence_lines(lines: list[str]) -> Optional[tuple[int, int]]:
-    """Return (start_idx, end_idx) 0-indexed line positions of the fence, or None."""
-    start_idx = end_idx = None
+    """Return (start_idx, end_idx) 0-indexed line positions of the fence, or None.
+
+    The FIRST start marker wins, paired with the first end marker after it, so
+    duplicated or malformed fences degrade predictably instead of silently
+    selecting the last start marker.
+    """
+    start_idx = None
     for i, line in enumerate(lines):
-        if line.strip() == FENCE_START:
-            start_idx = i
-        elif line.strip() == FENCE_END and start_idx is not None:
-            end_idx = i
-            break
-    if start_idx is None or end_idx is None or end_idx <= start_idx:
-        return None
-    return start_idx, end_idx
+        stripped = line.strip()
+        if start_idx is None:
+            if stripped == FENCE_START:
+                start_idx = i
+        elif stripped == FENCE_END:
+            return start_idx, i
+    return None
 
 
 def _normalise_block(block: str) -> str:
@@ -49,11 +55,12 @@ def apply_fenced_block(content: str, block: str) -> str:
 
     - If the fence is present, replace only the lines strictly between the
       delimiters; the delimiter lines and all outside content are preserved
-      byte-for-byte.
+      byte-for-byte, including the original trailing-newline state.
     - If the fence is absent, append the delimited block at the end of the
       file (with a single blank-line separator) and never touch existing
       content.
     """
+    had_trailing_newline = content.endswith("\n") or content == ""
     lines = content.splitlines()
     block = _normalise_block(block)
     block_lines = block.splitlines() if block else []
@@ -67,29 +74,28 @@ def apply_fenced_block(content: str, block: str) -> str:
         out.append(FENCE_START)
         out.extend(block_lines)
         out.append(FENCE_END)
-        return "\n".join(out)
+    else:
+        start_idx, end_idx = fence
+        out = lines[: start_idx + 1]
+        out.extend(block_lines)
+        out.extend(lines[end_idx:])
 
-    start_idx, end_idx = fence
-    out = lines[: start_idx + 1]
-    out.extend(block_lines)
-    out.extend(lines[end_idx:])
-    return "\n".join(out)
+    result = "\n".join(out)
+    if had_trailing_newline:
+        result += "\n"
+    return result
 
 
 def update_instruction_file(path: Path, block: str) -> None:
     """Apply the delimited block to the instruction file at ``path`` in place.
 
-    The file is written atomically (temp file + os.replace) so a crash never
-    leaves a half-written instruction file.
+    The file is written atomically and durably (temp file + fsync + os.replace
+    + directory fsync via trashheap.fsutil) so a crash never leaves a
+    half-written instruction file.
     """
-    import os
-
     original = path.read_text(encoding="utf-8") if path.exists() else ""
     updated = apply_fenced_block(original, block)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.trashheap.tmp")
-    tmp.write_text(updated, encoding="utf-8")
-    os.replace(tmp, path)
+    atomic_write_text(path, updated)
 
 
 def extract_fenced_block(content: str) -> Optional[str]:

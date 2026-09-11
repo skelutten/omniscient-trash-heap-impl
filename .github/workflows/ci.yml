@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  gate:
+    name: Validation gate (AC-10 clean checkout)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package with dev + parquet extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,parquet]"
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Registry validation
+        run: python -m trashheap.cli check-registries
+
+      - name: External spec pin verification (OKF)
+        run: |
+          python - <<'PY'
+          import hashlib, yaml
+          pin = yaml.safe_load(open('external-specs/okf/PIN.yaml'))
+          for key, path in (('retrieved', 'external-specs/okf/SPEC.md'), ('license', 'external-specs/okf/LICENSE.md')):
+              digest = hashlib.sha256(open(path, 'rb').read()).hexdigest()
+              assert digest == pin[key]['sha256'], f'{path} hash mismatch'
+          print('OKF PIN.yaml verified')
+          PY
+
+      - name: Canonical fixture lint (0 errors / 0 warnings)
+        run: python -m trashheap.cli lint fixtures/canonical
+
+      - name: Agent Skills drift check (E050)
+        run: python -m trashheap.cli generate-skills --check
+
+      - name: Conformance matrix drift check (D90, CONFORM-001)
+        run: python -m trashheap.cli conformance --check
+
+      - name: Pytest with coverage gate (>= 70%)
+        run: pytest -q --cov=trashheap --cov-fail-under=70

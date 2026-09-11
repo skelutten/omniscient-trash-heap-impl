@@ -41,3 +41,5 @@ relations:
 
 ## Summary
 Every non-empty set of natural numbers contains a least element.
+
+Related: [PERS-CON-MATH-0001](PERS-CON-MATH-0001.md).

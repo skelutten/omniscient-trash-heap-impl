@@ -1,15 +1,11 @@
 """Data models for Universal Source Envelope, Representations, and Evidence Units (UNIVERSAL-SOURCE-EXTENSION.md)."""
 
 import hashlib
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
-def current_iso_timestamp() -> str:
-    """Return current UTC timestamp in ISO format."""
-    return datetime.now(timezone.utc).isoformat()
+from trashheap.timeutil import current_iso_timestamp  # noqa: E402  (re-exported)
 
 
 def compute_sha256(data: bytes) -> str:
@@ -20,7 +16,7 @@ def compute_sha256(data: bytes) -> str:
 class RepresentationRecord(BaseModel):
     """Immutable representation metadata (INGEST-STAGING.md §7.1)."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     representation_id: str
     representation_hash: str
@@ -35,7 +31,7 @@ class RepresentationRecord(BaseModel):
 class UniversalSourceEnvelope(BaseModel):
     """Universal Source Record envelope (UNIVERSAL-SOURCE-EXTENSION.md §3)."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     source_id: str
     source_type: str
@@ -53,7 +49,7 @@ class UniversalSourceEnvelope(BaseModel):
 class EvidenceUnit(BaseModel):
     """Staging Evidence Unit projection (UNIVERSAL-SOURCE-EXTENSION.md §5)."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     evidence_unit_ref: str
     observation_ref: Optional[str] = None

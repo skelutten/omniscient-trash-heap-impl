@@ -10,16 +10,12 @@ Normative rules:
 - Rule 11 & D95: Opt-in frontmatter: required|derived mode with title extraction and privacy stripping.
 """
 
-from datetime import datetime, timezone
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
-def current_iso_timestamp() -> str:
-    """Generate RFC3339 / ISO 8601 UTC timestamp."""
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+from trashheap.timeutil import current_iso_timestamp
 
 
 class FrontmatterMode(str, Enum):
@@ -31,8 +27,12 @@ class FrontmatterMode(str, Enum):
     )
 
 
-class MigrationMode(str, Enum):
-    """Execution mode for migration."""
+class MigrationMode(StrEnum):
+    """Execution mode for migration.
+
+    A ``str``-valued enum so serialized manifest values remain exactly
+    ``"dry-run"`` / ``"execute"`` in JSON, YAML, and f-string output.
+    """
 
     DRY_RUN = "dry-run"
     EXECUTE = "execute"
@@ -102,7 +102,7 @@ class MigrationManifest(BaseModel):
     source_mutated: bool = Field(
         default=False, description="Whether source files were mutated (must be False, Rule 1)"
     )
-    mode: str = Field(..., description="Execution mode: dry-run or execute")
+    mode: MigrationMode = Field(..., description="Execution mode: dry-run or execute")
     frontmatter_mode: str = Field(
         default="required", description="Frontmatter mode: required or derived (Rule 11)"
     )
@@ -117,6 +117,13 @@ class MigrationManifest(BaseModel):
         },
         description="Detailed file and ambiguity counts",
     )
+    emitted_files: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Target-relative POSIX paths of canonical files emitted by this migration; "
+            "used for fail-closed collision detection on forced reruns (Rule 2)"
+        ),
+    )
     quarantined: List[QuarantineRecord] = Field(
         default_factory=list, description="List of quarantined files"
     )
@@ -128,7 +135,7 @@ class MigrationManifest(BaseModel):
 class MigrationMap(BaseModel):
     """Migration configuration mapping legacy metadata to canonical registries."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     frontmatter_mode: FrontmatterMode = Field(
         default=FrontmatterMode.REQUIRED,

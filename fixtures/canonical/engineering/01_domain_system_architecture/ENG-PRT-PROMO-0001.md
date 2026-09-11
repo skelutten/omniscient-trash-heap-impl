@@ -42,3 +42,5 @@ next_review: '2027-02-17'
 
 ## Summary
 Protocol governing transition from staged proposal to canonical knowledge.
+
+Related: [ENG-IFC-CLI-0001](ENG-IFC-CLI-0001.md).

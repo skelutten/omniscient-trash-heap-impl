@@ -39,3 +39,5 @@ next_review: '2027-02-17'
 
 ## Summary
 Work package for building parser, linter, slug generator, and registry loader.
+
+Related: [ENG-REQ-CRASH-0001](ENG-REQ-CRASH-0001.md).

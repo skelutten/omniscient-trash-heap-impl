@@ -3,34 +3,38 @@ import hashlib
 import os
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import yaml
 
-
-def current_iso_timestamp() -> str:
-    return datetime.now(timezone.utc).isoformat()
+from trashheap.timeutil import current_iso_timestamp
 
 
-def count_executable_tests(test_path: Path) -> int:
-    """Parse test file with AST and count executable test functions (test_*)."""
+def _analyze_test_file(test_path: Path) -> Tuple[int, bool]:
+    """Parse a test file once and return (executable_test_count, has_assertions).
+
+    A single ``ast.parse`` per file feeds both the test-count and the
+    assertion-presence checks, avoiding redundant reads/parses of the same source.
+    """
     if not test_path.exists() or not test_path.is_file():
-        return 0
+        return (0, False)
     try:
         tree = ast.parse(test_path.read_text(encoding="utf-8"))
-        return len(
-            [
-                n
-                for n in ast.walk(tree)
-                if isinstance(n, ast.FunctionDef) and n.name.startswith("test_")
-            ]
-        )
     except Exception as exc:
         raise SyntaxError(
             f"Failed to parse test file '{test_path}' for executable test counting: {exc}"
         ) from exc
+    test_count = sum(
+        1 for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name.startswith("test_")
+    )
+    has_assertions = any(isinstance(n, ast.Assert) for n in ast.walk(tree))
+    return (test_count, has_assertions)
+
+
+def count_executable_tests(test_path: Path) -> int:
+    """Parse test file with AST and count executable test functions (test_*)."""
+    return _analyze_test_file(test_path)[0]
 
 
 def _has_substantive_implementation(path: Path) -> bool:
@@ -83,7 +87,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "ID": {
         "owner": "specs/DATA_MODEL.md",
@@ -91,7 +94,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/models.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "FAC": {
         "owner": "specs/DATA_MODEL.md",
@@ -99,7 +101,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "CLS": {
         "owner": "specs/DATA_MODEL.md",
@@ -107,7 +108,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "TAX": {
         "owner": "specs/ARCHITECTURE.md",
@@ -115,7 +115,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "REL": {
         "owner": "specs/ONTOLOGY.md",
@@ -132,7 +131,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "EPI": {
         "owner": "specs/EPISTEMOLOGY.md",
@@ -148,7 +146,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "PROV": {
         "owner": "specs/EPISTEMOLOGY.md",
@@ -156,7 +153,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "GOV": {
         "owner": "specs/EPISTEMOLOGY.md",
@@ -164,7 +160,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "SOURCE": {
         "owner": "specs/UNIVERSAL-SOURCE-EXTENSION.md",
@@ -181,7 +176,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/ingest/pipeline.py",
         "test": "tests/test_ingest_safety.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "RAW": {
         "owner": "specs/INGEST-STAGING.md",
@@ -200,7 +194,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/ingest/cscc.py",
         "test": "tests/test_ingest_safety.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "INGEST-CORE": {
         "owner": "specs/INGEST.md",
@@ -208,7 +201,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/ingest/pipeline.py",
         "test": "tests/test_ingest_safety.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "CSCC": {
         "owner": "specs/INGEST-STAGING.md",
@@ -216,7 +208,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/ingest/cscc.py",
         "test": "tests/test_ingest_safety.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "DSCP": {
         "owner": "specs/INGEST-STAGING.md",
@@ -224,7 +215,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/ingest/pipeline.py",
         "test": "tests/test_ingest_safety.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "DPCP": {
         "owner": "specs/INGEST-STAGING.md",
@@ -243,15 +233,20 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/promotion/engine.py",
         "test": "tests/test_proposal_promotion.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "DISC": {
         "owner": "specs/DISCOVERY.md",
-        "invariants": ["DISC-001", "DISC-002", "DISC-003", "DISC-004", "DISC-005"],
+        "invariants": [
+            "DISC-001",
+            "DISC-002",
+            "DISC-003",
+            "DISC-004",
+            "DISC-005",
+            "DISC-010",
+        ],
         "implementation": "trashheap/graph/discovery.py, trashheap/graph/analysis.py",
-        "test": "tests/test_graph_intelligence.py",
+        "test": "tests/test_graph_intelligence.py, tests/test_remediation_2026_09.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "GRAPH": {
         "owner": "specs/ONTOLOGY.md",
@@ -259,7 +254,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "SG": {
         "owner": "specs/STRUCTURAL-GRAPH.md",
@@ -288,7 +282,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/structural/indexer.py, trashheap/structural/extractor.py, trashheap/structural/analysis.py, trashheap/structural/bridge.py",
         "test": "tests/test_structural_graph.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "OKF": {
         "owner": "specs/OKF-INTEROP.md",
@@ -296,7 +289,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/bundle/export.py, trashheap/bundle/import_okf.py",
         "test": "tests/test_bundles_and_okf.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "BUNDLE": {
         "owner": "specs/OKF-INTEROP.md",
@@ -304,7 +296,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/bundle/export.py, trashheap/bundle/models.py",
         "test": "tests/test_bundles_and_okf.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "OWN": {
         "owner": "specs/SCHEMA.md",
@@ -312,7 +303,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "BODY": {
         "owner": "specs/SCHEMA.md",
@@ -320,7 +310,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py, trashheap/authoring.py",
         "test": "tests/test_linter.py, tests/test_section_ownership.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "W": {
         "owner": "specs/VALIDATION.md",
@@ -328,7 +317,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "THRESH": {
         "owner": "schemas/registry/threshold_policy.yaml",
@@ -336,7 +324,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/retrieval.py",
         "test": "tests/test_retrieval.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "REVIEW": {
         "owner": "specs/REVIEW-PROMOTION.md",
@@ -355,7 +342,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/promotion/engine.py, trashheap/promotion/models.py",
         "test": "tests/test_proposal_promotion.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "PROMO": {
         "owner": "specs/REVIEW-PROMOTION.md",
@@ -374,7 +360,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/promotion/engine.py",
         "test": "tests/test_proposal_promotion.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "REX": {
         "owner": "specs/RELATION-EXTRACTION.md",
@@ -396,7 +381,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "UNIMPLEMENTED",
         "test": "planned",
         "verification": "planned",
-        "status": "UNIMPLEMENTED",
     },
     "VIS": {
         "owner": "specs/VISUALIZE.md",
@@ -415,7 +399,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "UNIMPLEMENTED",
         "test": "planned",
         "verification": "planned",
-        "status": "UNIMPLEMENTED",
     },
     "RES": {
         "owner": "specs/INGEST.md",
@@ -423,15 +406,13 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/ingest/pipeline.py",
         "test": "tests/test_ingest_safety.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "SCALE": {
         "owner": "specs/ARCHITECTURE.md",
         "invariants": ["SCALE-001", "SCALE-002", "SCALE-003"],
-        "implementation": "trashheap/operations/benchmark.py",
-        "test": "tests/test_operations_and_ci.py",
+        "implementation": "trashheap/operations/benchmark.py, scripts/ingest_full_pubmed.py",
+        "test": "tests/test_operations_and_ci.py, tests/test_csr_compile.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "DERIVED": {
         "owner": "specs/ARCHITECTURE.md",
@@ -439,7 +420,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/retrieval.py",
         "test": "tests/test_retrieval.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "CONFORM": {
         "owner": "specs/VALIDATION.md",
@@ -447,7 +427,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/operations/conformance.py",
         "test": "tests/test_operations_and_ci.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "RET": {
         "owner": "specs/RETRIEVAL.md",
@@ -465,7 +444,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/retrieval.py, trashheap/vector/",
         "test": "tests/test_retrieval.py, tests/test_vector_retrieval.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "META": {
         "owner": "specs/ARCHITECTURE.md",
@@ -473,7 +451,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/models.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "LIB": {
         "owner": "specs/ARCHITECTURE.md",
@@ -481,7 +458,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "SCOPE": {
         "owner": "specs/DATA_MODEL.md",
@@ -489,7 +465,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "VAL": {
         "owner": "specs/VALIDATION.md",
@@ -497,7 +472,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "ERR": {
         "owner": "specs/VALIDATION.md",
@@ -505,7 +479,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "FS": {
         "owner": "specs/VALIDATION.md",
@@ -513,7 +486,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/linter.py",
         "test": "tests/test_linter.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "G": {
         "owner": "specs/INGEST-PIPELINE.md",
@@ -521,7 +493,6 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/ingest/pipeline.py",
         "test": "tests/test_ingest_safety.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     # --- families added 2026-09-09: pending invariants (implementation in progress) ---
     # These were codified 2026-09-08 (RET-010/011, SCHEMA-005, VAL-011..014,
@@ -531,9 +502,8 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "owner": "specs/RETRIEVAL.md",
         "invariants": ["RET-010", "RET-011"],
         "implementation": "trashheap/section_map.py, trashheap/rcva.py, trashheap/cli.py",
-        "test": "tests/test_section_map.py, tests/test_rcva.py, tests/test_section_retrieval.py",
+        "test": "tests/test_section_map.py, tests/test_rcva.py, tests/test_section_retrieval.py, tests/test_remediation_2026_09.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "SCHEMA-CARD": {
         "owner": "specs/SCHEMA.md",
@@ -541,31 +511,27 @@ INVARIANT_FAMILY_MAP: Dict[str, Dict[str, Any]] = {
         "implementation": "trashheap/section_map.py",
         "test": "tests/test_section_map.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "VAL-EXT": {
         "owner": "specs/VALIDATION.md",
         "invariants": ["VAL-011", "VAL-012", "VAL-013", "VAL-014"],
         "implementation": "trashheap/link_mirror.py, trashheap/mermaid.py, trashheap/runaway.py, trashheap/promotion/engine.py",
-        "test": "tests/test_val_extensions.py, tests/test_runaway.py",
+        "test": "tests/test_val_extensions.py, tests/test_runaway.py, tests/test_remediation_2026_09.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "REVIEW-MOD": {
         "owner": "specs/REVIEW-PROMOTION.md",
         "invariants": ["REVIEW-011"],
-        "implementation": "trashheap/promotion/pre_score.py",
-        "test": "tests/test_moderator_prescore.py",
+        "implementation": "trashheap/promotion/pre_score.py, trashheap/cli.py",
+        "test": "tests/test_moderator_prescore.py, tests/test_remediation_2026_09.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
     "DISC-FENCE": {
         "owner": "specs/DISCOVERY.md",
         "invariants": ["DISC-009"],
-        "implementation": "trashheap/instruction_fence.py",
-        "test": "tests/test_instruction_fence.py",
+        "implementation": "trashheap/instruction_fence.py, trashheap/init.py",
+        "test": "tests/test_instruction_fence.py, tests/test_remediation_2026_09.py",
         "verification": "tools/check.sh",
-        "status": "CONFORMANCE_TESTED",
     },
 }
 
@@ -715,8 +681,6 @@ def generate_conformance_matrix(
         verif = mapped.get(
             "verification", "tools/check.sh" if impl != "UNIMPLEMENTED" else "planned"
         )
-        status = mapped.get("status", "UNIMPLEMENTED")
-
         # Verify physical presence in repository
         impl_ok = impl != "UNIMPLEMENTED" and all(
             (workspace_root / p.strip()).exists()

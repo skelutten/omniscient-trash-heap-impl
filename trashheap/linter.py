@@ -17,6 +17,8 @@ from trashheap.constants import (
     YEAR_TAG_PATTERN,
 )
 from trashheap.corpus import Corpus
+from trashheap.link_mirror import check_link_mirroring
+from trashheap.mermaid import extract_mermaid_blocks, validate_mermaid_block
 from trashheap.models import KnowledgeObject
 from trashheap.registry.loader import LoadedRegistries
 from trashheap.slug import taxonomy_id_to_directory
@@ -110,6 +112,10 @@ class Linter:
     ):
         self.registries = registries
         self.reference_date = reference_date or date.today()
+        # ``strict`` is recorded for caller convenience only: findings always keep
+        # their native severity here. Strict-mode semantics (exit code 2 under
+        # --strict, elevation under --warnings-as-errors) are applied by the CLI
+        # exit-code layer per VALIDATION.md §Exit Codes.
         self.strict = strict
         self.check_skills = check_skills
 
@@ -165,6 +171,14 @@ class Linter:
         for ko in corpus.objects:
             findings.extend(self._check_section_ownership(ko))
 
+        # Body integrity checks (VAL-011 link mirroring W016, VAL-012 mermaid W017)
+        for ko in corpus.objects:
+            findings.extend(self._check_body_integrity(ko))
+
+        # Body integrity checks (VAL-011 link mirroring W016, VAL-012 mermaid W017)
+        for ko in corpus.objects:
+            findings.extend(self._check_body_integrity(ko))
+
         # Agent skill drift check (AGENT-SKILLS.md, E050)
         if self.check_skills and target_file is None:
             from trashheap.skills import SKILL_RELATIVE_PATH, check_agent_skills
@@ -202,6 +216,29 @@ class Linter:
                 if f.file is not None and str(Path(f.file).resolve()) == resolved_target
             ]
 
+        return findings
+
+    def lint_object(self, ko: KnowledgeObject) -> List[Finding]:
+        """Public single-object validation: Layers 1-3, section ownership, body integrity.
+
+        Cross-object layers (4-5) require corpus context; use
+        :meth:`lint_cross_object` for those. This is the supported API for
+        external callers (e.g. the promotion engine) — private ``_check_*``
+        methods are an internal detail.
+        """
+        findings: List[Finding] = []
+        findings.extend(self._check_layer1_schema(ko))
+        findings.extend(self._check_layer2_structural(ko))
+        findings.extend(self._check_layer3_semantic(ko))
+        findings.extend(self._check_section_ownership(ko))
+        findings.extend(self._check_body_integrity(ko))
+        return findings
+
+    def lint_cross_object(self, corpus: Corpus) -> List[Finding]:
+        """Public cross-object validation: Layers 4-5 over a (possibly synthetic) corpus."""
+        findings: List[Finding] = []
+        findings.extend(self._check_layer4_graph(corpus))
+        findings.extend(self._check_layer5_cross_object(corpus))
         return findings
 
     def _check_layer1_schema(self, ko: KnowledgeObject) -> List[Finding]:
@@ -1053,6 +1090,84 @@ class Linter:
                         message=f"Unrecognized heading '## {heading}' outside template standard (OWN-001)",
                         suggestion="Place custom insights under '## Notes' or align with standard template",
                         file=rel_path,
+                        level="WARNING",
+                    )
+                )
+
+        return findings
+
+    def _check_body_integrity(self, ko: KnowledgeObject) -> List[Finding]:
+        """Validate body-level integrity rules (VAL-011 W016, VAL-012 W017)."""
+        findings: List[Finding] = []
+        rel_path = str(ko.path)
+        body = ko.raw_body
+
+        for mirror in check_link_mirroring(body, ko.relations):
+            findings.append(
+                Finding(
+                    code=mirror["code"],
+                    field=mirror.get("field"),
+                    message=mirror["message"],
+                    suggestion=mirror.get("suggestion"),
+                    file=rel_path,
+                    level="WARNING",
+                )
+            )
+
+        for block in extract_mermaid_blocks(body):
+            ok, reason = validate_mermaid_block(block["inner"])
+            if not ok:
+                line_no = body[: block["start"]].count("\n") + 1
+                findings.append(
+                    Finding(
+                        code="W017",
+                        field="body",
+                        message=f"Mermaid block fails syntax validation: {reason} (VAL-012)",
+                        suggestion=(
+                            "Fix the diagram, or degrade the block in place to a ```text "
+                            "fence prefixed with the LINT_FAILURE marker"
+                        ),
+                        file=rel_path,
+                        line=line_no,
+                        level="WARNING",
+                    )
+                )
+
+        return findings
+
+    def _check_body_integrity(self, ko: KnowledgeObject) -> List[Finding]:
+        """Validate body-level integrity rules (VAL-011 W016, VAL-012 W017)."""
+        findings: List[Finding] = []
+        rel_path = str(ko.path)
+        body = ko.raw_body
+
+        for mirror in check_link_mirroring(body, ko.relations):
+            findings.append(
+                Finding(
+                    code=mirror["code"],
+                    field=mirror.get("field"),
+                    message=mirror["message"],
+                    suggestion=mirror.get("suggestion"),
+                    file=rel_path,
+                    level="WARNING",
+                )
+            )
+
+        for block in extract_mermaid_blocks(body):
+            ok, reason = validate_mermaid_block(block["inner"])
+            if not ok:
+                line_no = body[: block["start"]].count("\n") + 1
+                findings.append(
+                    Finding(
+                        code="W017",
+                        field="body",
+                        message=f"Mermaid block fails syntax validation: {reason} (VAL-012)",
+                        suggestion=(
+                            "Fix the diagram, or degrade the block in place to a ```text "
+                            "fence prefixed with the LINT_FAILURE marker"
+                        ),
+                        file=rel_path,
+                        line=line_no,
                         level="WARNING",
                     )
                 )

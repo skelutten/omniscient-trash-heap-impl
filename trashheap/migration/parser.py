@@ -12,13 +12,13 @@ Enforces:
 
 import hashlib
 import re
-from datetime import date, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import yaml
 
-from trashheap.constants import ACTOR_PATTERN, ID_PATTERN
+from trashheap.constants import ACTOR_PATTERN, DEFAULT_SCHEMA_VERSION, ID_PATTERN
 from trashheap.migration.models import (
     FacetProposal,
     FrontmatterMode,
@@ -43,10 +43,19 @@ class LegacyParser:
         rel_path: str,
         content_bytes: bytes,
         migration_map: MigrationMap,
+        now: Optional[datetime] = None,
     ) -> Union[
         Tuple[KnowledgeObject, List[LinkProposal], List[FacetProposal], List[str]], QuarantineRecord
     ]:
-        """Parse a single legacy markdown file into canonical representation or quarantine record."""
+        """Parse a single legacy markdown file into canonical representation or quarantine record.
+
+        Args:
+            now: Reference time used for year tags, ``last_verified`` and
+                ``next_review`` (plumbed from the engine for deterministic
+                reruns). Defaults to the current UTC time when None.
+        """
+        now_dt = now if now is not None else datetime.now(timezone.utc)
+
         # 1. Decode UTF-8
         try:
             raw_text = content_bytes.decode("utf-8")
@@ -114,7 +123,6 @@ class LegacyParser:
             }
             body_text = stripped_text
 
-        # 3. Scope resolution (Rule 9)
         # 3. Scope resolution (Rule 9)
         raw_scope = legacy_fm.get("scope")
         if raw_scope in ("personal", "engineering"):
@@ -205,7 +213,7 @@ class LegacyParser:
         else:
             tag_strat = getattr(obj_spec, "tag_strategy", "domain") if obj_spec else "domain"
             if tag_strat == "year":
-                tag = str(date.today().year)
+                tag = str(now_dt.year)
             else:
                 raw_tag = (
                     slugify_text(legacy_fm.get("title", "untitled"))[:12].upper().replace("-", "_")
@@ -216,8 +224,8 @@ class LegacyParser:
             obj_id = f"{scope_prefix}-{type_code}-{tag}-{num_suffix}"
 
         # 9. Conservative metadata construction (Rule 10)
-        today_iso = date.today().isoformat()
-        next_review_iso = (date.today() + timedelta(days=365)).isoformat()
+        today_iso = now_dt.date().isoformat()
+        next_review_iso = (now_dt + timedelta(days=365)).date().isoformat()
 
         # Domain fallback
         domain = legacy_fm.get("domain")
@@ -246,10 +254,18 @@ class LegacyParser:
         else:
             author = "process:migration"
 
+        # Confidence: numeric coercion with conservative fallback and range validation
+        try:
+            confidence_val = float(legacy_fm.get("confidence"))
+        except (TypeError, ValueError):
+            confidence_val = 0.5
+        if not 0.0 <= confidence_val <= 1.0:
+            confidence_val = 0.5
+
         frontmatter_dict: Dict[str, Any] = {
             "id": obj_id,
             "title": legacy_fm.get("title") or Path(rel_path).stem.replace("_", " ").title(),
-            "schema_version": "3.8.10",
+            "schema_version": DEFAULT_SCHEMA_VERSION,
             "aliases": [],
             "keywords": [],  # Anti-contamination: empty canonical keywords (Rule 8)
             "scope": scope,
@@ -268,13 +284,7 @@ class LegacyParser:
             "reviewer": "human:operator",
             "last_verified": today_iso,
             "next_review": next_review_iso,
-            "confidence": (
-                float(legacy_fm["confidence"])
-                if "confidence" in legacy_fm
-                and isinstance(legacy_fm["confidence"], (int, float, str))
-                and str(legacy_fm["confidence"]).replace(".", "", 1).isdigit()
-                else 0.5
-            ),
+            "confidence": confidence_val,
             "validity": legacy_fm.get("validity")
             if isinstance(legacy_fm.get("validity"), dict)
             else None,
@@ -328,10 +338,15 @@ class LegacyParser:
         # Propose matches for legacy tags against registered facets
         facet_vocab: Dict[str, Set[str]] = {}
         for facet_name, facet_spec in self.registries.facets.items():
-            if hasattr(facet_spec, "values"):
+            # dict branch MUST come first: dicts also have a .values method,
+            # so a hasattr check would shadow the raw-dict registry form.
+            if isinstance(facet_spec, dict):
+                if "values" in facet_spec:
+                    facet_vocab[facet_name] = set(facet_spec["values"])
+            elif hasattr(facet_spec, "values"):
                 facet_vocab[facet_name] = set(facet_spec.values)
-            elif isinstance(facet_spec, dict) and "values" in facet_spec:
-                facet_vocab[facet_name] = set(facet_spec["values"])
+            elif hasattr(facet_spec, "values"):
+                facet_vocab[facet_name] = set(facet_spec.values)
 
         for tag in legacy_tags:
             tag_lower = tag.lower()

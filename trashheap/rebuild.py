@@ -1,26 +1,27 @@
-"""Idempotent reconstruction of disposable metadata, graph, and search caches (RET-004, CANON-003)."""
+"""Idempotent reconstruction of disposable metadata, graph, and vector caches (RET-004, CANON-003)."""
 
 import json
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from trashheap.corpus import load_corpus
-from trashheap.registry.loader import LoadedRegistries
 
 
 def rebuild_indexes(
     corpus_root: Path,
-    registries: LoadedRegistries,
     output_dir: Optional[Path] = None,
     rebuild_vector: bool = False,
 ) -> Dict[str, Any]:
-    """Rebuild ephemeral metadata, graph projections, and term index directly from Markdown notes.
+    """Rebuild disposable projections directly from Markdown notes.
+
+    Produces the graph projection (``graph.json``), the metadata catalog
+    (``metadata_catalog.json``) and, with ``rebuild_vector=True``, the
+    persisted vector index (``vector_index.json``) consumed by ``query --vector``.
 
     Guarantees:
     - CANON-003: Derived indexes can be wiped and re-created at any time without information loss.
     - Deterministic output: Keys and node lists are ordered deterministically.
     """
-    _ = registries
     corpus = load_corpus(corpus_root)
     out_path = output_dir or (corpus_root / ".cache")
     out_path.mkdir(parents=True, exist_ok=True)

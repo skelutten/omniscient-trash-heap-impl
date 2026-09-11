@@ -5,7 +5,7 @@
 - **Corpus Version:** Full PubMed 2026 Baseline (`pubmed26n0001` – `pubmed26n1334`)
 - **Graph Dimensions:** 38,160,835 unified vertices (38,130,067 articles + 30,768 MeSH descriptors) | 1,083,057,976 directed edges (397,591,740 pure citations + 685,466,236 bipartite MeSH bridges)
 - **Engine:** Memory-Mapped Out-of-Core CSR (`indptr.npy`, `indices.npy`, `node_mapping.parquet`)
-- **Status:** **VERIFIED & REPRODUCIBLE**
+- **Status:** **PARTIALLY REPRODUCIBLE** — see the reproducibility ledger below (amended 2026-09-09 per REP-FULL-002 §5 disclosures)
 
 ---
 
@@ -18,6 +18,20 @@ Following the full ingestion and out-of-core CSR binary compilation of all 1,334
 3. **Autonomous Literature-Based Discovery (Swanson's ABC Model):** Demonstrated sub-4-second discovery of hidden scientific links by replicating Don Swanson's classic discoveries (Raynaud's $\leftrightarrow$ Fish Oil via blood viscosity; Migraine $\leftrightarrow$ Magnesium via cortical hyperexcitability) and identifying computational drug repurposing mechanisms (Metformin $\leftrightarrow$ Alzheimer's via Type 2 diabetes, insulin resistance, and amyloid-$\beta$ clearance).
 4. **"Six Degrees of Separation" & Directed Intellectual Lineage:** Direct BFS traversal traced the 59-year intellectual lineage connecting **Charpentier & Doudna's 2012 CRISPR-Cas9** breakthrough to **Watson & Crick's 1953 DNA Double Helix** in **712 milliseconds** over 4 citation hops.
 5. **Out-of-Core Multi-Hop Traversal Latency:** Benchmarked 1-hop neighbor lookup at **202.51 µs** and 2-hop neighborhood expansion (~913 papers) at **7.52 ms** directly from NVMe memory maps.
+
+### Reproducibility ledger (mandatory disclosure)
+
+| Experiment | Committed code | Status |
+|:---|:---|:---|
+| 1. Global citation ranking (Top-20) | **None** | **AD-HOC SESSION ARTIFACT.** Numbers recorded from an interactive session; not reproducible from this repository. |
+| 2. Power-law fit (γ=2.569) & Gini (0.7844) | **None** | **AD-HOC SESSION ARTIFACT.** `.cache/pubmed/citation_counts.npy` (152 MB) is the orphaned input; no committed producer or consumer. |
+| 3. Swanson ABC discovery | `trashheap/graph/discovery.py` (`discover_literature_bridges`), CLI `discover literature`, `tests/test_csr_compile.py`, `tests/test_graph_intelligence.py` | **VERIFIED & REPRODUCIBLE.** Raynaud↔Fish-Oils output reproduces exactly (256.25 / 88.12 / 86.69 / 84.41 / 83.78). Note: the Metformin↔Alzheimer's pair has `disjointness_holds: false` (104 articles already co-discuss both) — bridge ranking, not a pure disjoint discovery. |
+| 4. CRISPR→DNA-double-helix lineage (712 ms) | **None** | **AD-HOC SESSION ARTIFACT.** |
+| 5. Traversal latency benchmark | `trashheap/graph/csr.py` (`benchmark_traversal`, now seeded RNG) | **REPRODUCIBLE WITH CAVEAT.** Historic 202.51 µs used an unseeded RNG; re-runs vary (126–203 µs observed across sessions). |
+
+Per the project's own VAL-013/conformance philosophy, rows marked AD-HOC are
+**observations, not evidence**: they MUST NOT be cited as verified results until
+the producing code is committed and test-pinned.
 
 ---
 

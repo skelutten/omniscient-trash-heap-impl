@@ -76,7 +76,7 @@ class FrontmatterModel(BaseModel):
     reviewer: Optional[str] = None
     last_verified: Optional[date] = None
     next_review: date
-    confidence: float
+    confidence: float = Field(ge=0.0, le=1.0)
 
     # Category 7: TEMPORAL
     validity: Optional[ValidityModel] = None
@@ -156,22 +156,15 @@ class KnowledgeObject:
         return self.raw_body
 
     def parse_sections(self) -> Dict[str, str]:
-        """Extract Markdown H2 sections from the body."""
-        sections: Dict[str, str] = {}
+        """Extract Markdown H2 sections from the body (code-fence aware).
+
+        Delegates to the single Section Map implementation (SCHEMA-005) so the
+        linter, retrieval and CLI all share one heading parser.
+        """
+        from trashheap.section_map import build_section_map
+
         lines = self.raw_body.splitlines()
-        current_heading: Optional[str] = None
-        current_lines: List[str] = []
-
-        for line in lines:
-            if line.startswith("## "):
-                if current_heading is not None:
-                    sections[current_heading] = "\n".join(current_lines).strip()
-                current_heading = line[3:].strip()
-                current_lines = []
-            elif current_heading is not None:
-                current_lines.append(line)
-
-        if current_heading is not None:
-            sections[current_heading] = "\n".join(current_lines).strip()
-
+        sections: Dict[str, str] = {}
+        for entry in build_section_map(self.raw_body):
+            sections[entry.title] = "\n".join(lines[entry.start_line : entry.end_line]).strip()
         return sections

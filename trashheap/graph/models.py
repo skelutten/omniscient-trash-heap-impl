@@ -5,13 +5,9 @@ Implements invariants DELTA-CORE-001..DELTA-CORE-007 and DISC-001..DISC-005.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
-
-def current_iso_timestamp() -> str:
-    """Return current UTC timestamp in ISO 8601 format."""
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+from trashheap.timeutil import current_iso_timestamp
 
 
 @dataclass

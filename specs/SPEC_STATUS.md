@@ -77,7 +77,7 @@ such as interactive visualization and automated relation extraction remain plann
 > Plans 01–05 (`plans/01-REPOSITORY-FOUNDATION.md` through `plans/05-CONNECTORS-OPERATIONS-CI.md`),
 > the core knowledge compiler runtime, universal source ingestion pipeline, DPCP promotion
 > engine, operational lifecycle manager, and reproducible validation gates are fully implemented
-> and verified by 159 automated tests in `tests/` and `tools/check.sh`.
+> and verified by 255 automated tests in `tests/` and `tools/check.sh`.
 > Conformance status is projected deterministically into `artifacts/conformance_matrix.yaml`.
 > Structural Knowledge Graph (`STRUCTURAL-GRAPH.md`), Knowledge Bundles and Google OKF v0.2 interop (`OKF-INTEROP.md`),
 > and Graph Intelligence / Discovery (`GRAPH-INTELLIGENCE.md`, `GRAPH-RETRIEVAL.md`, `DISCOVERY.md`) are fully implemented
@@ -98,7 +98,7 @@ such as interactive visualization and automated relation extraction remain plann
 | Relation Extraction & Linking | `PROPOSED` | `UNIMPLEMENTED` | Closed-ontology automated relation extraction & entity linking (`specs/RELATION-EXTRACTION.md`, `plans/95-RELATION-EXTRACTION-AND-LINKING.md`). |
 | PubMed & MeSH Benchmark | `PROPOSED` | `CONFORMANCE_TESTED` | Streaming XML adapter, CSR projections, adversarial controls, and PubMedQA benchmark harness (`plans/96-OPT-IN-PUBMED-BENCHMARK.md`, `trashheap benchmark --pubmed`). |
 | Constrained Logit Calibration | `PROPOSED` | `CONFORMANCE_TESTED` | Discrete logit decoding, class calibration, and epistemic abstention gates (`plans/97-CONSTRAINED-DECODING-CALIBRATION.md`, `trashheap/calibration/`, `tests/test_calibration.py`). |
-| Test-Time Search & Verifiers | `PROPOSED` | `UNIMPLEMENTED` | Test-time compute search, RAM CSR MCTS, Best-of-N, PRM verification, RCVA protocol, section-targeted retrieval (`plans/98-TEST-TIME-SEARCH-AND-VERIFIERS.md`). |
+| Test-Time Search & Verifiers | `PROPOSED` | `PARTIAL` | RCVA protocol and section-targeted retrieval are `CONFORMANCE_TESTED` (`trashheap/rcva.py`, `trashheap/section_map.py`, families RET-RCVA / SCHEMA-CARD); test-time compute search, RAM CSR MCTS, Best-of-N and PRM verification remain `UNIMPLEMENTED` (`plans/98-TEST-TIME-SEARCH-AND-VERIFIERS.md`). |
 | Tool integration | `PLAN` | `NOT_APPLICABLE` | Non-normative integration plan. |
 
 ### Overall conclusion

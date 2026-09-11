@@ -2,7 +2,6 @@
 
 import hashlib
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
@@ -20,9 +19,7 @@ MutationAction = Literal["create", "replace_owned_sections", "append_notes", "up
 ACTOR_REGEX = re.compile(ACTOR_PATTERN)
 
 
-def current_iso_timestamp() -> str:
-    """Return current UTC timestamp in ISO 8601 format."""
-    return datetime.now(timezone.utc).isoformat()
+from trashheap.timeutil import current_iso_timestamp  # noqa: E402  (re-exported)
 
 
 def compute_content_sha256(content: str) -> str:
@@ -115,7 +112,7 @@ class SemanticResolutionRecord(BaseModel):
 class CandidateProposal(BaseModel):
     """Full Candidate Proposal record staged for review and promotion."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     candidate_id: str
     proposal_revision: int = 1

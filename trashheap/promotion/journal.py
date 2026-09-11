@@ -3,16 +3,18 @@
 import json
 import shutil
 import sqlite3
+import time
+from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Generator, List, Optional
 
 from trashheap.promotion.models import compute_content_sha256
+from trashheap.timeutil import current_iso_timestamp
 
-
-def current_iso_timestamp() -> str:
-    return datetime.now(timezone.utc).isoformat()
+#: Orphan temporary directories younger than this are presumed to belong to a
+#: concurrent in-flight promotion and are never purged (mirrors the DSCP gate).
+ORPHAN_TMP_AGE_GATE_SECONDS = 15 * 60
 
 
 @dataclass
@@ -45,8 +47,36 @@ class DPCPJournal:
         conn.execute("PRAGMA synchronous=FULL;")
         return conn
 
+    @contextmanager
+    def _connect(self) -> Generator[sqlite3.Connection, None, None]:
+        """Connection scope that commits (or rolls back) AND always closes.
+
+        ``with sqlite3.connect(...)`` alone commits but never closes, leaking
+        file handles and WAL locks until garbage collection.
+        """
+        conn = self._get_conn()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
+    @contextmanager
+    def _connect(self) -> Generator[sqlite3.Connection, None, None]:
+        """Connection scope that commits (or rolls back) AND always closes.
+
+        ``with sqlite3.connect(...)`` alone commits but never closes, leaking
+        file handles and WAL locks until garbage collection.
+        """
+        conn = self._get_conn()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
     def _init_db(self) -> None:
-        with self._get_conn() as conn:
+        with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS dpcp_journal (
                     operation_id TEXT PRIMARY KEY,
@@ -85,7 +115,7 @@ class DPCPJournal:
         idempotency_key: str,
     ) -> None:
         now = current_iso_timestamp()
-        with self._get_conn() as conn:
+        with self._connect() as conn:
             conn.execute(
                 """
                 INSERT INTO dpcp_journal (
@@ -111,7 +141,7 @@ class DPCPJournal:
         self, operation_id: str, new_state: str, error_message: Optional[str] = None
     ) -> None:
         now = current_iso_timestamp()
-        with self._get_conn() as conn:
+        with self._connect() as conn:
             conn.execute(
                 """
                 UPDATE dpcp_journal
@@ -131,7 +161,7 @@ class DPCPJournal:
         result_dict: Dict[str, Any],
     ) -> None:
         now = current_iso_timestamp()
-        with self._get_conn() as conn:
+        with self._connect() as conn:
             conn.execute(
                 """
                 INSERT OR REPLACE INTO dpcp_idempotency (
@@ -151,7 +181,7 @@ class DPCPJournal:
             )
 
     def get_idempotency_entry(self, idempotency_key: str) -> Optional[Dict[str, Any]]:
-        with self._get_conn() as conn:
+        with self._connect() as conn:
             cur = conn.execute(
                 "SELECT * FROM dpcp_idempotency WHERE idempotency_key = ?;", (idempotency_key,)
             )
@@ -169,7 +199,7 @@ class DPCPJournal:
             }
 
     def get_journal_entry(self, operation_id: str) -> Optional[JournalRecord]:
-        with self._get_conn() as conn:
+        with self._connect() as conn:
             cur = conn.execute(
                 "SELECT * FROM dpcp_journal WHERE operation_id = ?;", (operation_id,)
             )
@@ -191,7 +221,7 @@ class DPCPJournal:
             )
 
     def list_uncompleted_journals(self) -> List[JournalRecord]:
-        with self._get_conn() as conn:
+        with self._connect() as conn:
             cur = conn.execute(
                 "SELECT * FROM dpcp_journal WHERE current_state NOT IN ('COMPLETED', 'FAILED');"
             )
@@ -285,10 +315,26 @@ class DPCPJournal:
                         }
                     )
 
-        # Sweep orphan .tmp_promo_* folders in staging/transactions
+        # Sweep orphan .tmp_promo_* folders in staging/transactions. Only
+        # directories older than the age gate are purged, so a concurrent
+        # in-flight promotion's staging dir is never destroyed.
         transactions_dir = workspace_root / "staging" / "transactions"
         if transactions_dir.exists():
+            now_mono = time.time()
             for orphan in transactions_dir.glob(".tmp_promo_*"):
+                try:
+                    age_seconds = now_mono - orphan.stat().st_mtime
+                except OSError:
+                    continue
+                if age_seconds < ORPHAN_TMP_AGE_GATE_SECONDS:
+                    recovery_log.append(
+                        {
+                            "orphan_dir": str(orphan),
+                            "action": "skipped_recent_orphan_directory",
+                            "age_seconds": round(age_seconds, 1),
+                        }
+                    )
+                    continue
                 shutil.rmtree(orphan, ignore_errors=True)
                 recovery_log.append(
                     {

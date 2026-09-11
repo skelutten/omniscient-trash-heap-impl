@@ -188,6 +188,22 @@ When the autonomous discovery or ingestion pipeline updates repository root inst
 
 - **DISC-009**: Automated injection of knowledge references into repository root instruction files (`AGENTS.md`, `CLAUDE.md`, etc.) MUST be enclosed strictly between `<!-- TRASHHEAP:START -->` and `<!-- TRASHHEAP:END -->`. Any content outside this delimited instruction fence is human-owned or operator-defined and MUST NOT be modified, reordered, or overwritten by automated tooling. If the delimiter comments are absent, tooling MUST append the delimited block at the end of the file rather than replacing existing content.
 
+### 10.5 Swanson ABC Literature-Based Discovery (DISC-010)
+
+Over large compiled citation/MeSH graph artifacts (CSR projections of the
+PubMed-scale corpus), the system exposes Swanson-style A->B->C literature-based
+discovery (`trashheap discover literature`):
+
+- **DISC-010**: Literature-based discovery MUST be deterministic and
+  artifact-driven: intermediate bridges B are ranked by the degree-normalized
+  co-occurrence score `(co_A(B) * co_C(B)) / sqrt(deg(B))` with a total-order
+  tie-break on the bridge node index; the MeSH/article partition MUST be derived
+  from the compiled `node_mapping.parquet` at query time (no hardcoded index
+  boundaries); all SQL over compiled artifacts MUST be parameterized; and the
+  Swanson disjointness precondition MUST be measured and reported
+  (`articles_discussing_both`), never assumed. Results are discovery candidates
+  in the sense of DISC-001: they propose, and governed review decides.
+
 ---
 
 **End of LLM Wiki Discovery & Promotion Specification v1.0.0**

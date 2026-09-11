@@ -2,12 +2,13 @@
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from trashheap.promotion.engine import list_candidates, save_candidate
 from trashheap.promotion.models import StateTransitionRecord, current_iso_timestamp
+from trashheap.timeutil import parse_iso_timestamp
 
 
 @dataclass
@@ -54,27 +55,56 @@ class TTLReaper:
         with open(self.audit_log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
 
-    def run_reap_cycle(self, now: Optional[datetime] = None) -> Dict[str, int]:
+    def _expiry_anchor(self, candidate: Any, created_dt: datetime) -> datetime:
+        """Return the instant from which the grace period is measured.
+
+        Prefers the timestamp of the most recent ``expired`` state transition in
+        the proposal's history (the actual expiry event). When no parseable
+        expiry transition exists, falls back to the theoretical expiry instant
+        ``created_at + ttl_days`` — never to creation time itself (INGEST-STAGING.md §7.3).
+        """
+        for record in reversed(candidate.history):
+            if record.new_state == "expired":
+                transitioned = parse_iso_timestamp(record.transitioned_at)
+                if transitioned is not None:
+                    return transitioned
+        return created_dt + timedelta(days=self.ttl_days)
+
+    def run_reap_cycle(self, now: Optional[datetime] = None) -> Dict[str, Any]:
         """Execute deterministic retention reaper pass.
 
         Rules:
         1. Proposals with state == 'pending' whose age >= ttl_days are transitioned to 'expired'.
         2. Proposals with state == 'approved' or 'promoted' are NEVER expired.
-        3. Expired proposals older than ttl_days + grace_days are purged to reaper_audit.jsonl.
-        4. Canonical files (personal/, engineering/) are NEVER touched.
+        3. Expired proposals are purged only once ``now >= expiry_anchor + grace_days``,
+           where the anchor is the recorded expiry transition (or the theoretical
+           expiry ``created_at + ttl_days`` when no transition is present).
+        4. Proposals with a corrupt/unparseable ``created_at`` are NEVER expired or
+           purged; they are quarantined (fail-visible) and reported for manual review.
+        5. Canonical files (personal/, engineering/) are NEVER touched.
         """
         current_time = now or datetime.now(timezone.utc)
         candidates = list_candidates(self.workspace_root)
 
         expired_count = 0
         purged_count = 0
+        quarantined: List[str] = []
 
         for c in candidates:
-            # Parse creation time
-            try:
-                created_dt = datetime.fromisoformat(c.created_at.replace("Z", "+00:00"))
-            except Exception:
-                created_dt = datetime.fromtimestamp(0, tz=timezone.utc)
+            created_dt = parse_iso_timestamp(c.created_at)
+            if created_dt is None:
+                # Fail-visible: a corrupt creation timestamp must never trigger a
+                # silent purge or a blind expiry. Quarantine and surface it.
+                quarantined.append(c.candidate_id)
+                self._log_audit(
+                    {
+                        "action": "quarantine_corrupt_timestamp",
+                        "candidate_id": c.candidate_id,
+                        "created_at": c.created_at,
+                        "reason": "unparseable created_at; excluded from expiry and purge",
+                    }
+                )
+                continue
 
             age_days = (current_time - created_dt).total_seconds() / 86400.0
 
@@ -105,24 +135,31 @@ class TTLReaper:
                 )
                 expired_count += 1
 
-            # Step 2: Purge proposals that have been expired past the grace period
-            elif c.state == "expired" and age_days >= (self.ttl_days + self.grace_days):
-                p_file = self.workspace_root / "staging" / "proposals" / f"{c.candidate_id}.yaml"
-                p_file.unlink(missing_ok=True)
-                self._log_audit(
-                    {
-                        "action": "tombstone_purge",
-                        "candidate_id": c.candidate_id,
-                        "proposal_revision": c.proposal_revision,
-                        "source_refs": c.source_refs,
-                        "age_days": age_days,
-                    }
-                )
-                purged_count += 1
+            # Step 2: Purge proposals whose grace period (measured from expiry) has elapsed
+            elif c.state == "expired":
+                expiry_anchor = self._expiry_anchor(c, created_dt)
+                if current_time >= expiry_anchor + timedelta(days=self.grace_days):
+                    p_file = (
+                        self.workspace_root / "staging" / "proposals" / f"{c.candidate_id}.yaml"
+                    )
+                    p_file.unlink(missing_ok=True)
+                    self._log_audit(
+                        {
+                            "action": "tombstone_purge",
+                            "candidate_id": c.candidate_id,
+                            "proposal_revision": c.proposal_revision,
+                            "source_refs": c.source_refs,
+                            "age_days": age_days,
+                            "expiry_anchor": expiry_anchor.isoformat(),
+                        }
+                    )
+                    purged_count += 1
 
         return {
             "expired_count": expired_count,
             "purged_count": purged_count,
+            "quarantined_count": len(quarantined),
+            "quarantined": quarantined,
         }
 
 
@@ -137,15 +174,17 @@ def calculate_knowledge_debt(
 
     pending_items = [c for c in candidates if c.state == "pending"]
     oldest_age = 0.0
+    corrupt_timestamps = 0
 
     for p in pending_items:
-        try:
-            c_time = datetime.fromisoformat(p.created_at.replace("Z", "+00:00"))
-            age = (current_time - c_time).total_seconds() / 86400.0
-            if age > oldest_age:
-                oldest_age = age
-        except Exception:
-            pass
+        c_time = parse_iso_timestamp(p.created_at)
+        if c_time is None:
+            # Fail-visible: count corrupt timestamps instead of silently ignoring them.
+            corrupt_timestamps += 1
+            continue
+        age = (current_time - c_time).total_seconds() / 86400.0
+        if age > oldest_age:
+            oldest_age = age
 
     # Count quarantined files
     quarantine_dir = workspace_root / "staging" / "quarantine"
@@ -165,5 +204,6 @@ def calculate_knowledge_debt(
             "approved_count": len([c for c in candidates if c.state == "approved"]),
             "promoted_count": len([c for c in candidates if c.state == "promoted"]),
             "rejected_count": len([c for c in candidates if c.state == "rejected"]),
+            "corrupt_timestamps": corrupt_timestamps,
         },
     )

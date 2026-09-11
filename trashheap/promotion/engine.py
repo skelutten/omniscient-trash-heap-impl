@@ -1,6 +1,7 @@
 """Candidate extraction, review decisions, and DPCP deterministic promotion engine (Plan 04)."""
 
 import os
+import shutil
 import uuid
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -9,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
+from trashheap.constants import DEFAULT_SCHEMA_VERSION
 from trashheap.corpus import load_corpus, load_single_file
 from trashheap.ingest.exceptions import AccessDeniedError
 from trashheap.ingest.models import EvidenceUnit
@@ -180,7 +182,7 @@ def create_candidate_proposal(
     fm: Dict[str, Any] = {
         "id": canonical_id,
         "title": doc_title,
-        "schema_version": "3.8.10",
+        "schema_version": DEFAULT_SCHEMA_VERSION,
         "aliases": [cid],
         "keywords": ["candidate", "ingestion"],
         "scope": scope,
@@ -387,89 +389,91 @@ def promote_candidate(
     7. DPCP Step 5: COMPLETED in SQLite journal, update candidate state
     """
     ws = workspace_root.resolve()
-    proposal = load_candidate(candidate_id, ws)
-    try:
-        target_file = sandbox_path(ws / proposal.target_path, ws)
-    except AccessDeniedError as exc:
-        raise PromotionError(
-            f"Path traversal detected in proposal target_path '{proposal.target_path}': {exc}"
-        ) from exc
-    operation_id = f"OP-{uuid.uuid4().hex[:12].upper()}"
-    idem_key = idempotency_key or compute_content_sha256(
-        f"{proposal.candidate_id}:{proposal.proposal_revision}:{proposal.proposal_hash}"
-    )
-
     journal = get_journal(ws)
     locks_dir = ws / "staging" / "transactions" / "locks"
     lock_file = locks_dir / "canonical_promotion.lock"
 
-    # 1. Idempotency check before pre-condition check (PROMO-005)
-    existing_idem = journal.get_idempotency_entry(idem_key)
-    if existing_idem:
-        if existing_idem["content_hash"] == proposal.proposal_hash:
-            return PromotionResult(
-                candidate_id=proposal.candidate_id,
-                proposal_revision=proposal.proposal_revision,
-                operation_id=existing_idem["operation_id"],
-                target_path=target_file,
-                content_hash=proposal.proposal_hash,
-                is_noop=True,
-                audit_record=existing_idem["result"],
-            )
-        else:
-            raise PromotionError(
-                f"Integrity conflict: same idempotency key '{idem_key}' with divergent hash [PROMO-005]"
-            )
-
-    # 2. Pre-condition checks (fail-closed, PROMO-002, REVIEW-002, REVIEW-004)
-    if proposal.state != "approved":
-        raise ApprovalBindingError(
-            f"Cannot promote candidate '{candidate_id}' with state '{proposal.state}'. Candidate MUST be approved first [PROMO-002]"
-        )
-
-    if proposal.review_decision is None or proposal.review_decision.decision != "approve":
-        raise ApprovalBindingError(
-            f"Candidate '{candidate_id}' lacks a valid approval decision record [REVIEW-002]"
-        )
-
-    # Approval binding verification (REVIEW-002)
-    rd = proposal.review_decision
-    if rd.candidate_id != proposal.candidate_id:
-        raise ApprovalBindingError(
-            "Candidate ID mismatch between approval and proposal [REVIEW-002]"
-        )
-    if rd.proposal_revision != proposal.proposal_revision:
-        raise ApprovalBindingError(
-            "Proposal revision mismatch between approval and proposal [REVIEW-002]"
-        )
-    if rd.proposal_hash != proposal.proposal_hash:
-        raise ApprovalBindingError(
-            "Proposal hash mismatch between approval and proposal [REVIEW-002]"
-        )
-    if rd.source_revision != proposal.source_revision:
-        raise ApprovalBindingError(
-            "Source revision mismatch between approval and proposal [REVIEW-002]"
-        )
-
-    # Bind approval to the actual content bytes (REVIEW-002, PROMO-002). A staged
-    # payload whose recomputed hash no longer matches the approved hash is rejected.
-    actual_content_hash = compute_content_sha256(proposal.proposed_content)
-    if actual_content_hash != proposal.proposal_hash:
-        raise ApprovalBindingError(
-            f"Proposal hash mismatch: approved {proposal.proposal_hash} does not match "
-            f"recomputed content hash {actual_content_hash} [REVIEW-002]"
-        )
-
-    # Verify scope admissibility (§9.5)
-    scope = proposal.proposed_frontmatter.get("scope")
-    if scope not in {"personal", "engineering"}:
-        raise PromotionError(
-            f"Inadmissible candidate scope '{scope}'. Must be personal or engineering [E104]"
-        )
-
-    # 3. Acquire lock & run DPCP
+    # The mutex is acquired FIRST: proposal state, idempotency records and the
+    # approval binding are all read under the lock so concurrent promotions of
+    # the same candidate cannot race between check and commit (PROMO-005).
     with canonical_promotion_lock(lock_file, timeout_seconds=10.0):
-        # Conflict check (PROMO-006)
+        proposal = load_candidate(candidate_id, ws)
+        try:
+            target_file = sandbox_path(ws / proposal.target_path, ws)
+        except AccessDeniedError as exc:
+            raise PromotionError(
+                f"Path traversal detected in proposal target_path '{proposal.target_path}': {exc}"
+            ) from exc
+        operation_id = f"OP-{uuid.uuid4().hex[:12].upper()}"
+        idem_key = idempotency_key or compute_content_sha256(
+            f"{proposal.candidate_id}:{proposal.proposal_revision}:{proposal.proposal_hash}"
+        )
+
+        # 1. Idempotency check before pre-condition check (PROMO-005)
+        existing_idem = journal.get_idempotency_entry(idem_key)
+        if existing_idem:
+            if existing_idem["content_hash"] == proposal.proposal_hash:
+                return PromotionResult(
+                    candidate_id=proposal.candidate_id,
+                    proposal_revision=proposal.proposal_revision,
+                    operation_id=existing_idem["operation_id"],
+                    target_path=target_file,
+                    content_hash=proposal.proposal_hash,
+                    is_noop=True,
+                    audit_record=existing_idem["result"],
+                )
+            else:
+                raise PromotionError(
+                    f"Integrity conflict: same idempotency key '{idem_key}' with divergent hash [PROMO-005]"
+                )
+
+        # 2. Pre-condition checks (fail-closed, PROMO-002, REVIEW-002, REVIEW-004)
+        if proposal.state != "approved":
+            raise ApprovalBindingError(
+                f"Cannot promote candidate '{candidate_id}' with state '{proposal.state}'. Candidate MUST be approved first [PROMO-002]"
+            )
+
+        if proposal.review_decision is None or proposal.review_decision.decision != "approve":
+            raise ApprovalBindingError(
+                f"Candidate '{candidate_id}' lacks a valid approval decision record [REVIEW-002]"
+            )
+
+        # Approval binding verification (REVIEW-002)
+        rd = proposal.review_decision
+        if rd.candidate_id != proposal.candidate_id:
+            raise ApprovalBindingError(
+                "Candidate ID mismatch between approval and proposal [REVIEW-002]"
+            )
+        if rd.proposal_revision != proposal.proposal_revision:
+            raise ApprovalBindingError(
+                "Proposal revision mismatch between approval and proposal [REVIEW-002]"
+            )
+        if rd.proposal_hash != proposal.proposal_hash:
+            raise ApprovalBindingError(
+                "Proposal hash mismatch between approval and proposal [REVIEW-002]"
+            )
+        if rd.source_revision != proposal.source_revision:
+            raise ApprovalBindingError(
+                "Source revision mismatch between approval and proposal [REVIEW-002]"
+            )
+
+        # Bind approval to the actual content bytes (REVIEW-002, PROMO-002). A staged
+        # payload whose recomputed hash no longer matches the approved hash is rejected.
+        actual_content_hash = compute_content_sha256(proposal.proposed_content)
+        if actual_content_hash != proposal.proposal_hash:
+            raise ApprovalBindingError(
+                f"Proposal hash mismatch: approved {proposal.proposal_hash} does not match "
+                f"recomputed content hash {actual_content_hash} [REVIEW-002]"
+            )
+
+        # Verify scope admissibility (§9.5)
+        scope = proposal.proposed_frontmatter.get("scope")
+        if scope not in {"personal", "engineering"}:
+            raise PromotionError(
+                f"Inadmissible candidate scope '{scope}'. Must be personal or engineering [E104]"
+            )
+
+        # 3. Conflict check (PROMO-006)
         if target_file.exists():
             current_target_hash = compute_content_sha256(target_file.read_text(encoding="utf-8"))
             if current_target_hash != proposal.proposal_hash:
@@ -519,11 +523,7 @@ def promote_candidate(
             )
             registries = load_registries(reg_dir)
             linter = Linter(registries)
-            findings = []
-            findings.extend(linter._check_layer1_schema(ko))
-            findings.extend(linter._check_layer2_structural(ko))
-            findings.extend(linter._check_layer3_semantic(ko))
-            findings.extend(linter._check_section_ownership(ko))
+            findings = list(linter.lint_object(ko))
 
             # Layers 4 & 5 are cross-object (PROMO-003): validate the candidate
             # against the existing canonical corpus plus itself.
@@ -542,13 +542,15 @@ def promote_candidate(
             corpus.objects_by_path[target_file] = ko
             if ko.id and ko.id not in corpus.objects_by_id:
                 corpus.objects_by_id[ko.id] = ko
-            findings.extend(linter._check_layer4_graph(corpus))
-            findings.extend(linter._check_layer5_cross_object(corpus))
+            findings.extend(linter.lint_cross_object(corpus))
 
-            errors = [f for f in findings if f.level == "ERROR"]
-            if errors:
+            # ERROR findings block (PROMO-003). W015 (GRAPH-004 outbound degree
+            # cap) is a "SHALL NOT" invariant and is therefore promotion-blocking
+            # as well — fail-closed at the canonical write boundary.
+            blocking = [f for f in findings if f.level == "ERROR" or f.code == "W015"]
+            if blocking:
                 raise ValidationRollbackError(
-                    f"Linter validation rejected candidate: [{errors[0].code}] {errors[0].message}"
+                    f"Linter validation rejected candidate: [{blocking[0].code}] {blocking[0].message}"
                 )
 
             journal.transition_state(operation_id, "VALIDATED")
@@ -617,11 +619,9 @@ def promote_candidate(
                 journal.transition_state(operation_id, "FAILED", error_message=str(e))
                 proposal.materialization_state = "failed"
                 save_candidate(proposal, ws)
-            raise e
+            raise
 
         finally:
             # Clean temporary promotion folder
             if tmp_promo_dir.exists():
-                import shutil
-
                 shutil.rmtree(tmp_promo_dir, ignore_errors=True)

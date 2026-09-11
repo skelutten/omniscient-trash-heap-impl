@@ -187,6 +187,74 @@ Status: ✓ PASSED
 
 ---
 
+## 8A. Erratum & Telemetry Disclosures (added 2026-09-09, REP-FULL-002)
+
+This report is a point-in-time record (commit `2dd0bff`). The following
+corrections and disclosures are mandatory reading for any citation of its
+numbers:
+
+1. **Resume-zeroed job telemetry.** `.cache/pubmed/full_pubmed_report.json`
+   reports `total_citations: 0`, `total_mesh_headings: 0` and
+   `total_elapsed_hours: 0.22`. The resume logic counts cached shards as zero
+   work, so the final session's report **understates the job**: the true
+   wall-clock cost was ~11.6 hours across 6 process starts (Sep 8 23:46 →
+   Sep 9 11:22, including one reboot mid-run), per `.cache/pubmed/full_job.log`.
+   The 1.083B edge total is genuine (encoded in the CSR `indptr`).
+2. **CSR artifact/loader incompatibility at report time.** The compiled
+   `indices.npy` was written headerless via `np.memmap(mode="w+")`, which the
+   package loader (`CsrGraphProjection.load_memmap`, `np.load`) could not read —
+   the "< 150 ms zero-copy mmap cold-start" was not achievable through
+   committed code at `2dd0bff`. **Fixed:** the compiler now writes a numpy
+   header (`np.lib.format.open_memmap`), the loader accepts both formats and
+   validates `indptr[-1] == len(indices)` fail-closed, and
+   `--adopt-legacy-csr` upgrades the existing artifact without recompilation.
+3. **Crash-resilience caveat at report time.** Resume validity was a size-only
+   check (`st_size == total_edges * 8`): a crash mid-stream left a full-size
+   zero-filled file that the next run accepted as valid. **Fixed:** resume now
+   requires the atomically-last `csr_manifest.json` completion marker
+   (`tests/test_csr_compile.py` pins both behaviors).
+4. **RSS telemetry scope.** The 108–114 MB figures measure the parent process
+   only (`/proc/self/status`); multiprocessing parse workers holding per-shard
+   edge lists were not included.
+5. **Test-count drift.** "168 pytest tests" was accurate at `2dd0bff`; the
+   suite has since grown (see `docs/TEST_REPORT.md` for current counts).
+
+---
+
+## 8A. Erratum & Telemetry Disclosures (added 2026-09-09, REP-FULL-002)
+
+This report is a point-in-time record (commit `2dd0bff`). The following
+corrections and disclosures are mandatory reading for any citation of its
+numbers:
+
+1. **Resume-zeroed job telemetry.** `.cache/pubmed/full_pubmed_report.json`
+   reports `total_citations: 0`, `total_mesh_headings: 0` and
+   `total_elapsed_hours: 0.22`. The resume logic counts cached shards as zero
+   work, so the final session's report **understates the job**: the true
+   wall-clock cost was ~11.6 hours across 6 process starts (Sep 8 23:46 →
+   Sep 9 11:22, including one reboot mid-run), per `.cache/pubmed/full_job.log`.
+   The 1.083B edge total is genuine (encoded in the CSR `indptr`).
+2. **CSR artifact/loader incompatibility at report time.** The compiled
+   `indices.npy` was written headerless via `np.memmap(mode="w+")`, which the
+   package loader (`CsrGraphProjection.load_memmap`, `np.load`) could not read —
+   the "< 150 ms zero-copy mmap cold-start" was not achievable through
+   committed code at `2dd0bff`. **Fixed:** the compiler now writes a numpy
+   header (`np.lib.format.open_memmap`), the loader accepts both formats and
+   validates `indptr[-1] == len(indices)` fail-closed, and
+   `--adopt-legacy-csr` upgrades the existing artifact without recompilation.
+3. **Crash-resilience caveat at report time.** Resume validity was a size-only
+   check (`st_size == total_edges * 8`): a crash mid-stream left a full-size
+   zero-filled file that the next run accepted as valid. **Fixed:** resume now
+   requires the atomically-last `csr_manifest.json` completion marker
+   (`tests/test_csr_compile.py` pins both behaviors).
+4. **RSS telemetry scope.** The 108–114 MB figures measure the parent process
+   only (`/proc/self/status`); multiprocessing parse workers holding per-shard
+   edge lists were not included.
+5. **Test-count drift.** "168 pytest tests" was accurate at `2dd0bff`; the
+   suite has since grown (see `docs/TEST_REPORT.md` for current counts).
+
+---
+
 ## 9. Architectural Takeaways
 
 1. **Massive Scale Feasibility on Commodity Hardware:**
@@ -202,4 +270,4 @@ Status: ✓ PASSED
 
 > **Report Authorization:** Skelutten & Antigravity  
 > **Repository Commit:** [`2dd0bff`](file:///home/daniel6651/omniscient-trash-heap-impl)  
-> **Status:** Production Verified & Benchmark Certified  
+> **Status:** Production Verified & Benchmark Certified — **subject to the §8A Erratum & Telemetry Disclosures** — **subject to the §8A Erratum & Telemetry Disclosures**  

@@ -5,7 +5,9 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from trashheap.constants import REGISTRY_FILES
+from trashheap.constants import REGISTRY_FILES, VERSION
+from trashheap.fsutil import atomic_write_text
+from trashheap.instruction_fence import update_instruction_file
 from trashheap.skills import write_agent_skills
 
 DEFAULT_TAXONOMY_DIRS = [
@@ -37,7 +39,7 @@ __pycache__/
 WELCOME_NOTE_TEMPLATE = """---
 id: PERS-DOC-WELCOME-0001
 title: {title}
-schema_version: 3.8.10
+schema_version: {version}
 keywords:
 - welcome
 - trashheap
@@ -78,6 +80,21 @@ Initial seed document for your personal knowledge repository.
 
 ## Notes
 Add your verified knowledge, thoughts, and connections here. All canonical notes are plain Markdown with strict YAML frontmatter.
+"""
+
+INSTRUCTION_BLOCK_TEMPLATE = """## Knowledge Library: {name}
+
+This repository contains a deterministic Knowledge Library compiled with The
+Omniscient Trash Heap (`trashheap` v{version}).
+
+- Canonical notes: `personal/`, `engineering/` (Markdown + strict YAML frontmatter)
+- Registries: `schemas/registry/`
+- Query: `trashheap query "<prompt>" --corpus-root .`
+- Display: `trashheap show <node-id> --corpus-root .`
+- Intake: `trashheap ingest <file>` (sandboxed staging, governed promotion)
+- Integrity: `trashheap lint .`
+
+This block is machine-managed (DISC-009); content outside the fence is human-owned.
 """
 
 README_TEMPLATE = """# {name}
@@ -206,7 +223,7 @@ def init_wiki(
     # 6. .gitignore
     gitignore_path = target_path / ".gitignore"
     if not gitignore_path.exists() or force:
-        gitignore_path.write_text(GITIGNORE_TEMPLATE, encoding="utf-8")
+        atomic_write_text(gitignore_path, GITIGNORE_TEMPLATE)
         created_files.append(".gitignore")
 
     # 7. Starter Welcome Note
@@ -219,16 +236,29 @@ def init_wiki(
             author=author,
             today=today,
             next_review=next_review,
+            version=VERSION,
         )
-        welcome_path.write_text(welcome_content, encoding="utf-8")
+        atomic_write_text(welcome_path, welcome_content)
         created_files.append(str(welcome_path.relative_to(target_path)))
 
     # 8. README.md
     readme_path = target_path / "README.md"
     if not readme_path.exists() or force:
         readme_content = README_TEMPLATE.format(name=wiki_name)
-        readme_path.write_text(readme_content, encoding="utf-8")
+        atomic_write_text(readme_path, readme_content)
         created_files.append("README.md")
+
+    # 9. Instruction-file fence injection (DISC-009): machine-managed knowledge
+    # references confined to <!-- TRASHHEAP:START/END --> delimiters. AGENTS.md is
+    # always maintained; other instruction files only when they already exist
+    # (human-owned files are never created unprompted).
+    instruction_block = INSTRUCTION_BLOCK_TEMPLATE.format(name=wiki_name, version=VERSION)
+    instruction_files_updated: List[str] = []
+    for instr_name in ("AGENTS.md", "CLAUDE.md", ".cursorrules"):
+        instr_path = target_path / instr_name
+        if instr_name == "AGENTS.md" or instr_path.exists():
+            update_instruction_file(instr_path, instruction_block)
+            instruction_files_updated.append(instr_name)
 
     return {
         "status": "ok",
@@ -236,4 +266,5 @@ def init_wiki(
         "name": wiki_name,
         "created_files": sorted(created_files),
         "created_directories": sorted(created_dirs),
+        "instruction_files_updated": sorted(instruction_files_updated),
     }

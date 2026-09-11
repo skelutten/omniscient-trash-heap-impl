@@ -390,6 +390,14 @@ Grounded question answering, multi-hop reasoning, and automated knowledge synthe
 3. **Phase 3 — Verify:** Every generated factual claim or relation MUST be verified against the cited source passage. Citations MUST use explicit bracketed provenance references (`[source:node_id#lines]`). If an atomic proposition cannot be entailed by the cited source text, the claim is rejected.
 4. **Phase 4 — Abstain:** If the calibrated posterior mass clears below the confidence threshold ($\max_y P(y) < \tau_{\text{abstain}}$) or if verification fails to substantiate the core query, the system MUST halt generation and emit an `EPISTEMIC_ABSTENTION` refusal rather than speculative text (**RET-011**).
 
+**Deterministic CLI surface:** `trashheap query "<prompt>" --claim "<claim>"`
+executes Phases 1-4 end to end. Phase 3 uses the deterministic lexical
+entailment proxy (VAL-013: no generative self-evaluation); the evidence bundle
+carries an `rcva` block with per-phase evidence, and a failed verification sets
+`retrieval_status: REFUSED` with a Stage-2 propositional `refusal`
+(`INSUFFICIENT_EVIDENCE`, RET-007). The cut-offs are registered in
+`threshold_policy.yaml` (`RCVA-TAU-ABSTAIN`, `RCVA-MIN-ENTAILMENT`).
+
 ---
 
 ## Retrieval Invariants

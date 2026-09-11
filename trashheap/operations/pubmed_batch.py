@@ -8,10 +8,14 @@ Compressed Sparse Row (CSR) binary projections.
 from __future__ import annotations
 
 import concurrent.futures
+import hashlib
+import json
+import logging
 import multiprocessing
 import os
 import time
 import urllib.request
+import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,7 +26,10 @@ import numpy as np
 from trashheap.graph.csr import CsrGraphProjection
 from trashheap.operations.pubmed import stream_pubmed_xml
 
+logger = logging.getLogger(__name__)
+
 NCBI_BASELINE_URL = "https://ftp.ncbi.nlm.nih.gov/pubmed/baseline"
+MIN_TRUSTED_SHARD_BYTES = 1000
 
 
 @dataclass
@@ -140,28 +147,100 @@ class PubmedBatchIngestor:
     def shard_url(self, shard_num: int) -> str:
         return f"{NCBI_BASELINE_URL}/{self.shard_filename(shard_num)}"
 
+    def shard_md5_url(self, shard_num: int) -> str:
+        return f"{NCBI_BASELINE_URL}/{self.shard_filename(shard_num)}.md5"
+
+    def _fetch_expected_md5(self, shard_num: int) -> Optional[str]:
+        """Best-effort fetch of the sibling ``{fname}.md5`` checksum.
+
+        Returns the lowercase hex digest, or ``None`` when the checksum file is
+        unavailable (404/network/empty), in which case the caller falls back to
+        the size heuristic.
+        """
+        url = self.shard_md5_url(shard_num)
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "Mozilla/5.0 (OmniscientTrashHeap)"}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                content = resp.read().decode("utf-8", "replace").strip()
+        except Exception as err:
+            logger.info("md5 checksum unavailable for %s (%s); using size heuristic", url, err)
+            return None
+        if not content:
+            return None
+        return content.split()[0].lower()
+
     def download_shard(self, shard_num: int, force: bool = False) -> Path:
-        """Download a single baseline shard archive with resume/cache check."""
+        """Download a single baseline shard archive with integrity verification.
+
+        Cache hits are trusted only when the shard exceeds the minimum size and,
+        ideally, carries a sibling ``{fname}.verified`` marker written after a
+        previously verified download. Pre-existing caches without the marker are
+        accepted on the size heuristic alone (with a warning) so offline runs keep
+        working. Fresh downloads compute an MD5 while streaming; when the upstream
+        ``{fname}.md5`` is available the digest is verified exactly (a mismatch
+        deletes the temp file and raises), otherwise the size heuristic is used.
+        The temp file is fsynced and atomically ``os.replace``d into place.
+        """
         fname = self.shard_filename(shard_num)
         target = self.cache_dir / fname
-        if target.exists() and not force and target.stat().st_size > 1000:
+        marker = self.cache_dir / f"{fname}.verified"
+
+        if target.exists() and not force and target.stat().st_size > MIN_TRUSTED_SHARD_BYTES:
+            if not marker.exists():
+                logger.warning(
+                    "cached shard %s has no .verified marker; accepting on size heuristic", fname
+                )
             return target
 
         url = self.shard_url(shard_num)
         req = urllib.request.Request(
             url, headers={"User-Agent": "Mozilla/5.0 (OmniscientTrashHeap)"}
         )
-        tmp_target = self.cache_dir / f"{fname}.tmp"
+        tmp_target = self.cache_dir / f"{fname}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp"
 
-        with urllib.request.urlopen(req, timeout=60) as resp, open(tmp_target, "wb") as f:
-            while True:
-                chunk = resp.read(1024 * 1024)
-                if not chunk:
-                    break
-                f.write(chunk)
+        try:
+            md5 = hashlib.md5()
+            size = 0
+            with urllib.request.urlopen(req, timeout=60) as resp, open(tmp_target, "wb") as f:
+                while True:
+                    chunk = resp.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    md5.update(chunk)
+                    size += len(chunk)
+                f.flush()
+                os.fsync(f.fileno())
 
-        tmp_target.rename(target)
-        return target
+            local_hex = md5.hexdigest()
+            expected_hex = self._fetch_expected_md5(shard_num)
+
+            checksum_tag: Optional[str]
+            if expected_hex is not None:
+                if local_hex != expected_hex:
+                    raise RuntimeError(
+                        f"MD5 mismatch for {fname}: expected {expected_hex}, got {local_hex}"
+                    )
+                checksum_tag = f"md5:{local_hex}"
+            else:
+                if size <= MIN_TRUSTED_SHARD_BYTES:
+                    raise RuntimeError(
+                        f"Downloaded shard {fname} is suspiciously small ({size} bytes) and no "
+                        "MD5 checksum was available to verify it"
+                    )
+                checksum_tag = None
+
+            os.replace(tmp_target, target)
+            marker.write_text((checksum_tag or "size_heuristic") + "\n", encoding="utf-8")
+            logger.info(
+                "pubmed_shard_download %s", json.dumps({"shard": fname, "checksum": checksum_tag})
+            )
+            return target
+        except BaseException:
+            tmp_target.unlink(missing_ok=True)
+            raise
 
     def _download_shard_with_retry(
         self, shard_num: int, max_retries: int = 3, force: bool = False

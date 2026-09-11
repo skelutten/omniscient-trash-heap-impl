@@ -42,3 +42,5 @@ next_review: '2027-02-17'
 
 ## Summary
 CLI command structure for lint, validate, rebuild, query, and stage-lint.
+
+Related: [ENG-PRT-PROMO-0001](ENG-PRT-PROMO-0001.md).

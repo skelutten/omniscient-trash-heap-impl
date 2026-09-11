@@ -16,15 +16,21 @@ VAL-013: neural models propose, deterministic verifiers validate.
 
 from __future__ import annotations
 
-import re
 from typing import Any, Dict, List, Optional
+
+from trashheap.textutil import content_tokens
 
 EPISTEMIC_ABSTENTION = "EPISTEMIC_ABSTENTION"
 
+#: Default abstention threshold, aligned with the Stage-2 propositional gate
+#: (retrieval.evaluate_stage_2_refusal min_confidence) and the calibration
+#: engine's tau (0.65). One conceptual threshold, one default value.
+DEFAULT_TAU_ABSTAIN = 0.65
+
 
 def _content_tokens(text: str) -> set:
-    """Lowercase alphanumeric tokens (deterministic, no stemming dependency)."""
-    return set(re.findall(r"[a-z0-9]+", text.lower()))
+    """Lowercase alphanumeric content tokens, stopwords removed (deterministic)."""
+    return content_tokens(text)
 
 
 def entailment_score(claim: str, passage: str) -> float:
@@ -84,7 +90,7 @@ def rcva_answer(
     passages: List[Dict[str, Any]],
     calibrated_confidence: Optional[float] = None,
     *,
-    tau_abstain: float = 0.5,
+    tau_abstain: float = DEFAULT_TAU_ABSTAIN,
     min_entailment: float = 0.5,
     token_budget: int = 512,
 ) -> Dict[str, Any]:

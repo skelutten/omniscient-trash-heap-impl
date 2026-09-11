@@ -2,14 +2,12 @@
 
 import hashlib
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-
-def current_iso_timestamp() -> str:
-    return datetime.now(timezone.utc).isoformat()
+from trashheap.timeutil import current_iso_timestamp
 
 
 @dataclass
@@ -38,7 +36,7 @@ class CursorStore:
         return conn
 
     def _init_db(self) -> None:
-        with self._get_conn() as conn:
+        with closing(self._get_conn()) as conn, conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS ingestion_cursors (
                     source_path TEXT PRIMARY KEY,
@@ -51,7 +49,7 @@ class CursorStore:
             """)
 
     def get_cursor(self, source_path: str) -> Optional[CursorState]:
-        with self._get_conn() as conn:
+        with closing(self._get_conn()) as conn, conn:
             cur = conn.execute(
                 "SELECT * FROM ingestion_cursors WHERE source_path = ?;", (source_path,)
             )
@@ -76,7 +74,7 @@ class CursorStore:
         file_sha256: str,
     ) -> CursorState:
         now = current_iso_timestamp()
-        with self._get_conn() as conn:
+        with closing(self._get_conn()) as conn, conn:
             conn.execute(
                 """
                 INSERT OR REPLACE INTO ingestion_cursors (
@@ -95,11 +93,18 @@ class CursorStore:
         )
 
     def check_and_read_new_bytes(self, target_path: Path) -> tuple[bytes, CursorState]:
-        """Read newly appended bytes from target_path while handling rotation and truncation."""
+        """Read newly appended bytes from target_path while handling rotation and truncation.
+
+        The file is read exactly once per poll; the prefix watermark, the new-byte
+        slice, and the whole-file integrity hash are all derived from that single
+        in-memory buffer (INGEST-ADAPTERS.md §3.1).
+        """
         stat = target_path.stat()
         curr_inode = stat.st_ino
         curr_mtime = stat.st_mtime
-        curr_size = stat.st_size
+
+        data = target_path.read_bytes()
+        curr_size = len(data)
 
         cursor = self.get_cursor(str(target_path))
         start_offset = 0
@@ -108,9 +113,7 @@ class CursorStore:
             # Check for file rotation (inode change) or truncation (size shrunk)
             if cursor.inode == curr_inode and curr_size >= cursor.byte_offset:
                 if cursor.byte_offset > 0:
-                    with open(target_path, "rb") as f:
-                        prefix_bytes = f.read(cursor.byte_offset)
-                    prefix_hash = f"sha256:{hashlib.sha256(prefix_bytes).hexdigest()}"
+                    prefix_hash = f"sha256:{hashlib.sha256(data[: cursor.byte_offset]).hexdigest()}"
                     # Inode numbers can be recycled immediately by OS upon file unlink/recreation.
                     # Verify that prefix hash matches the recorded file_sha256.
                     if prefix_hash == cursor.file_sha256:
@@ -123,13 +126,8 @@ class CursorStore:
                 # File rotated or truncated: reset to beginning
                 start_offset = 0
 
-        with open(target_path, "rb") as f:
-            f.seek(start_offset)
-            new_bytes = f.read()
-
-        # Compute whole-file sha256 for integrity watermark
-        with open(target_path, "rb") as f:
-            whole_hash = f"sha256:{hashlib.sha256(f.read()).hexdigest()}"
+        new_bytes = data[start_offset:]
+        whole_hash = f"sha256:{hashlib.sha256(data).hexdigest()}"
 
         new_cursor = self.update_cursor(
             source_path=str(target_path),

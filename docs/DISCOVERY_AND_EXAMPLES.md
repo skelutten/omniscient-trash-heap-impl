@@ -60,7 +60,7 @@ Linting verifies schema compliance, YAML frontmatter restrictions (`extra: forbi
 uv run trashheap lint fixtures/canonical
 
 # Validate a single specific note within corpus context
-uv run trashheap validate fixtures/canonical/ENG-CMP-PARSER-0001.md
+uv run trashheap validate fixtures/canonical/engineering/01_domain_system_architecture/ENG-CMP-PARSER-0001.md
 ```
 
 ### Reading & Section Extraction (`trashheap show`)
@@ -71,7 +71,7 @@ To view note contents without opening full files in an editor:
 uv run trashheap show ENG-CMP-PARSER-0001 --corpus-root fixtures/canonical
 
 # Extract only a specific H2 section (RET-010 section-targeted retrieval)
-uv run trashheap show ENG-CMP-PARSER-0001 --section "Specification"
+uv run trashheap show ENG-CMP-PARSER-0001 --corpus-root fixtures/canonical --section "Summary"
 
 # Extract a bounded 1-indexed line range
 uv run trashheap show ENG-CMP-PARSER-0001 --lines 1-25
@@ -244,19 +244,26 @@ uv run trashheap discover literature \
   --top-k 5
 ```
 
-**Output in ~3.5 seconds:**
+**Output in ~3.5 seconds (verbatim, reproduced by `tests/test_csr_compile.py` contract):**
 ```text
 === Swanson ABC Discovery (MESH_D011928 <-> MESH_D005395) ===
   Articles tagged with MESH_D011928: 6,903
   Articles tagged with MESH_D005395: 8,940
-  Total intermediate bridges found: 2,524
+  Total intermediate bridges found: 2,515
   Top 5 intermediate functional bridges:
-    # 1 | Score: 256.25 | MESH_D004311 (Double-Blind Method)  (co-A:  186, co-C:  597, bg: 187,775)
-    # 2 | Score:  88.12 | MESH_D001161 (Arteriosclerosis)    (co-A:  142, co-C:  148, bg:  56,881)
-    # 3 | Score:  86.69 | MESH_D001794 (Blood Pressure)      (co-A:  211, co-C:  226, bg: 302,577)
-    # 4 | Score:  84.41 | MESH_D016896 (Treatment Outcome)   (co-A:  287, co-C:  334, bg: 1,289,731)
-    # 5 | Score:  83.78 | MESH_D013997 (Time Factors)        (co-A:  288, co-C:  327, bg: 1,263,705)
+    # 1 | Score:   256.25 | MESH_D004311     (co-A:  186, co-C:  597, bg: 187,775)
+    # 2 | Score:    88.12 | MESH_D001161     (co-A:  142, co-C:  148, bg:  56,881)
+    # 3 | Score:    86.69 | MESH_D001794     (co-A:  211, co-C:  226, bg: 302,577)
+    # 4 | Score:    84.41 | MESH_D016896     (co-A:  287, co-C:  334, bg: 1,289,731)
+    # 5 | Score:    83.78 | MESH_D013997     (co-A:  288, co-C:  327, bg: 1,263,705)
 ```
+
+> **Prerequisite:** `discover literature` reads a compiled full-scale CSR artifact
+> directory (`--csr-dir`, default `.cache/pubmed/csr_full`) produced by
+> `scripts/ingest_full_pubmed.py` over the 1,334-shard PubMed baseline. These
+> artifacts (~9 GB) are machine-local and are **not** part of a fresh clone.
+> "Total intermediate bridges found" counts bridges **after** the
+> `--max-background-degree` filter (DISC-010).
 
 ### CLI Example: Computational Drug Repurposing (Metformin $\leftrightarrow$ Alzheimer's)
 Uncovering the biological pathways connecting diabetes therapies to neurodegenerative amyloid clearance:
@@ -269,28 +276,72 @@ uv run trashheap discover literature \
   --json
 ```
 
-**JSON Output:**
+**JSON Output (verbatim, ~23 s on the 8.6 GB artifact):**
 ```json
 {
   "concept_a": "MESH_D008687",
   "concept_c": "MESH_D000544",
   "articles_a": 20612,
   "articles_c": 138869,
-  "total_intermediate_bridges": 7599,
+  "articles_discussing_both": 104,
+  "disjointness_holds": false,
+  "total_intermediate_bridges": 7590,
   "top_bridges": [
     {
       "rank": 1,
+      "bridge_id": "MESH_D051379",
+      "node_idx": 26739,
+      "score": 33096.7,
+      "cooccurrences_with_a": 2402,
+      "cooccurrences_with_c": 19027,
+      "background_degree": 1906853
+    },
+    {
+      "rank": 2,
       "bridge_id": "MESH_D003924",
       "node_idx": 7331,
       "score": 22822.15,
       "cooccurrences_with_a": 8307,
       "cooccurrences_with_c": 1217,
       "background_degree": 196226
+    },
+    {
+      "rank": 3,
+      "bridge_id": "MESH_D000369",
+      "node_idx": 3941,
+      "score": 22240.46,
+      "cooccurrences_with_a": 818,
+      "cooccurrences_with_c": 28678,
+      "background_degree": 1112543
+    },
+    {
+      "rank": 4,
+      "bridge_id": "MESH_D004195",
+      "node_idx": 7587,
+      "score": 18113.05,
+      "cooccurrences_with_a": 865,
+      "cooccurrences_with_c": 13986,
+      "background_degree": 446104
+    },
+    {
+      "rank": 5,
+      "bridge_id": "MESH_D007004",
+      "node_idx": 10256,
+      "score": 14138.27,
+      "cooccurrences_with_a": 12617,
+      "cooccurrences_with_c": 332,
+      "background_degree": 87780
     }
   ]
 }
 ```
-*`MESH_D003924` is Diabetes Mellitus, Type 2, directly capturing the metabolic etiology linking Metformin to Alzheimer's pathology.*
+*Honest reading of this result: `disjointness_holds: false` — 104 articles already
+discuss Metformin and Alzheimer's together, so this is bridge **ranking**, not a
+pure Swanson disjoint discovery (DISC-010 requires this precondition to be
+measured and reported, never assumed). The top-ranked bridge `MESH_D051379`
+scores highest via massive co-occurrence with the Alzheimer's literature;
+`MESH_D003924` (rank 2) is the diabetes-side bridge. Descriptor names are not
+printed by the CLI; resolve UIs via the NLM MeSH browser.*
 
 ### Python API Usage
 You can embed Swanson Discovery directly in Python programs:

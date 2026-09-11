@@ -2,6 +2,9 @@
 # tools/check.sh — Repository validation gate
 set -euo pipefail
 
+# Anchor to the repository root regardless of invocation CWD.
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
 # Choose python binary (prefer .venv if available)
 if [ -f ".venv/bin/python" ]; then
     PYTHON=".venv/bin/python"
@@ -57,7 +60,7 @@ $PYTHON -m trashheap.cli lint fixtures/canonical
 echo "==> Generating and verifying conformance matrix and status drift (D90, CONFORM-001)..."
 $PYTHON -m trashheap.cli conformance --check
 
-echo "==> Running pytest test suite..."
-$PYTEST -q
+echo "==> Running pytest test suite with coverage gate (>= 70%)..."
+$PYTEST -q --cov=trashheap --cov-fail-under=70
 
 echo "==> Gate passed successfully."

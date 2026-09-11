@@ -1,16 +1,12 @@
 """Data models for Staging Backend, DSCP Protocol, and Parquet Tables (INGEST-STAGING.md §7, §9)."""
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
-def current_iso_timestamp() -> str:
-    """Return current UTC timestamp in ISO 8601 format."""
-    return datetime.now(timezone.utc).isoformat()
+from trashheap.timeutil import current_iso_timestamp
 
 
 class BackendType(str, Enum):
@@ -149,7 +145,7 @@ TARGET_SCHEMAS: Dict[str, List[tuple[str, str, str]]] = {
 class ParquetProposalRecord(BaseModel):
     """Staged proposal record for Parquet tables."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     proposal_id: str
     trajectory_id: str = "default"

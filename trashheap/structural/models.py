@@ -12,16 +12,13 @@ Normative Invariants:
 - SG-020: Explicit degradation tracking.
 """
 
-from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
-def current_iso_timestamp() -> str:
-    """Generate RFC3339 / ISO 8601 UTC timestamp."""
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+from trashheap.constants import VERSION
+from trashheap.timeutil import current_iso_timestamp
 
 
 class StructuralNodeType(str, Enum):
@@ -191,4 +188,4 @@ class StructuralGraphManifest(BaseModel):
     )
     node_count: int = Field(..., description="Total nodes in graph")
     edge_count: int = Field(..., description="Total edges in graph")
-    tool_version: str = Field(default="3.8.10", description="trashheap tool version")
+    tool_version: str = Field(default=VERSION, description="trashheap tool version")

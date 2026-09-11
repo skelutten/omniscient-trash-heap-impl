@@ -34,7 +34,18 @@ class EnvironmentReport:
 
 
 def inspect_environment(workspace_root: Path) -> EnvironmentReport:
-    """Inspect environment for crash durability tier and optional dependency availability."""
+    """Inspect environment for crash durability tier and optional dependency availability.
+
+    The filesystem-tier detection is a deliberate path-prefix heuristic: it only
+    recognises WSL2 DrvFs mounts under ``/mnt/c/`` and ``/mnt/d/`` as Tier 2
+    (Degraded). It does NOT introspect the actual mount type, so network or
+    cloud-backed filesystems (NFS, SMB/CIFS, FUSE sync clients, object-storage
+    mounts) that do not match those prefixes are reported as Tier 1 (Production)
+    even though they may not honour atomic-rename/fsync durability guarantees.
+    Callers relying on Tier 1 for crash safety should verify their mount type
+    independently; broadening the heuristic is tracked separately and intentionally
+    not attempted here to avoid false downgrades of native POSIX filesystems.
+    """
     sys_name = platform.system()
     ws_str = str(workspace_root.resolve())
 

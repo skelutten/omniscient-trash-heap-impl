@@ -18,15 +18,17 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from trashheap.constants import VERSION
 from trashheap.corpus import Corpus
 from trashheap.models import KnowledgeObject
 from trashheap.registry.loader import LoadedRegistries
+from trashheap.textutil import STOPWORDS, tokenize, tokenize_with_ids
 from trashheap.vector.protocol import Embedder
 from trashheap.vector.store import VectorHit, VectorIndex
 
 RETRIEVAL_VERSION = "1.0.0"
 RANKING_POLICY_VERSION = "1.0.0"
-RELATION_REGISTRY_VERSION = "3.8.10"
+RELATION_REGISTRY_VERSION = VERSION
 
 # Stage 1 & Stage 2 Refusal Reason Codes (specs/RETRIEVAL.md §9.6, RET-006..RET-008)
 UNGROUNDED_DESCRIPTOR = "UNGROUNDED_DESCRIPTOR"
@@ -35,95 +37,6 @@ EMPTY_BODY_TERMINAL = "EMPTY_BODY_TERMINAL"
 SUPERSEDED_EVIDENCE = "SUPERSEDED_EVIDENCE"
 INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
 
-STOPWORDS: Set[str] = {
-    "a",
-    "an",
-    "the",
-    "and",
-    "or",
-    "but",
-    "if",
-    "then",
-    "else",
-    "when",
-    "at",
-    "from",
-    "by",
-    "for",
-    "with",
-    "about",
-    "against",
-    "between",
-    "into",
-    "through",
-    "during",
-    "before",
-    "after",
-    "above",
-    "below",
-    "to",
-    "of",
-    "up",
-    "down",
-    "in",
-    "out",
-    "on",
-    "off",
-    "over",
-    "under",
-    "again",
-    "further",
-    "once",
-    "here",
-    "there",
-    "where",
-    "why",
-    "how",
-    "all",
-    "any",
-    "both",
-    "each",
-    "few",
-    "more",
-    "most",
-    "other",
-    "some",
-    "such",
-    "no",
-    "nor",
-    "not",
-    "only",
-    "own",
-    "same",
-    "so",
-    "than",
-    "too",
-    "very",
-    "can",
-    "will",
-    "just",
-    "should",
-    "now",
-    "is",
-    "are",
-    "was",
-    "were",
-    "be",
-    "been",
-    "being",
-    "have",
-    "has",
-    "had",
-    "having",
-    "do",
-    "does",
-    "did",
-    "doing",
-    "would",
-    "could",
-    "role",
-    "play",
-}
 
 DEFAULT_RETRIEVAL_PARAMS: Dict[str, Any] = {
     "seed_top_k": 10,
@@ -187,11 +100,6 @@ EPISTEMIC_RANKS: Dict[str, Dict[str, int]] = {
 }
 
 
-def tokenize(text: str) -> List[str]:
-    """Deterministic tokenization into lowercased words."""
-    return [w.lower() for w in re.findall(r"\b[A-Za-z0-9_]+\b", text)]
-
-
 class BM25Index:
     """Okapi BM25 index with k1=1.5 and b=0.75."""
 
@@ -201,6 +109,7 @@ class BM25Index:
         self.doc_len: Dict[str, int] = {}
         self.doc_freq: Dict[str, int] = {}
         self.doc_term_freq: Dict[str, Dict[str, int]] = {}
+        self.postings: Dict[str, Dict[str, int]] = {}
         self.corpus_size = 0
         self.avg_doc_len = 0.0
 
@@ -208,6 +117,7 @@ class BM25Index:
         self.doc_len.clear()
         self.doc_freq.clear()
         self.doc_term_freq.clear()
+        self.postings.clear()
         total_len = 0
         self.corpus_size = len(objects)
         if self.corpus_size == 0:
@@ -232,8 +142,9 @@ class BM25Index:
                 tf[t] = tf.get(t, 0) + 1
             self.doc_term_freq[ko.id] = tf
 
-            for t in tf.keys():
+            for t, freq in tf.items():
                 self.doc_freq[t] = self.doc_freq.get(t, 0) + 1
+                self.postings.setdefault(t, {})[ko.id] = freq
 
         self.avg_doc_len = total_len / self.corpus_size if self.corpus_size > 0 else 1.0
 
@@ -244,17 +155,29 @@ class BM25Index:
             return scores
 
         for token in query_tokens:
-            if token not in self.doc_freq:
+            postings = self.postings.get(token)
+            if not postings:
                 continue
             df = self.doc_freq[token]
             idf = math.log((self.corpus_size - df + 0.5) / (df + 0.5) + 1.0)
-            if idf < 0:
-                idf = 0.0
 
-            for doc_id, tf_map in self.doc_term_freq.items():
-                if token not in tf_map:
-                    continue
-                tf = tf_map[token]
+            for doc_id, tf in postings.items():
+                doc_len = self.doc_len.get(doc_id, self.avg_doc_len)
+                num = tf * (self.k1 + 1.0)
+                denom = tf + self.k1 * (1.0 - self.b + self.b * (doc_len / self.avg_doc_len))
+                term_score = idf * (num / denom)
+                scores[doc_id] = scores.get(doc_id, 0.0) + term_score
+
+        return scores
+
+        for token in query_tokens:
+            postings = self.postings.get(token)
+            if not postings:
+                continue
+            df = self.doc_freq[token]
+            idf = math.log((self.corpus_size - df + 0.5) / (df + 0.5) + 1.0)
+
+            for doc_id, tf in postings.items():
                 doc_len = self.doc_len.get(doc_id, self.avg_doc_len)
                 num = tf * (self.k1 + 1.0)
                 denom = tf + self.k1 * (1.0 - self.b + self.b * (doc_len / self.avg_doc_len))
@@ -308,8 +231,10 @@ def epistemic_conflict_key(ko: KnowledgeObject) -> Tuple[Any, ...]:
     last_verified = str(fm.get("last_verified") or "")
 
     node_id = ko.id or ""
-    # Lowest Node-ID wins last tie-breaker: tuple of negative ASCII values
-    id_neg_ascii = tuple(-ord(ch) for ch in node_id)
+    # Lowest Node-ID wins last tie-breaker. Length-prefixed negative ASCII so
+    # that prefix-related IDs ("ENG-A" vs "ENG-A-10") also resolve to the
+    # lexicographically lowest ID under max().
+    id_neg_ascii = (-len(node_id),) + tuple(-ord(ch) for ch in node_id)
 
     return (v_val, a_val, c_val, e_val, conf, last_verified, id_neg_ascii)
 
@@ -444,6 +369,8 @@ class HybridRetriever:
 
         # Lazy CSR graph projection
         self._csr_projection: Optional[Any] = None
+        self._graph_scorer: Optional[Any] = None
+        self._graph_scorer: Optional[Any] = None
 
         # Build vocabulary for Stage 1 ontology grounding gate (RET-006)
         self.ontology_terms: Set[str] = set()
@@ -479,11 +406,6 @@ class HybridRetriever:
                         for token in tokenize(str(text)):
                             if token not in STOPWORDS and len(token) > 2:
                                 self.ontology_terms.add(token)
-            else:
-                for term in getattr(self.registries.taxonomy_registry, "taxonomies", {}).keys():
-                    for token in tokenize(str(term)):
-                        if token not in STOPWORDS and len(token) > 2:
-                            self.ontology_terms.add(token)
 
     @property
     def csr(self):
@@ -493,6 +415,20 @@ class HybridRetriever:
             self._csr_projection = CsrGraphProjection.build_from_corpus(self.corpus, directed=False)
         return self._csr_projection
 
+    def _graph_feature_scorer(self):
+        """Lazily build (once per retriever) the graph-enhanced feature scorer.
+
+        Topology and all-pairs bounded BFS are expensive; the corpus is fixed
+        for the lifetime of this retriever, so the scorer is cached.
+        """
+        if self._graph_scorer is None:
+            from trashheap.graph.analysis import GraphAnalyzer
+            from trashheap.graph.retrieval import GraphFeatureScorer
+
+            analyzer = GraphAnalyzer(self.corpus, self.workspace_root)
+            self._graph_scorer = GraphFeatureScorer(analyzer)
+        return self._graph_scorer
+
     def retrieve(
         self,
         query: str,
@@ -500,8 +436,15 @@ class HybridRetriever:
         config_params: Optional[Dict[str, Any]] = None,
         vector_index: Optional[VectorIndex] = None,
         embedder: Optional[Embedder] = None,
+        claim: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Execute hybrid search pipeline with D94 per-parameter precedence."""
+        """Execute hybrid search pipeline with D94 per-parameter precedence.
+
+        When ``claim`` is provided, the Stage-2 propositional gate (RET-007) is
+        executed via the RCVA protocol (RET-011): the claim is verified against
+        the retrieved passages with the deterministic entailment proxy, and the
+        retrieval is refused with ``INSUFFICIENT_EVIDENCE`` on abstention.
+        """
         cli_params = cli_params or {}
         config_params = config_params or {}
         v_index = vector_index if vector_index is not None else self.vector_index
@@ -511,7 +454,7 @@ class HybridRetriever:
         parameters_used: Dict[str, Any] = {}
         parameters_origin: Dict[str, str] = {}
 
-        all_param_keys = (
+        all_param_keys = sorted(
             set(DEFAULT_RETRIEVAL_PARAMS.keys())
             | set(config_params.keys())
             | set(cli_params.keys())
@@ -724,11 +667,7 @@ class HybridRetriever:
         graph_raw_scores: Dict[str, float] = {}
         graph_features_map: Dict[str, Dict[str, float]] = {}
         if retrieval_mode == "graph_enhanced":
-            from trashheap.graph.analysis import GraphAnalyzer
-            from trashheap.graph.retrieval import GraphFeatureScorer
-
-            analyzer = GraphAnalyzer(self.corpus, self.workspace_root)
-            scorer = GraphFeatureScorer(analyzer)
+            scorer = self._graph_feature_scorer()
             for nid in visited_depth.keys():
                 score, feat_breakdown = scorer.score_candidate(nid, seed_nodes)
                 graph_raw_scores[nid] = score
@@ -951,23 +890,31 @@ class HybridRetriever:
         grounded_terms = [t for t in query_tokens if t in self.ontology_terms]
         grounding_passed = len(grounded_terms) > 0 if query_tokens else True
 
-        # Gate 2: Path Admissibility Gate
-        mentioned_nids = [t.upper() for t in tokenize(query) if t.upper() in self.csr.node_to_int]
+        # Gate 2: Path Admissibility Gate (RET-006). Canonical node IDs are
+        # hyphenated, so ID-aware tokenization is required; the CSR projection
+        # is built only when structural gates are actually enforced.
+        enforce_refusal = bool(parameters_used.get("enforce_structural_gates", False))
         path_admissibility_passed = True
-        if len(mentioned_nids) >= 2:
-            has_any_path = False
-            for i in range(len(mentioned_nids)):
-                for j in range(i + 1, len(mentioned_nids)):
-                    if self.csr.has_path(
-                        mentioned_nids[i],
-                        mentioned_nids[j],
-                        max_depth=parameters_used.get("max_depth", 2),
-                    ):
-                        has_any_path = True
+        if enforce_refusal:
+            mentioned_nids = list(
+                dict.fromkeys(
+                    t.upper() for t in tokenize_with_ids(query) if t.upper() in self.csr.node_to_int
+                )
+            )
+            if len(mentioned_nids) >= 2:
+                has_any_path = False
+                for i in range(len(mentioned_nids)):
+                    for j in range(i + 1, len(mentioned_nids)):
+                        if self.csr.has_path(
+                            mentioned_nids[i],
+                            mentioned_nids[j],
+                            max_depth=parameters_used.get("max_depth", 2),
+                        ):
+                            has_any_path = True
+                            break
+                    if has_any_path:
                         break
-                if has_any_path:
-                    break
-            path_admissibility_passed = has_any_path
+                path_admissibility_passed = has_any_path
 
         # Gate 3: Terminal Validity Gate
         terminal_validity_passed = True
@@ -1019,7 +966,6 @@ class HybridRetriever:
                 "All candidate evidence nodes are superseded or retracted without active successors"
             )
 
-        enforce_refusal = parameters_used.get("enforce_structural_gates", False)
         if enforce_refusal and not stage_1_passed:
             retrieval_status = "REFUSED"
             refusal = {
@@ -1039,6 +985,45 @@ class HybridRetriever:
             retrieval_status = "ADMISSIBLE"
             refusal = None
             final_node_ids = surviving_candidates[:max_results]
+
+        # Stage 2: Propositional Refusal (RET-007) via the RCVA protocol (RET-011).
+        # A non-empty graph path certifies topological aboutness, NOT propositional
+        # truth: when a claim is supplied, verify it against the retrieved passages
+        # with the deterministic entailment proxy and abstain on failure.
+        rcva_result: Optional[Dict[str, Any]] = None
+        if claim is not None and retrieval_status != "REFUSED":
+            from trashheap.rcva import EPISTEMIC_ABSTENTION, rcva_answer
+
+            tau_abstain = 0.65
+            min_entailment = 0.5
+            for th in self.registries.threshold_policy.thresholds:
+                if th.threshold_id == "RCVA-TAU-ABSTAIN":
+                    tau_abstain = float(th.value)
+                elif th.threshold_id == "RCVA-MIN-ENTAILMENT":
+                    min_entailment = float(th.value)
+
+            passages = [
+                {
+                    "text": prepare_scoring_window(
+                        eligible_objects[nid].raw_body or "", max_tokens=512
+                    ),
+                    "source_ref": nid,
+                }
+                for nid in final_node_ids
+            ]
+            rcva_result = rcva_answer(
+                claim, passages, tau_abstain=tau_abstain, min_entailment=min_entailment
+            )
+            if rcva_result["decision"] == EPISTEMIC_ABSTENTION:
+                verification = rcva_result["phases"]["verify"]
+                refusal = evaluate_stage_2_refusal(
+                    {"retrieval_status": "ADMISSIBLE"},
+                    claim_entailment_score=verification["score"],
+                    calibrated_confidence=None,
+                    min_entailment=verification["threshold"],
+                )
+                retrieval_status = "REFUSED"
+                final_node_ids = []
 
         # 8. Build Evidence Bundle Nodes
         evidence_bundle_nodes: List[Dict[str, Any]] = []
@@ -1166,12 +1151,14 @@ class HybridRetriever:
 
         return {
             "query": query,
+            "claim": claim,
             "retrieval_version": RETRIEVAL_VERSION,
             "ranking_policy_version": RANKING_POLICY_VERSION,
             "relation_registry_version": RELATION_REGISTRY_VERSION,
             "retrieval_mode": retrieval_mode,
             "retrieval_status": retrieval_status,
             "refusal": refusal,
+            "rcva": rcva_result,
             "stage_1_structural_gates": {
                 "status": "PASSED" if stage_1_passed else "FAILED",
                 "reason": refusal_reason,

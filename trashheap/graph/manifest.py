@@ -6,12 +6,13 @@ Implements DELTA-CORE-001..DELTA-CORE-007 (E201..E207).
 
 import hashlib
 import json
-import os
-import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from trashheap.graph.models import GraphManifest, current_iso_timestamp
+from trashheap.constants import VERSION
+from trashheap.fsutil import atomic_write_text
+from trashheap.graph.models import GraphManifest
+from trashheap.timeutil import current_iso_timestamp
 
 
 def compute_file_sha256(path: Path) -> str:
@@ -79,8 +80,16 @@ def build_and_publish_manifest(
     records_count: Dict[str, int] | None = None,
     observability: Dict[str, Any] | None = None,
     corpus_dir: Path | None = None,
+    verify_immutability: bool = True,
 ) -> Tuple[GraphManifest, Path]:
-    """Scan canonical inputs, compute hashes, verify immutability, and publish manifest atomically.
+    """Scan canonical inputs, publish the manifest atomically, and verify immutability.
+
+    The E201 check brackets the real publication work: a pre-scan hashes all
+    canonical inputs, the manifest is built and written, then a post-scan
+    re-hashes and compares. If the inputs mutated in between, the freshly
+    published (now invalid) manifest is removed and RuntimeError is raised.
+    When ``verify_immutability`` is False, a single scan is performed and no
+    post-scan comparison happens.
 
     Raises:
         RuntimeError: If canonical input hashes mutated during generation (DELTA-CORE-001 / E201).
@@ -99,7 +108,7 @@ def build_and_publish_manifest(
 
     manifest = GraphManifest(
         schema_version="1.0.0",
-        architecture_version="3.8.10",
+        architecture_version=VERSION,
         pipeline_version="1.0.0",
         corpus_hash=corpus_hash,
         generated_at=current_iso_timestamp(),
@@ -109,49 +118,31 @@ def build_and_publish_manifest(
         observability=observability,
     )
 
-    # 2. Immutability verification pass (E201)
-    post_scan = scan_canonical_inputs(workspace_root, corpus_dir=corpus_dir)
-    post_corpus_hash = compute_aggregate_corpus_hash(post_scan)
-
-    if corpus_hash != post_corpus_hash:
-        raise RuntimeError(
-            f"DELTA-CORE-001 (E201): Canonical inputs mutated during graph processing! "
-            f"Pre-hash {corpus_hash} != Post-hash {post_corpus_hash}"
-        )
-
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = output_dir / "manifest.jsonl"
 
-    # 3. Atomic publication via temporary file
-    temp_file = tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        dir=output_dir,
-        delete=False,
-        prefix="manifest_",
-        suffix=".tmp",
-    )
-    try:
-        # Header record
-        temp_file.write(json.dumps({"manifest_header": manifest.to_dict()}) + "\n")
-        # Item records
-        for rel_path, _, file_hash in pre_scan:
-            rec = {
-                "record_type": "canonical_input",
-                "path": rel_path,
-                "file_hash": file_hash,
-                "corpus_hash": corpus_hash,
-            }
-            temp_file.write(json.dumps(rec) + "\n")
-        temp_file.flush()
-        os.fsync(temp_file.fileno())
-        temp_file.close()
+    # 2. Build JSONL payload (header record + item records) and publish atomically
+    lines = [json.dumps({"manifest_header": manifest.to_dict()})]
+    for rel_path, _, file_hash in pre_scan:
+        rec = {
+            "record_type": "canonical_input",
+            "path": rel_path,
+            "file_hash": file_hash,
+            "corpus_hash": corpus_hash,
+        }
+        lines.append(json.dumps(rec))
+    atomic_write_text(manifest_path, "\n".join(lines) + "\n")
 
-        # Atomic rename
-        os.replace(temp_file.name, manifest_path)
-    except Exception:
-        if os.path.exists(temp_file.name):
-            os.unlink(temp_file.name)
-        raise
+    # 3. Immutability verification pass bracketing the publication work (E201)
+    if verify_immutability:
+        post_scan = scan_canonical_inputs(workspace_root, corpus_dir=corpus_dir)
+        post_corpus_hash = compute_aggregate_corpus_hash(post_scan)
+
+        if corpus_hash != post_corpus_hash:
+            manifest_path.unlink(missing_ok=True)
+            raise RuntimeError(
+                f"DELTA-CORE-001 (E201): Canonical inputs mutated during graph processing! "
+                f"Pre-hash {corpus_hash} != Post-hash {post_corpus_hash}"
+            )
 
     return manifest, manifest_path

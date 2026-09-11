@@ -11,22 +11,27 @@ Implements:
 
 import hashlib
 import json
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import yaml
 
+from trashheap.fsutil import atomic_write_text
 from trashheap.migration.models import (
     FacetProposal,
     LinkProposal,
     MigrationManifest,
     MigrationMap,
+    MigrationMode,
     QuarantineRecord,
 )
 from trashheap.migration.parser import LegacyParser
 from trashheap.models import KnowledgeObject
 from trashheap.registry.loader import LoadedRegistries, load_registries
 from trashheap.slug import taxonomy_id_to_directory
+
+_HASH_CHUNK_BYTES = 1024 * 1024
 
 
 class MigrationError(Exception):
@@ -47,23 +52,35 @@ class ChangedSourceError(MigrationError):
     pass
 
 
-def compute_corpus_hash(source_dir: Path) -> Tuple[str, List[Tuple[str, bytes]]]:
-    """Compute exact-byte SHA-256 hash over sorted relative POSIX paths and bytes (Rule 3)."""
-    source_dir = Path(source_dir)
-    file_records: List[Tuple[str, bytes]] = []
+def compute_corpus_hash(source_dir: Path) -> Tuple[str, List[Tuple[str, int, str]]]:
+    """Compute exact-byte SHA-256 hash over sorted relative POSIX paths and bytes (Rule 3).
 
-    for p in sorted(source_dir.glob("**/*")):
-        if p.is_file():
-            rel = p.relative_to(source_dir).as_posix()
-            content = p.read_bytes()
-            file_records.append((rel, content))
+    Files are streamed through the hasher in chunks; raw file bytes are never
+    retained in memory.
+
+    Returns:
+        Tuple of (corpus_hash, records) where records is a list of
+        (relative_posix_path, size_bytes, file_sha256) in sorted path order.
+    """
+    source_dir = Path(source_dir)
+    records: List[Tuple[str, int, str]] = []
 
     hasher = hashlib.sha256()
-    for rel_path, content in file_records:
-        hasher.update(rel_path.encode("utf-8"))
-        hasher.update(content)
+    for p in sorted(source_dir.glob("**/*")):
+        if not p.is_file():
+            continue
+        rel = p.relative_to(source_dir).as_posix()
+        file_hasher = hashlib.sha256()
+        size = 0
+        hasher.update(rel.encode("utf-8"))
+        with open(p, "rb") as f:
+            while chunk := f.read(_HASH_CHUNK_BYTES):
+                hasher.update(chunk)
+                file_hasher.update(chunk)
+                size += len(chunk)
+        records.append((rel, size, f"sha256:{file_hasher.hexdigest()}"))
 
-    return f"sha256:{hasher.hexdigest()}", file_records
+    return f"sha256:{hasher.hexdigest()}", records
 
 
 class MigrationEngine:
@@ -78,13 +95,26 @@ class MigrationEngine:
         self.registries = registries or load_registries()
         self.parser = LegacyParser(self.registries)
 
-    def plan(self, source_dir: Path, target_dir: Path) -> MigrationManifest:
+    def plan(
+        self,
+        source_dir: Path,
+        target_dir: Path,
+        now: Optional[datetime] = None,
+    ) -> MigrationManifest:
         """Run dry-run migration analysis without writing canonical target objects."""
-        return self._run(source_dir=source_dir, target_dir=target_dir, dry_run=True)
+        return self._run(source_dir=source_dir, target_dir=target_dir, dry_run=True, now=now)
 
-    def execute(self, source_dir: Path, target_dir: Path, force: bool = False) -> MigrationManifest:
+    def execute(
+        self,
+        source_dir: Path,
+        target_dir: Path,
+        force: bool = False,
+        now: Optional[datetime] = None,
+    ) -> MigrationManifest:
         """Execute migration to target directory with idempotency and target safety (Rule 2)."""
-        return self._run(source_dir=source_dir, target_dir=target_dir, dry_run=False, force=force)
+        return self._run(
+            source_dir=source_dir, target_dir=target_dir, dry_run=False, force=force, now=now
+        )
 
     def _run(
         self,
@@ -92,6 +122,7 @@ class MigrationEngine:
         target_dir: Path,
         dry_run: bool,
         force: bool = False,
+        now: Optional[datetime] = None,
     ) -> MigrationManifest:
         source_dir = Path(source_dir)
         target_dir = Path(target_dir)
@@ -104,6 +135,7 @@ class MigrationEngine:
 
         # Fresh-target and idempotency checks (Rule 2)
         manifest_file = target_dir / "migration_manifest.json"
+        prior_emitted: Set[str] = set()
         if not dry_run and target_dir.exists():
             existing_files = list(target_dir.iterdir())
             if existing_files:
@@ -115,6 +147,8 @@ class MigrationEngine:
                 # Target has existing migration manifest
                 with open(manifest_file, "r", encoding="utf-8") as f:
                     prior_manifest = json.load(f)
+
+                prior_emitted = set(prior_manifest.get("emitted_files") or [])
 
                 prior_source_hash = prior_manifest.get("source_corpus_hash")
                 if prior_source_hash == source_hash and not force:
@@ -134,7 +168,7 @@ class MigrationEngine:
         quarantined: List[QuarantineRecord] = []
         excluded_count = 0
 
-        for rel_posix, content in file_records:
+        for rel_posix, _size, _file_hash in file_records:
             # Check if file is markdown
             if not rel_posix.endswith(".md"):
                 excluded_count += 1
@@ -145,10 +179,12 @@ class MigrationEngine:
                 excluded_count += 1
                 continue
 
+            content = (source_dir / rel_posix).read_bytes()
             res = self.parser.parse_file(
                 rel_path=rel_posix,
                 content_bytes=content,
                 migration_map=self.migration_map,
+                now=now,
             )
 
             if isinstance(res, QuarantineRecord):
@@ -181,7 +217,7 @@ class MigrationEngine:
             source_location=str(source_dir),
             target_location=str(target_dir),
             source_mutated=source_mutated,
-            mode="dry-run" if dry_run else "execute",
+            mode=MigrationMode.DRY_RUN if dry_run else MigrationMode.EXECUTE,
             frontmatter_mode=self.migration_map.frontmatter_mode.value,
             counts=counts,
             quarantined=quarantined,
@@ -195,6 +231,7 @@ class MigrationEngine:
         target_dir.mkdir(parents=True, exist_ok=True)
 
         target_hasher = hashlib.sha256()
+        written: Set[str] = set()
 
         for ko, _ in eligible_objects:
             scope = ko.scope or "engineering"
@@ -204,6 +241,15 @@ class MigrationEngine:
             dest_dir = target_dir / tax_dir_rel
             dest_dir.mkdir(parents=True, exist_ok=True)
             dest_file = dest_dir / f"{ko.id}.md"
+            rel_dest = dest_file.relative_to(target_dir).as_posix()
+
+            # Fail-closed collision detection (Rule 2): never silently overwrite
+            # a file that this migration did not previously emit.
+            if dest_file.exists() and rel_dest not in prior_emitted:
+                raise UnmanagedTargetError(
+                    f"Target file '{dest_file}' already exists and is not recorded in the "
+                    f"prior migration manifest; refusing last-writer-wins overwrite (Rule 2)."
+                )
 
             # Serialize canonical markdown note
             fm_yaml = yaml.dump(
@@ -212,29 +258,31 @@ class MigrationEngine:
                 allow_unicode=True,
             )
             serialized = f"---\n{fm_yaml}---\n\n{ko.raw_body}\n"
-            dest_file.write_text(serialized, encoding="utf-8")
+            atomic_write_text(dest_file, serialized)
+            written.add(rel_dest)
 
-            rel_dest = dest_file.relative_to(target_dir).as_posix()
             target_hasher.update(rel_dest.encode("utf-8"))
             target_hasher.update(serialized.encode("utf-8"))
 
         manifest.target_corpus_hash = f"sha256:{target_hasher.hexdigest()}"
+        manifest.emitted_files = sorted(written)
 
-        # Write migration artifacts
-        with open(target_dir / "migration_manifest.json", "w", encoding="utf-8") as f:
-            f.write(json.dumps(manifest.model_dump(), indent=2, sort_keys=True))
-
-        with open(target_dir / "link_proposals.json", "w", encoding="utf-8") as f:
-            f.write(
-                json.dumps([p.model_dump() for p in all_link_proposals], indent=2, sort_keys=True)
-            )
-
-        with open(target_dir / "facet_proposals.json", "w", encoding="utf-8") as f:
-            f.write(
-                json.dumps([p.model_dump() for p in all_facet_proposals], indent=2, sort_keys=True)
-            )
-
-        with open(target_dir / "legacy_tag_audit.json", "w", encoding="utf-8") as f:
-            f.write(json.dumps(legacy_tag_audit, indent=2, sort_keys=True))
+        # Write migration artifacts atomically
+        atomic_write_text(
+            target_dir / "migration_manifest.json",
+            json.dumps(manifest.model_dump(), indent=2, sort_keys=True),
+        )
+        atomic_write_text(
+            target_dir / "link_proposals.json",
+            json.dumps([p.model_dump() for p in all_link_proposals], indent=2, sort_keys=True),
+        )
+        atomic_write_text(
+            target_dir / "facet_proposals.json",
+            json.dumps([p.model_dump() for p in all_facet_proposals], indent=2, sort_keys=True),
+        )
+        atomic_write_text(
+            target_dir / "legacy_tag_audit.json",
+            json.dumps(legacy_tag_audit, indent=2, sort_keys=True),
+        )
 
         return manifest

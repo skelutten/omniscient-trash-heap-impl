@@ -19,10 +19,11 @@ Normative invariants enforced:
 import hashlib
 import json
 import os
+import re
 import shutil
 import uuid
 from collections import deque
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -33,10 +34,39 @@ from trashheap.bundle.models import (
     BundleSelector,
     CrossScopeSecurityError,
 )
+from trashheap.constants import DEFAULT_SCHEMA_VERSION, VERSION
 from trashheap.corpus import Corpus
 from trashheap.models import KnowledgeObject
 from trashheap.registry.loader import LoadedRegistries
 
+# Deterministic sentinel for missing last_modified values. Wall-clock fallbacks
+# (date.today() / datetime.now()) are forbidden in exported bytes because they
+# break the byte-identical determinism claim (BUNDLE-003 / OKF-010).
+EPOCH_SENTINEL_DATE = "1970-01-01"
+
+
+def _iso_date_string(value: Any) -> str:
+    """Normalize a frontmatter date-ish value to an ISO date string."""
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    return str(value)[:10]
+
+
+def _derive_generated_at(objects: List[KnowledgeObject]) -> str:
+    """Derive a deterministic generated_at stamp for a bundle (BUNDLE-003).
+
+    Uses the maximum ``last_modified`` across the exported Knowledge Objects as
+    an ISO date string, falling back to the ``1970-01-01`` sentinel when none
+    of them carries a last_modified value.
+    """
+    stamps: List[str] = []
+    for ko in objects:
+        last_mod = ko.frontmatter_dict.get("last_modified")
+        if last_mod:
+            stamps.append(_iso_date_string(last_mod))
+    return max(stamps) if stamps else EPOCH_SENTINEL_DATE
 
 def derive_okf_status(status: Optional[str]) -> str:
     """Map canonical 4-state status to OKF 3-state status (§16.4.2)."""
@@ -62,7 +92,12 @@ def export_okf_concept(
     ko: KnowledgeObject,
     bundle_relative_path_map: Dict[str, str],
 ) -> str:
-    """Render a canonical Knowledge Object as a conformant OKF concept document (§16.4)."""
+    """Render a canonical Knowledge Object as a conformant OKF concept document (§16.4).
+
+    Deterministic (BUNDLE-003 / OKF-010): when the frontmatter lacks
+    ``last_modified``, the ``generated.at`` field falls back to the
+    ``1970-01-01`` epoch sentinel instead of today's wall-clock date.
+    """
     fm = ko.frontmatter_dict
     node_id = ko.id or ""
 
@@ -89,7 +124,7 @@ def export_okf_concept(
 
     # Generated (author + last_modified)
     author = fm.get("author") or "unknown"
-    last_mod = str(fm.get("last_modified") or date.today().isoformat())
+    last_mod = str(fm.get("last_modified") or EPOCH_SENTINEL_DATE)
     generated = {"by": author, "at": last_mod}
 
     # Verified (reviewer + last_verified)
@@ -150,7 +185,7 @@ def export_okf_concept(
 
     trashheap_extension: Dict[str, Any] = {
         "id": node_id,  # Stable identity (OKF-002)
-        "schema_version": "3.8.10",
+        "schema_version": DEFAULT_SCHEMA_VERSION,
         "taxonomy_id": fm.get("taxonomy_id"),
         "taxonomy_path": fm.get("taxonomy_path"),
         "domain": ko.domain,
@@ -190,9 +225,16 @@ def export_okf_concept(
     # Convert body cross-links to bundle-relative form (/path/to/target.md)
     body = ko.raw_body
     for target_id, target_bundle_path in bundle_relative_path_map.items():
-        # Replace Markdown link [text](target_id) or [[target_id]]
+        # Replace wiki-style [[target_id]] links
         body = body.replace(f"[[{target_id}]]", f"[[{target_bundle_path}]]")
-        body = body.replace(f"({target_id})", f"({target_bundle_path})")
+        # Replace Markdown link targets (target_id) only at link boundaries
+        # (followed by closing markup, whitespace, sentence punctuation, or end
+        # of text) so parenthesized prose mentions are not corrupted.
+        body = re.sub(
+            rf"\({re.escape(target_id)}\)(?=[)\s.,;:]|$)",
+            lambda _m, _p=target_bundle_path: f"({_p})",
+            body,
+        )
 
     # Serialize to YAML frontmatter + body
     fm_yaml = yaml.dump(frontmatter_dict, sort_keys=False, allow_unicode=True)
@@ -205,9 +247,15 @@ def build_bundle(
     output_dir: Path,
     registries: LoadedRegistries,
     exporter_version: str = "0.1.0",
-    architecture_version: str = "3.8.10",
+    architecture_version: str = VERSION,
+    generated_at: Optional[str] = None,
 ) -> BundleManifest:
-    """Compute and materialize an idempotent Knowledge Bundle (BUNDLE-001..BUNDLE-009)."""
+    """Compute and materialize an idempotent Knowledge Bundle (BUNDLE-001..BUNDLE-009).
+
+    ``generated_at`` defaults to a deterministic derivation (max last_modified
+    across exported KOs, or the 1970-01-01 sentinel) so repeated exports of the
+    same corpus are byte-identical (BUNDLE-003 / OKF-010).
+    """
     _ = registries
     # 1. Selection: Evaluate Selector Over Corpus (BUNDLE-001)
     selected_ids: Set[str] = set()
@@ -259,8 +307,12 @@ def build_bundle(
         if selector.statuses and fm.get("status") not in selector.statuses:
             continue
 
-        # Confidence threshold
-        conf = float(fm.get("confidence", 0.0))
+        # Confidence threshold (explicit None falls back to 0.0, never TypeError)
+        raw_conf = fm.get("confidence")
+        try:
+            conf = float(raw_conf) if raw_conf is not None else 0.0
+        except (TypeError, ValueError):
+            conf = 0.0
         if conf < selector.min_confidence:
             continue
 
@@ -338,7 +390,10 @@ def build_bundle(
     obj_by_id: Dict[str, KnowledgeObject] = {}
 
     for ko in all_objects:
-        assert ko.id is not None
+        if ko.id is None:
+            raise ValueError(
+                "Knowledge Object without an id cannot be mapped into a bundle path"
+            )
         obj_by_id[ko.id] = ko
         # Map path relative to corpus root
         try:
@@ -385,7 +440,10 @@ def build_bundle(
 
     # Emit each OKF concept
     for ko in all_objects:
-        assert ko.id is not None
+        if ko.id is None:
+            raise ValueError(
+                "Knowledge Object without an id cannot be emitted into the bundle"
+            )
         rel_target = bundle_relative_path_map[ko.id].lstrip("/")
         dest_file = tmp_output_dir / rel_target
         dest_file.parent.mkdir(parents=True, exist_ok=True)
@@ -424,13 +482,14 @@ def build_bundle(
         index_path.write_text("\n".join(lines), encoding="utf-8")
 
     # 6. Build and Write Manifest (BUNDLE-004, BUNDLE-008, OKF-007, OKF-011)
-    gen_at = datetime.now(timezone.utc).isoformat()
+    if generated_at is None:
+        generated_at = _derive_generated_at(all_objects)
     manifest = BundleManifest(
         bundle_id=selector.bundle_id,
         title=selector.title,
         selector_hash=selector_hash,
         corpus_hash=corpus_hash,
-        generated_at=gen_at,
+        generated_at=generated_at,
         generator="trashheap-bundle/0.1.0",
         exporter_version=exporter_version,
         architecture_version=architecture_version,

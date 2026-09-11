@@ -2,7 +2,7 @@
 
 > *All the sources. All the wisdom. Some of the trash.*
 
-[![Tests](https://img.shields.io/badge/pytest-208%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/pytest-255%20passing-brightgreen)](tests/)
 [![Architecture Conformance](https://img.shields.io/badge/Conformance-43%2F45%20Families%20(95.6%25)-blue)](artifacts/conformance_matrix.yaml)
 [![Python](https://img.shields.io/badge/Python->=3.11-blue.svg)](pyproject.toml)
 [![License](https://img.shields.io/badge/License-Apache--2.0-yellow.svg)](LICENSE)
@@ -332,7 +332,7 @@ uv sync --extra parquet
 # Verify all 11 YAML schemas and registries load cleanly
 uv run trashheap check-registries
 
-# Run the full validation gate (130 tests across all 37 invariant families)
+# Run the full validation gate (255 passing tests across 43 of 45 invariant families, >=70% coverage gate)
 bash tools/check.sh
 ```
 
@@ -530,7 +530,7 @@ The entire system's integrity is guaranteed by automated test suites, validation
 # Run the complete validation gate (Ruff, pytest, and check-registries)
 bash tools/check.sh
 
-# Run pytest unit and integration tests (208 passing)
+# Run pytest unit and integration tests (255 passing, 2 skipped)
 uv run pytest -v
 
 # Run Ruff linter
@@ -538,7 +538,7 @@ uv run ruff check
 ```
 
 ### Comprehensive Technical & Test Reports:
-- **[Comprehensive Test & Conformance Report (`docs/TEST_REPORT.md`)](docs/TEST_REPORT.md):** Detailed pass rates across all 208 tests, 45 conformance families, and PubMedQA retrieval evaluations.
+- **[Comprehensive Test & Conformance Report (`docs/TEST_REPORT.md`)](docs/TEST_REPORT.md):** Detailed pass rates across all 257 collected tests (35 modules), 45 conformance families, 83.5% line coverage, and PubMedQA retrieval evaluations.
 - **[Examples & Discovery User Guide (`docs/DISCOVERY_AND_EXAMPLES.md`)](docs/DISCOVERY_AND_EXAMPLES.md):** Step-by-step practical recipes for note lifecycle, structural graphs, and Swanson literature discovery.
 - **[Full PubMed 40M Scale Ingestion Report (`docs/FULL_PUBMED_40M_SCALE_REPORT.md`)](docs/FULL_PUBMED_40M_SCALE_REPORT.md):** Ingestion of 1,334 XML shards, 38.16M vertices, 1.083B edges, and out-of-core CSR binary compilation.
 - **[Advanced Graph Topology & Discovery Report (`docs/PUBMED_ADVANCED_TOPOLOGY_EXPERIMENTS.md`)](docs/PUBMED_ADVANCED_TOPOLOGY_EXPERIMENTS.md):** Global top-20 citation hits, scale-free power law MLE ($\gamma=2.569$), and 4-hop CRISPR lineage tracing.

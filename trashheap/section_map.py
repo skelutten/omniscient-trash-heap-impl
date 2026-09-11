@@ -51,11 +51,16 @@ def requires_section_map(body: str) -> bool:
 
 
 def build_section_map(body: str) -> List[SectionMapEntry]:
-    """Parse H2 sections and return a Section Map (Document Card) of the body."""
+    """Parse H2 sections and return a Section Map (Document Card) of the body.
+
+    Code-fence aware: a ``## `` line inside a fenced code block (``` or ~~~)
+    is content, not a section heading.
+    """
     lines = body.splitlines()
     entries: List[SectionMapEntry] = []
     current_title: Optional[str] = None
     current_start: int = 0
+    fence_marker: Optional[str] = None
 
     def close(prev_end: int) -> None:
         nonlocal current_title
@@ -72,7 +77,15 @@ def build_section_map(body: str) -> List[SectionMapEntry]:
 
     for idx, line in enumerate(lines):
         lineno = idx + 1
-        if line.startswith("## "):
+        stripped = line.lstrip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            marker = stripped[:3]
+            if fence_marker is None:
+                fence_marker = marker
+            elif marker == fence_marker:
+                fence_marker = None
+            continue
+        if fence_marker is None and line.startswith("## "):
             close(lineno - 1)
             current_title = line[3:].strip()
             current_start = lineno

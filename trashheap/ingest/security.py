@@ -40,13 +40,19 @@ def sandbox_path(target_path: Union[str, Path], root: Path) -> Path:
     return target_resolved
 
 
+_FENCE_TAG_PATTERN = re.compile(r"<\s*/?\s*untrusted_source\s*/?\s*>", re.IGNORECASE)
+
+
 def fence_untrusted_content(raw_text: str) -> str:
     """Wrap untrusted source content in immutable fences (FR-12, NFR-6, AC-5).
 
-    Escapes any internal closing tags to prevent delimiter breakout attacks.
+    Neutralizes every fence-tag lookalike in the payload — opening or closing,
+    any case, optional interior whitespace — so untrusted content cannot forge
+    or escape the fence boundary seen by downstream LLM consumers.
     """
-    # Neutralize closing delimiter breakout attacks
-    sanitized = raw_text.replace("</untrusted_source>", "&lt;/untrusted_source&gt;")
+    sanitized = _FENCE_TAG_PATTERN.sub(
+        lambda m: m.group(0).replace("<", "&lt;").replace(">", "&gt;"), raw_text
+    )
     return f"<untrusted_source>\n{sanitized}\n</untrusted_source>"
 
 

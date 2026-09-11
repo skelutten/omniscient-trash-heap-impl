@@ -488,11 +488,26 @@ def test_corpus_excludes_docs_and_trashheap(tmp_path: Path):
     (tmp_path / "nested" / "docs").mkdir(parents=True)
     (tmp_path / "nested" / "docs" / "test.md").write_text("---\nid: NEST-0001\n---\n# Nest", encoding="utf-8")
 
+    # Positive control: a canonical note (including one under a deep dir named
+    # like a top-level-only exclusion) MUST still be loaded.
+    (tmp_path / "personal" / "01_notes").mkdir(parents=True)
+    (tmp_path / "personal" / "01_notes" / "good.md").write_text(
+        "---\nid: GOOD-0001\n---\n# Good", encoding="utf-8"
+    )
+    (tmp_path / "personal" / "01_notes" / "tools").mkdir(parents=True)
+    (tmp_path / "personal" / "01_notes" / "tools" / "deep.md").write_text(
+        "---\nid: DEEP-0001\n---\n# Deep", encoding="utf-8"
+    )
+
     corpus = load_corpus(tmp_path)
     ids = {ko.id for ko in corpus.objects}
     assert "DOCS-0001" not in ids
     assert "TRASH-0001" not in ids
     assert "NEST-0001" not in ids
+    assert "GOOD-0001" in ids, "positive control: corpus loading must not exclude canonical notes"
+    assert "DEEP-0001" in ids, "top-level-only exclusions must not apply at depth"
+    assert "GOOD-0001" in ids, "positive control: corpus loading must not exclude canonical notes"
+    assert "DEEP-0001" in ids, "top-level-only exclusions must not apply at depth"
 
 
 def test_load_single_file_enforces_starting_fence(tmp_path: Path):
@@ -519,7 +534,7 @@ def test_environment_durability_flags_tied_to_tier():
 
 
 def test_reaper_handles_corrupt_created_at(temp_workspace):
-    """Verify TTLReaper treats corrupt/unparseable created_at as epoch (expired) rather than current time."""
+    """Verify TTLReaper quarantines corrupt/unparseable created_at (fail-visible, never purge)."""
     from trashheap.operations.reaper import TTLReaper
 
     c = create_candidate_proposal(candidate_id="CAND-CORRUPT-TIME", workspace_root=temp_workspace)
@@ -528,4 +543,9 @@ def test_reaper_handles_corrupt_created_at(temp_workspace):
 
     reaper = TTLReaper(workspace_root=temp_workspace, ttl_days=180, grace_days=7)
     counts = reaper.run_reap_cycle()
-    assert counts["expired_count"] >= 1
+    assert counts["expired_count"] == 0
+    assert counts["purged_count"] == 0
+    assert counts["quarantined_count"] >= 1
+    assert "CAND-CORRUPT-TIME" in counts["quarantined"]
+    proposal_file = temp_workspace / "staging" / "proposals" / "CAND-CORRUPT-TIME.yaml"
+    assert proposal_file.exists(), "quarantined proposal must never be purged"

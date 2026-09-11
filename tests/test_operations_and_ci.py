@@ -332,7 +332,7 @@ def test_conformance_matrix_generation(tmp_path: Path):
     assert matrix.summary["total_families"] == 45
     assert matrix.summary["conformance_tested"] >= 30
     assert matrix.summary["unimplemented"] <= 9
-    assert matrix.summary["total_invariants_tracked"] == 214
+    assert matrix.summary["total_invariants_tracked"] == 215
     assert matrix.summary["total_executable_tests"] > 50
     assert "corpus_hash" in matrix.summary
 

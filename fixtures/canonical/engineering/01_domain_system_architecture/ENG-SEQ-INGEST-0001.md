@@ -42,3 +42,5 @@ next_review: '2027-02-17'
 
 ## Summary
 Execution sequence: raw payload -> injection fence -> SHA-256 staging record.
+
+Related: [ENG-PRT-PROMO-0001](ENG-PRT-PROMO-0001.md).

@@ -2,11 +2,10 @@
 
 import hashlib
 import json
-import os
-import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
+from trashheap.fsutil import atomic_write_text
 from trashheap.structural.extractor import ASTExtractor, compute_content_hash
 from trashheap.structural.models import (
     CoverageReport,
@@ -38,6 +37,7 @@ class StructuralGraphIndexer:
         self.file_hashes: Dict[str, str] = {}  # rel_path -> content_hash
         self.unresolved_refs: List[Dict[str, str]] = []
         self.failed_files: List[Dict[str, str]] = []
+        self.manifest: Optional[StructuralGraphManifest] = None
 
     def scan_files(self, patterns: Optional[List[str]] = None) -> List[Path]:
         """Scan repository for source files, ignoring non-code directories."""
@@ -104,8 +104,10 @@ class StructuralGraphIndexer:
         """
         all_candidate_paths = self.scan_files(file_patterns)
 
-        if incremental and not self.nodes:
-            self.load_existing_index()
+        if incremental and not self.nodes and not self.file_hashes:
+            if not self.load_existing_index():
+                # Missing or empty cache: fall back to a full build (SG-006)
+                incremental = False
 
         if not incremental:
             self.nodes.clear()
@@ -229,18 +231,12 @@ class StructuralGraphIndexer:
             "file_hashes": dict(sorted(self.file_hashes.items())),
         }
 
-        # Write graph.json atomically
-        with tempfile.NamedTemporaryFile(
-            "w", dir=self.cache_dir, delete=False, encoding="utf-8"
-        ) as tf:
-            json.dump(graph_payload, tf, indent=2, sort_keys=True)
-            temp_graph = Path(tf.name)
-        os.replace(temp_graph, self.cache_dir / "graph.json")
-
-        # Write coverage.json atomically
-        with tempfile.NamedTemporaryFile(
-            "w", dir=self.cache_dir, delete=False, encoding="utf-8"
-        ) as tf:
-            json.dump(coverage.model_dump(), tf, indent=2, sort_keys=True)
-            temp_cov = Path(tf.name)
-        os.replace(temp_cov, self.cache_dir / "coverage.json")
+        # Write graph.json and coverage.json atomically (tmp + fsync + replace)
+        atomic_write_text(
+            self.cache_dir / "graph.json",
+            json.dumps(graph_payload, indent=2, sort_keys=True),
+        )
+        atomic_write_text(
+            self.cache_dir / "coverage.json",
+            json.dumps(coverage.model_dump(), indent=2, sort_keys=True),
+        )

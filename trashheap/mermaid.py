@@ -40,7 +40,8 @@ MERMAID_DIRECTIVES = {
     "block",
 }
 
-_MERMAID_FENCE = re.compile(r"```mermaid\s*\n(.*?)```", re.DOTALL)
+_MERMAID_FENCE = re.compile(r"```mermaid[^\S\r\n]*\r?\n(.*?)```", re.DOTALL)
+_QUOTED_SPAN = re.compile(r'"[^"]*"|\'[^\']*\'')
 
 
 def extract_mermaid_blocks(body: str) -> List[dict]:
@@ -57,10 +58,13 @@ def validate_mermaid_block(inner: str) -> Tuple[bool, str]:
     if not stripped:
         return False, "empty diagram"
     first_line = stripped.splitlines()[0].strip()
-    if not any(first_line.startswith(d) for d in sorted(MERMAID_DIRECTIVES, key=len, reverse=True)):
+    if not any(first_line.startswith(d) for d in MERMAID_DIRECTIVES):
         return False, f"unrecognized diagram directive {first_line!r}"
+    # Quoted labels may legally contain unbalanced delimiters (e.g. A["foo (bar"]);
+    # neutralize them before the balance check.
+    unquoted = _QUOTED_SPAN.sub('""', stripped)
     for open_c, close_c in (("{", "}"), ("[", "]"), ("(", ")")):
-        if stripped.count(open_c) != stripped.count(close_c):
+        if unquoted.count(open_c) != unquoted.count(close_c):
             return False, f"unbalanced {open_c}{close_c} delimiters"
     return True, ""
 

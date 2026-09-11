@@ -46,3 +46,5 @@ next_review: '2027-02-17'
 
 ## Summary
 Validates frontmatter, structural IDs, semantic facets, DAG cycles, and cross-object referential integrity.
+
+Related: [ENG-PRD-LLMWIKI-0001](ENG-PRD-LLMWIKI-0001.md).

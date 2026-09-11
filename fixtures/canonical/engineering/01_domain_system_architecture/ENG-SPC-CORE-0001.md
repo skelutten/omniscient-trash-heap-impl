@@ -45,3 +45,5 @@ next_review: '2027-02-17'
 
 ## Summary
 The normative technical specification governing system invariants and layered validation.
+
+Related: [ENG-PRT-PROMO-0001](ENG-PRT-PROMO-0001.md).

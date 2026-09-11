@@ -46,3 +46,5 @@ next_review: '2027-02-17'
 
 ## Summary
 Implements zero-drift parsing with extra=forbid and strict type coercion.
+
+Related: [ENG-FET-LINTER-0001](ENG-FET-LINTER-0001.md).

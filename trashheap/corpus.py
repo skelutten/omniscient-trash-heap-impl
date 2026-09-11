@@ -35,8 +35,7 @@ def load_single_file(file_path: Path) -> KnowledgeObject:
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    stripped_start = content.lstrip()
-    if not stripped_start.startswith("---"):
+    if not content.startswith("---"):
         err = ValueError(f"File missing starting YAML frontmatter fence ('---'): {file_path}")
         return KnowledgeObject(
             path=file_path,
@@ -46,7 +45,7 @@ def load_single_file(file_path: Path) -> KnowledgeObject:
             load_error=err,
         )
 
-    parts = stripped_start.split("---", 2)
+    parts = content.split("---", 2)
     if len(parts) < 3:
         err = ValueError(f"File missing YAML frontmatter fence ('---'): {file_path}")
         return KnowledgeObject(
@@ -97,6 +96,57 @@ def load_single_file(file_path: Path) -> KnowledgeObject:
     )
 
 
+#: Repository-structure directories excluded only at the corpus root. A canonical
+#: taxonomy directory deeper in the tree may legitimately carry one of these
+#: names (e.g. ``personal/.../tools/``), so they MUST NOT be excluded at depth.
+DEFAULT_EXCLUDED_TOP_DIRS = {
+    ".git",
+    ".venv",
+    ".pytest_cache",
+    ".ruff_cache",
+    "schemas",
+    "specs",
+    "plans",
+    "research",
+    "prompts",
+    "external-specs",
+    "review-outputs",
+    "input-artifacts",
+    ".agents",
+    "tools",
+    "tests",
+    "scripts",
+    "examples",
+}
+
+#: Non-canonical storage, derived working directories (CANON-005) and generated
+#: report directories. These are system-owned at any depth: a canonical
+#: Knowledge Object MUST NOT live inside them, so they are excluded wherever
+#: they appear in the path.
+DEFAULT_EXCLUDED_ANY_DEPTH = {
+    "raw",
+    "staging",
+    "artifacts",
+    "derived",
+    "discovery",
+    ".cache",
+    ".trashheap",
+    "docs",
+}
+
+ROOT_FILE_SKIP_NAMES = {
+    "README.md",
+    "CONTRIBUTING.md",
+    "LICENSE.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    # Root instruction files are human/agent-owned scaffolding (DISC-009),
+    # never canonical Knowledge Objects.
+    "AGENTS.md",
+    "CLAUDE.md",
+}
+
+
 def load_corpus(
     root: Path,
     scope: Optional[str] = None,
@@ -104,58 +154,42 @@ def load_corpus(
 ) -> Corpus:
     """Scan and load the corpus in a single read pass.
 
-    Reads each Markdown file exactly once, incrementing read_count.
+    Reads each Markdown file exactly once, incrementing read_count. Symlinked
+    files resolving outside the corpus root are skipped (containment policy,
+    mirroring the ingest sandbox at the canonical read boundary).
     """
     corpus = Corpus(root=root)
     if exclude_dirs is None:
-        exclude_dirs = {
-            ".git",
-            ".venv",
-            ".pytest_cache",
-            ".ruff_cache",
-            "schemas",
-            "specs",
-            "plans",
-            "research",
-            "prompts",
-            "external-specs",
-            "review-outputs",
-            "input-artifacts",
-            ".agents",
-            "tools",
-            "tests",
-            "conformance",
-            "docs",
-            ".trashheap",
-            # Non-canonical storage and derived working directories (CANON-005).
-            "raw",
-            "staging",
-            "artifacts",
-            "derived",
-            "discovery",
-            ".cache",
-        }
+        excluded_top = DEFAULT_EXCLUDED_TOP_DIRS
+        excluded_any = DEFAULT_EXCLUDED_ANY_DEPTH
+    else:
+        excluded_top = set(exclude_dirs)
+        excluded_any = set()
 
     # Find candidate Markdown files
     candidate_paths: List[Path] = []
     if root.is_file():
         candidate_paths = [root]
     else:
+        root_resolved = root.resolve()
         for p in root.rglob("*.md"):
             # Check exclusions
             rel = p.relative_to(root)
-            if any(part in exclude_dirs for part in rel.parts):
+            if rel.parts and rel.parts[0] in excluded_top:
                 continue
-            if len(rel.parts) == 1 and rel.name in {
-                "README.md",
-                "CONTRIBUTING.md",
-                "LICENSE.md",
-                "CHANGELOG.md",
-                "SECURITY.md",
-            }:
+            if excluded_any and any(part in excluded_any for part in rel.parts[:-1]):
+                continue
+            if len(rel.parts) == 1 and rel.name in ROOT_FILE_SKIP_NAMES:
                 continue
             if scope and not any(part == scope for part in rel.parts):
                 continue
+            if p.is_symlink():
+                try:
+                    resolved = p.resolve()
+                except OSError:
+                    continue
+                if not resolved.is_relative_to(root_resolved):
+                    continue
             candidate_paths.append(p)
 
     candidate_paths.sort()

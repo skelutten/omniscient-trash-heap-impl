@@ -41,3 +41,5 @@ next_review: '2027-02-17'
 
 ## Summary
 All file replacements must execute via .tmp file creation and atomic rename.
+
+Related: [ENG-FET-LINTER-0001](ENG-FET-LINTER-0001.md).

@@ -19,8 +19,8 @@ from trashheap.staging.models import (
     StagingBackendStatus,
     StagingManifest,
     StagingTableInfo,
-    current_iso_timestamp,
 )
+from trashheap.timeutil import current_iso_timestamp
 
 
 class BaselineStagingBackend(StagingBackend):
@@ -52,30 +52,30 @@ class BaselineStagingBackend(StagingBackend):
         dest = p_dir / f"{record.proposal_id}.yaml"
         tmp = p_dir / f".{record.proposal_id}.yaml.tmp"
 
-        # Check existing for idempotency and integrity collision
+        # Check existing for idempotency and integrity collision (fail closed)
         if dest.exists():
             try:
                 with open(dest, "r", encoding="utf-8") as fp:
                     data = yaml.safe_load(fp)
                 existing = CandidateProposal.model_validate(data)
-                if existing.proposal_hash == record.input_sha256:
-                    # Idempotent no-op
-                    return CommitResult(
-                        proposal_id=record.proposal_id,
-                        input_sha256=record.input_sha256,
-                        target_table=target_table,
-                        is_noop=True,
-                    )
-                else:
-                    raise DSCPIntegrityError(
-                        f"Identity collision for proposal_id '{record.proposal_id}' "
-                        f"with divergent hash: existing={existing.proposal_hash}, "
-                        f"new={record.input_sha256}. [E114]"
-                    )
-            except DSCPIntegrityError:
-                raise
-            except Exception:
-                pass
+            except Exception as e:
+                raise DSCPIntegrityError(
+                    f"Existing proposal at {dest} is corrupt or unparseable; refusing "
+                    f"to overwrite it (fail closed): {e} [E114]"
+                ) from e
+            if existing.proposal_hash == record.input_sha256:
+                # Idempotent no-op
+                return CommitResult(
+                    proposal_id=record.proposal_id,
+                    input_sha256=record.input_sha256,
+                    target_table=target_table,
+                    is_noop=True,
+                )
+            raise DSCPIntegrityError(
+                f"Identity collision for proposal_id '{record.proposal_id}' "
+                f"with divergent hash: existing={existing.proposal_hash}, "
+                f"new={record.input_sha256}. [E114]"
+            )
 
         # Build candidate proposal
         body = ""
@@ -159,7 +159,8 @@ class BaselineStagingBackend(StagingBackend):
                     data = yaml.safe_load(fp)
                 if status_filter is None or data.get("state") == status_filter:
                     results.append(data)
-            except Exception:
+            except Exception as e:
+                print(f"WARNING: skipping unparseable proposal {f}: {e}")
                 continue
         return results
 

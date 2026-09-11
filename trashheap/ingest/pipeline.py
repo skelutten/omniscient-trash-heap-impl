@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 import yaml
 
 from trashheap.ingest.cscc import CaptureResult, commit_raw_capture
-from trashheap.ingest.exceptions import SourceValidationError
+from trashheap.ingest.exceptions import QuarantineError, SourceValidationError
 from trashheap.ingest.models import (
     EvidenceUnit,
     RepresentationRecord,
@@ -133,6 +133,7 @@ def intake_source(
     actor_ref: Optional[str] = None,
     media_type: str = "text/plain",
     max_bytes: int = DEFAULT_MAX_SOURCE_BYTES,
+    registries: Optional[Any] = None,
 ) -> IngestionResult:
     """Universal source intake pipeline enforcing sandboxing, CSCC, fencing, and staging.
 
@@ -144,6 +145,10 @@ def intake_source(
     5. Registry profile validation (SourceValidationError on invalid envelope/profile)
     6. Crash-safe Source Capture Commit (CSCC)
     7. Staging Evidence Unit projection
+
+    ``registries`` accepts a pre-loaded ``LoadedRegistries`` instance so batch
+    callers (e.g. the PubMed adapter) do not re-parse all registry YAML files
+    per ingested source. When omitted, registries are loaded once per call.
     """
     ws_root = Path(workspace_root).resolve() if workspace_root else Path.cwd().resolve()
 
@@ -153,11 +158,13 @@ def intake_source(
 
     if isinstance(source_input, (str, Path)):
         candidate_path = Path(source_input)
+        text_form = str(source_input)
         is_file_like = (
             candidate_path.is_file()
-            or "/" in str(source_input)
-            or "\\" in str(source_input)
-            or str(source_input).startswith(".")
+            or (
+                not any(ch.isspace() for ch in text_form)
+                and ("/" in text_form or "\\" in text_form or text_form.startswith("."))
+            )
         )
 
         if is_file_like:
@@ -166,6 +173,13 @@ def intake_source(
             if not resolved_target.exists():
                 raise FileNotFoundError(
                     f"Source file '{candidate_path}' not found at '{resolved_target}'"
+                )
+            declared_size = resolved_target.stat().st_size
+            if declared_size > max_bytes:
+                raise QuarantineError(
+                    f"Source '{resolved_target.name}' declares {declared_size} bytes, "
+                    f"exceeding the {max_bytes}-byte resource limit",
+                    reason="size_limit_exceeded",
                 )
             raw_bytes = resolved_target.read_bytes()
             try:
@@ -176,7 +190,7 @@ def intake_source(
                 extension = resolved_target.suffix
         else:
             # Treat as string payload
-            raw_bytes = str(source_input).encode("utf-8")
+            raw_bytes = text_form.encode("utf-8")
     elif isinstance(source_input, bytes):
         raw_bytes = source_input
         extension = ".bin"
@@ -199,10 +213,13 @@ def intake_source(
     fenced_text = fence_untrusted_content(text_content)
 
     # Step 5: Profile Validation against source_registry.yaml
-    reg_dir = (
-        ws_root / "schemas" / "registry" if (ws_root / "schemas" / "registry").exists() else None
-    )
-    registries = load_registries(reg_dir)
+    if registries is None:
+        reg_dir = (
+            ws_root / "schemas" / "registry"
+            if (ws_root / "schemas" / "registry").exists()
+            else None
+        )
+        registries = load_registries(reg_dir)
     source_reg = registries.source_registry
 
     if source_type not in source_reg.source_types:

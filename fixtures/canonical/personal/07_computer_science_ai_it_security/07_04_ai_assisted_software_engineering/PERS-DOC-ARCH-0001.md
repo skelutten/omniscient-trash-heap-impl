@@ -42,3 +42,5 @@ next_review: '2027-02-17'
 
 ## Summary
 Transitioning from passive hoarding to active compilation in personal knowledge bases.
+
+Related: [PERS-ART-AGENTS-0001](PERS-ART-AGENTS-0001.md).

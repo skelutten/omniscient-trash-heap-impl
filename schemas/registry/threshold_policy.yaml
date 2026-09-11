@@ -80,6 +80,36 @@ thresholds:
     unit: outbound_edges
     owner: specs/VALIDATION.md
     rationale: Bounded outbound degree threshold to prevent link soup (W015, GRAPH-004).
+  - threshold_id: RCVA-TAU-ABSTAIN
+    decision_domain: rcva_abstention
+    value: 0.65
+    unit: posterior_mass
+    owner: specs/RETRIEVAL.md
+    rationale: Abstain threshold for the RCVA protocol (RET-011), aligned with the Stage-2 propositional gate and the calibration engine default. Not empirically calibrated.
+  - threshold_id: RCVA-MIN-ENTAILMENT
+    decision_domain: rcva_verification
+    value: 0.5
+    unit: lexical_entailment_fraction
+    owner: specs/RETRIEVAL.md
+    rationale: Minimum deterministic lexical entailment fraction for claim verification (RET-007/RET-011, VAL-013). Not empirically calibrated.
+  - threshold_id: REVIEW-TAU-PRE-SCORE
+    decision_domain: moderator_pre_scoring
+    value: 0.70
+    unit: span_entailment_fraction
+    owner: specs/REVIEW-PROMOTION.md
+    rationale: Hallucination-fence threshold for the Moderator Agent Pre-Pass (REVIEW-011). Not empirically calibrated.
+  - threshold_id: RUNAWAY-MAX-IDENTICAL
+    decision_domain: runaway_loop_fence
+    value: 5
+    unit: identical_signatures
+    owner: specs/VALIDATION.md
+    rationale: Sliding-ring repetition limit before the E052 circuit breaker trips (VAL-014, The 40% Rule).
+  - threshold_id: RUNAWAY-BUDGET-FRACTION
+    decision_domain: runaway_loop_fence
+    value: 0.40
+    unit: budget_fraction
+    owner: specs/VALIDATION.md
+    rationale: Share of the allocated token/turn budget that repeated identical failures may consume before E052 trips (VAL-014, The 40% Rule).
 
 rules:
   - threshold_id: THRESH-002

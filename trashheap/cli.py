@@ -150,7 +150,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--warnings-as-errors", action="store_true", help="Treat warnings as errors"
     )
     lint_parser.add_argument(
-        "--strict", action="store_true", help="Strict mode (elevates warnings)"
+        "--strict", action="store_true", help="Strict mode (warnings yield exit code 2)"
     )
     lint_parser.add_argument(
         "--scope", choices=["personal", "engineering"], default=None, help="Filter scope"
@@ -206,6 +206,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     query_parser.add_argument("prompt", type=str, help="Query text or node ID")
     query_parser.add_argument(
+        "--claim",
+        type=str,
+        default=None,
+        help="Propositional claim to verify against retrieved passages (Stage-2 RCVA gate, RET-007/RET-011)",
+    )
+    query_parser.add_argument(
         "--corpus-root", type=str, default="fixtures/canonical", help="Corpus root directory"
     )
     query_parser.add_argument(
@@ -226,7 +232,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     query_parser.add_argument("--min-relevance", type=float, default=0.0, help="Min relevance knob")
     query_parser.add_argument(
-        "--json", action="store_true", default=argparse.SUPPRESS, help="Emit machine-readable JSON output"
+        "--json",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="Emit machine-readable JSON output (query always emits the JSON evidence bundle; flag accepted for symmetry)",
     )
     query_parser.add_argument(
         "--vector",
@@ -297,9 +306,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     rebuild_parser.add_argument(
         "--output-dir", type=str, default=None, help="Output directory for rebuilt projections"
-    )
-    rebuild_parser.add_argument(
-        "--registry-dir", type=str, default=None, help="Custom path to schemas/registry"
     )
     rebuild_parser.add_argument(
         "--vector", action="store_true", help="Also rebuild offline vector index (Plan 90)"
@@ -989,20 +995,25 @@ def handle_lint(args: argparse.Namespace) -> int:
             print(f"Invalid date format for --now: {args.now}", file=sys.stderr)
             return ExitCode.CONFIG_OR_ARG_ERROR
 
-    # Determine corpus root and target file
+    # Determine corpus root and target file. An explicit --corpus-root (e.g. via
+    # `validate`) always wins over the walk-up heuristic.
+    override_root = getattr(args, "corpus_root", None)
     if target_path.is_file():
-        corpus_root = target_path.parent
-        # Walk up to find nearest known root
-        curr = target_path.parent
-        while curr != curr.parent:
-            if (
-                (curr / "engineering").exists()
-                or (curr / "personal").exists()
-                or (curr / "pyproject.toml").exists()
-            ):
-                corpus_root = curr
-                break
-            curr = curr.parent
+        if override_root:
+            corpus_root = Path(override_root)
+        else:
+            corpus_root = target_path.parent
+            # Walk up to find nearest known root
+            curr = target_path.parent
+            while curr != curr.parent:
+                if (
+                    (curr / "engineering").exists()
+                    or (curr / "personal").exists()
+                    or (curr / "pyproject.toml").exists()
+                ):
+                    corpus_root = curr
+                    break
+                curr = curr.parent
         target_file: Optional[Path] = target_path
     else:
         corpus_root = target_path
@@ -1073,7 +1084,17 @@ def handle_rename(args: argparse.Namespace) -> int:
     """Handle rename command."""
     corpus_root = Path(args.corpus_root)
     if not corpus_root.exists():
+        print(f"Corpus root '{corpus_root}' not found", file=sys.stderr)
         return ExitCode.NOT_FOUND
+
+    graph_path = None
+    for candidate in (
+        corpus_root / ".cache" / "graph.json",
+        corpus_root / ".trashheap" / "cache" / "graph.json",
+    ):
+        if candidate.exists():
+            graph_path = candidate
+            break
 
     try:
         res = rename_entity(
@@ -1081,6 +1102,7 @@ def handle_rename(args: argparse.Namespace) -> int:
             old_id=args.old_id,
             new_id=args.new_id,
             dry_run=args.dry_run,
+            graph_path=graph_path,
         )
     except KeyError as e:
         if args.json:
@@ -1102,14 +1124,47 @@ def handle_rename(args: argparse.Namespace) -> int:
         print(f"{prefix}Renamed {args.old_id} -> {args.new_id}")
         if res.renamed_file:
             print(f"  Target file: {res.renamed_file}")
+        if res.path_changed:
+            print("  Note: file moved to its re-derived taxonomy slug path (TAX-002)")
         print(f"  Updated referencing files: {len(res.updated_referencing_files)}")
+        if graph_path is not None:
+            if res.graph_updated:
+                print(f"  Graph projection updated: {graph_path}")
+            elif res.graph_error:
+                print(f"  Graph projection NOT updated: {res.graph_error}", file=sys.stderr)
     return ExitCode.SUCCESS
+
+
+def _load_vector_cache(corpus_root: Path, corpus, embedder):
+    """Load a persisted vector index (written by `rebuild --vector`) when fresh (D84).
+
+    Returns None when no cache exists, the cache is corrupt, or it is stale for
+    the current corpus/embedder — callers then rebuild from scratch.
+    """
+    from trashheap.vector import VectorIndex
+
+    for cache_path in (
+        corpus_root / ".cache" / "vector_index.json",
+        corpus_root / ".trashheap" / "cache" / "vector_index.json",
+    ):
+        if not cache_path.exists():
+            continue
+        try:
+            index = VectorIndex()
+            index.from_dict(json.loads(cache_path.read_text(encoding="utf-8")))
+            fresh, _reason = index.check_freshness(corpus, embedder)
+        except (ValueError, KeyError, OSError, json.JSONDecodeError):
+            continue
+        if fresh:
+            return index
+    return None
 
 
 def handle_query(args: argparse.Namespace) -> int:
     """Handle query command returning an evidence bundle."""
     corpus_root = Path(args.corpus_root)
     if not corpus_root.exists():
+        print(f"Corpus root '{corpus_root}' not found", file=sys.stderr)
         return ExitCode.NOT_FOUND
 
     reg_dir = args.registry_dir or "schemas/registry"
@@ -1122,8 +1177,10 @@ def handle_query(args: argparse.Namespace) -> int:
         from trashheap.vector import LocalOfflineProvider, VectorIndex
 
         embedder = LocalOfflineProvider()
-        vector_index = VectorIndex()
-        vector_index.build(corpus, embedder)
+        vector_index = _load_vector_cache(corpus_root, corpus, embedder)
+        if vector_index is None:
+            vector_index = VectorIndex()
+            vector_index.build(corpus, embedder)
 
     retriever = HybridRetriever(
         corpus=corpus,
@@ -1145,10 +1202,13 @@ def handle_query(args: argparse.Namespace) -> int:
         "retrieval_mode": "graph_enhanced"
         if getattr(args, "graph_enhanced", False)
         else "canonical",
+        "enforce_structural_gates": getattr(args, "enforce_structural_gates", False),
     }
 
-    bundle = retriever.retrieve(query=args.prompt, cli_params=cli_params)
-    print(json.dumps(bundle, indent=2))
+    bundle = retriever.retrieve(
+        query=args.prompt, cli_params=cli_params, claim=getattr(args, "claim", None)
+    )
+    print(json.dumps(bundle, indent=2, sort_keys=True))
     return ExitCode.SUCCESS
 
 
@@ -1223,15 +1283,13 @@ def handle_rebuild(args: argparse.Namespace) -> int:
     """Handle rebuild command reconstructing index caches directly from Markdown notes."""
     corpus_root = Path(args.corpus_root)
     if not corpus_root.exists():
+        print(f"Corpus root '{corpus_root}' not found", file=sys.stderr)
         return ExitCode.NOT_FOUND
 
-    reg_dir = args.registry_dir or "schemas/registry"
-    registries = load_registries(reg_dir)
     out_dir = Path(args.output_dir) if args.output_dir else None
 
     res = rebuild_indexes(
         corpus_root,
-        registries,
         output_dir=out_dir,
         rebuild_vector=getattr(args, "vector", False),
     )
@@ -1446,31 +1504,56 @@ def handle_review(args: argparse.Namespace) -> int:
     ws_root = Path(getattr(args, "workspace_root", ".") or ".").resolve()
 
     if action == "list":
+        from trashheap.promotion.pre_score import pre_score_proposal
+
         candidates = list_candidates(ws_root, state_filter=args.status)
         if args.scope:
             candidates = [
                 c for c in candidates if c.proposed_frontmatter.get("scope") == args.scope
             ]
+        # REVIEW-011 Moderator Pre-Pass: every staged proposal is pre-scored
+        # against its cited source spans before presentation to the operator.
+        pre_scores = {c.candidate_id: pre_score_proposal(c, ws_root) for c in candidates}
         if args.json:
-            print(json.dumps([c.model_dump() for c in candidates], indent=2))
+            payload = []
+            for c in candidates:
+                entry = c.model_dump()
+                entry["pre_score"] = pre_scores[c.candidate_id]
+                payload.append(entry)
+            print(json.dumps(payload, indent=2))
         else:
             print(f"Candidates ({len(candidates)}):")
             for c in candidates:
+                ps = pre_scores[c.candidate_id]
+                score = ps["span_entailment_score"]
+                score_txt = "n/a" if score is None else f"{score:.2f}"
                 print(
-                    f"  - {c.candidate_id} [{c.state}] rev:{c.proposal_revision} -> {c.target_path}"
+                    f"  - {c.candidate_id} [{c.state}] rev:{c.proposal_revision} "
+                    f"pre-score:{score_txt} ({ps['flag']}) -> {c.target_path}"
                 )
         return ExitCode.SUCCESS
 
     elif action == "show":
         try:
+            from trashheap.promotion.pre_score import pre_score_proposal
+
             c = load_candidate(args.candidate_id, ws_root)
+            ps = pre_score_proposal(c, ws_root)
             if args.json:
-                print(json.dumps(c.model_dump(), indent=2))
+                payload = c.model_dump()
+                payload["pre_score"] = ps
+                print(json.dumps(payload, indent=2))
             else:
                 print(f"Candidate: {c.candidate_id} (rev {c.proposal_revision})")
                 print(f"  State: {c.state} (materialization: {c.materialization_state})")
                 print(f"  Target: {c.target_path}")
                 print(f"  Hash: {c.proposal_hash}")
+                score = ps["span_entailment_score"]
+                score_txt = "n/a" if score is None else f"{score:.3f}"
+                print(
+                    f"  Pre-score (REVIEW-011): {ps['flag']} "
+                    f"(span entailment: {score_txt}, tau: {ps['tau_pre_score']})"
+                )
                 if c.review_decision:
                     print(
                         f"  Decision: {c.review_decision.decision} by {c.review_decision.reviewer}"
@@ -1583,7 +1666,7 @@ def handle_status(args: argparse.Namespace) -> int:
 
     canonical_count = 0
     if corpus_dir and corpus_dir.exists():
-        canonical_count = len([p for p in corpus_dir.glob("**/*.md") if p.is_file()])
+        canonical_count = len(load_corpus(corpus_dir))
 
     total_units = canonical_count + debt_report.pending_backlog_count
     debt_index = round(debt_report.pending_backlog_count / max(1, total_units), 3)
@@ -1952,8 +2035,19 @@ def handle_discover(args: argparse.Namespace) -> int:
 
         csr_dir = Path(args.csr_dir)
         if not csr_dir.exists():
-            print(f"Error: CSR directory '{csr_dir}' not found", file=sys.stderr)
+            msg = f"CSR directory '{csr_dir}' not found"
+            if args.json:
+                print(json.dumps({"status": "error", "message": msg}, indent=2))
+            else:
+                print(f"Error: {msg}", file=sys.stderr)
             return ExitCode.NOT_FOUND
+        if args.top_k < 1:
+            msg = f"--top-k must be >= 1, got {args.top_k}"
+            if args.json:
+                print(json.dumps({"status": "error", "message": msg}, indent=2))
+            else:
+                print(f"Error: {msg}", file=sys.stderr)
+            return ExitCode.CONFIG_OR_ARG_ERROR
         try:
             res = discover_literature_bridges(
                 csr_dir=csr_dir,
@@ -1975,11 +2069,26 @@ def handle_discover(args: argparse.Namespace) -> int:
                     )
             return ExitCode.SUCCESS
         except KeyError as e:
-            print(f"Error: {e}", file=sys.stderr)
+            msg = str(e.args[0]) if e.args else str(e)
+            if args.json:
+                print(json.dumps({"status": "error", "message": msg}, indent=2))
+            else:
+                print(f"Error: {msg}", file=sys.stderr)
+            return ExitCode.NOT_FOUND
+        except FileNotFoundError as e:
+            msg = str(e)
+            if args.json:
+                print(json.dumps({"status": "error", "message": msg}, indent=2))
+            else:
+                print(f"Error: {msg}", file=sys.stderr)
             return ExitCode.NOT_FOUND
         except Exception as e:
-            print(f"Discovery error: {e}", file=sys.stderr)
-            return ExitCode.INTERNAL_ERROR
+            msg = f"Discovery error: {type(e).__name__}: {e}"
+            if args.json:
+                print(json.dumps({"status": "error", "error_type": type(e).__name__, "message": str(e)}, indent=2))
+            else:
+                print(msg, file=sys.stderr)
+            return ExitCode.VALIDATION_ERROR
 
     disc_dir = Path(args.discovery_dir)
     ws_root = Path(getattr(args, "workspace_root", "."))
@@ -2161,7 +2270,12 @@ def handle_structural(args: argparse.Namespace) -> int:
 
         if b_action == "scan":
             indexer = StructuralGraphIndexer(repo_root=ws_root, cache_dir=cache_dir)
-            indexer.load_existing_index()
+            if not indexer.load_existing_index():
+                print(
+                    "No structural index found. Run 'trashheap structural index' first.",
+                    file=sys.stderr,
+                )
+                return ExitCode.NOT_FOUND
             corpus = load_corpus(ws_root / "fixtures" / "canonical")
             bridges = engine.discover_bridges(corpus, indexer.nodes)
             if args.json:
@@ -2402,16 +2516,47 @@ def handle_init(args: argparse.Namespace) -> int:
         return ExitCode.SUCCESS
     except FileNotFoundError as e:
         if getattr(args, "json", False):
-            print(json.dumps({"status": "error", "message": str(e)}, indent=2), file=sys.stderr)
+            print(json.dumps({"status": "error", "error_type": "FileNotFoundError", "message": str(e)}, indent=2))
         else:
             print(f"Error: {e}", file=sys.stderr)
         return ExitCode.NOT_FOUND
     except Exception as e:
         if getattr(args, "json", False):
-            print(json.dumps({"status": "error", "message": str(e)}, indent=2), file=sys.stderr)
+            print(json.dumps({"status": "error", "error_type": type(e).__name__, "message": str(e)}, indent=2))
         else:
             print(f"Error: {e}", file=sys.stderr)
         return ExitCode.CONFIG_OR_ARG_ERROR
+
+
+def _fail_uniformly(args: argparse.Namespace, exc: Exception) -> int:
+    """Uniform uncaught-exception path: clean message or JSON envelope, deterministic code.
+
+    No handler may escape as a raw traceback (exit-code contract, VALIDATION.md
+    §Exit Codes): FileNotFoundError/registry-load failures map to NOT_FOUND(4),
+    ValueError to CONFIG_OR_ARG_ERROR(3), everything else to VALIDATION_ERROR(1).
+    """
+    from trashheap.registry.loader import RegistryLoadError
+
+    if isinstance(exc, (FileNotFoundError, RegistryLoadError)):
+        code = ExitCode.NOT_FOUND
+    elif isinstance(exc, FileExistsError):
+        code = ExitCode.VALIDATION_ERROR
+    elif isinstance(exc, ValueError):
+        code = ExitCode.CONFIG_OR_ARG_ERROR
+    else:
+        code = ExitCode.VALIDATION_ERROR
+
+    if getattr(args, "json", False):
+        print(
+            json.dumps(
+                {"status": "error", "error_type": type(exc).__name__, "message": str(exc)},
+                indent=2,
+                sort_keys=True,
+            )
+        )
+    else:
+        print(f"\u274c ERROR ({type(exc).__name__}): {exc}", file=sys.stderr)
+    return code
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -2459,7 +2604,15 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     handler = handlers.get(args.command)
     if handler:
-        return handler(args)
+        try:
+            return handler(args)
+        except SystemExit:
+            raise
+        except KeyboardInterrupt:
+            print("Interrupted.", file=sys.stderr)
+            return ExitCode.VALIDATION_ERROR
+        except Exception as exc:
+            return _fail_uniformly(args, exc)
 
     parser.print_help()
     return ExitCode.SUCCESS

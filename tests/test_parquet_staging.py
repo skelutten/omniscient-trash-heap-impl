@@ -18,14 +18,16 @@ import sqlite3
 from pathlib import Path
 from unittest.mock import patch
 
-import pyarrow as pa
-import pyarrow.parquet as pq
 import pytest
 
-from trashheap.cli import main
-from trashheap.constants import ExitCode
-from trashheap.promotion.models import CandidateProposal
-from trashheap.staging import (
+pa = pytest.importorskip("pyarrow")
+pq = pytest.importorskip("pyarrow.parquet")
+pytest.importorskip("duckdb")
+
+from trashheap.cli import main  # noqa: E402
+from trashheap.constants import ExitCode  # noqa: E402
+from trashheap.promotion.models import CandidateProposal  # noqa: E402
+from trashheap.staging import (  # noqa: E402
     BackendType,
     BaselineStagingBackend,
     DSCPIntegrityError,
@@ -40,7 +42,7 @@ from trashheap.staging import (
     sync_baseline_to_parquet,
     verify_backend_equivalence,
 )
-from trashheap.staging.parquet import _validated_sql_path
+from trashheap.staging.parquet import _validated_sql_path  # noqa: E402
 
 
 @pytest.fixture

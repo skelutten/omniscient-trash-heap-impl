@@ -6,9 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class StrictRegistryModel(BaseModel):
-    """Base model for core registry models."""
+    """Base model for core registry models (META-002-style extra="forbid")."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
 
 # --- Object Registry ---
@@ -109,7 +109,7 @@ class SourceCategoryDefinition(StrictRegistryModel):
 
 
 class SourceTypeDefinition(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     category: str
     source_taxonomy: List[str]
@@ -118,10 +118,14 @@ class SourceTypeDefinition(BaseModel):
     identity_fields_any_of: Optional[List[List[str]]] = None
     provenance_requirements: List[str] = Field(default_factory=list)
     recommended_fields: List[str] = Field(default_factory=list)
+    policy_note: Optional[str] = None
+    represents_event_types: Optional[List[str]] = None
+    event_metadata: Optional[List[str]] = None
+    may_report_events: Optional[List[str]] = None
 
 
 class SourceRegistryModel(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     schema_version: str
     registry_id: Optional[str] = None
@@ -139,7 +143,7 @@ class SourceRegistryModel(BaseModel):
 
 # --- Actor Registry ---
 class ActorTypeDefinition(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     description: Optional[str] = None
     identity_fields: List[str] = Field(default_factory=list)
@@ -147,7 +151,7 @@ class ActorTypeDefinition(BaseModel):
 
 
 class ActorRegistryModel(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     schema_version: str
     registry_id: Optional[str] = None

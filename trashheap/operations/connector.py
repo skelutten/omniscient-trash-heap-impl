@@ -8,6 +8,7 @@ from typing import Any, Dict, Generator, Optional
 from trashheap.ingest.models import compute_sha256
 from trashheap.ingest.pipeline import IngestionResult, intake_source
 from trashheap.operations.cursor import CursorStore
+from trashheap.timeutil import current_iso_timestamp
 
 
 @dataclass
@@ -20,6 +21,18 @@ class RawPayload:
     media_type: str = "text/plain"
     metadata: Optional[Dict[str, Any]] = None
     collected_at: Optional[str] = None
+
+
+def resolve_occurred_at(payload: RawPayload) -> str:
+    """Resolve the event timestamp for a trajectory payload (INGEST-ADAPTERS.md §3.1).
+
+    Precedence: an explicit ``metadata["occurred_at"]`` (the time the event
+    actually occurred) wins over ``payload.collected_at`` (the time the connector
+    read it), which wins over the current wall-clock time. Event time is
+    authoritative over read time.
+    """
+    metadata = payload.metadata or {}
+    return metadata.get("occurred_at") or payload.collected_at or current_iso_timestamp()
 
 
 class BaseConnector(ABC):
@@ -39,12 +52,10 @@ class FileConnector(BaseConnector):
         self.cursor_store = cursor_store
 
     def acquire(self) -> Generator[RawPayload, None, None]:
-        from datetime import datetime, timezone
-
         if not self.file_path.exists():
             return
 
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = current_iso_timestamp()
         if self.cursor_store:
             content, cursor = self.cursor_store.check_and_read_new_bytes(self.file_path)
             if not content:
@@ -134,14 +145,7 @@ class TrajectoryAdapter(BaseAdapter):
         payload: RawPayload,
         workspace_root: Path,
     ) -> IngestionResult:
-        from datetime import datetime, timezone
-
-        occurred_at = (
-            payload.collected_at
-            or (payload.metadata.get("occurred_at") if payload.metadata else None)
-            or (payload.metadata.get("collected_at") if payload.metadata else None)
-            or datetime.now(timezone.utc).isoformat()
-        )
+        occurred_at = resolve_occurred_at(payload)
 
         return intake_source(
             source_input=payload.content_bytes,

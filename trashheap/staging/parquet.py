@@ -1,5 +1,6 @@
 """Opt-in Parquet and DuckDB discovery staging backend (INGEST-STAGING.md §7, §9, plans/93)."""
 
+import contextlib
 import hashlib
 import json
 import os
@@ -11,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from trashheap.fsutil import file_lock
 from trashheap.staging.backend import StagingBackend, check_parquet_dependencies
 from trashheap.staging.models import (
     TARGET_SCHEMAS,
@@ -23,10 +25,12 @@ from trashheap.staging.models import (
     ParquetProposalRecord,
     StagingManifest,
     StagingTableInfo,
-    current_iso_timestamp,
 )
+from trashheap.timeutil import current_iso_timestamp
 
 _SAFE_PATH_RE = re.compile(r"^[A-Za-z0-9_./~-]+$")
+
+DSCP_COMMIT_LOCK_NAME = ".dscp_commit.lock"
 
 
 def _safe_delete(path: Path) -> None:
@@ -55,8 +59,22 @@ def commit_staged_parquet(
 ) -> bool:
     """Deduplicates and merges temporary Parquet data into the target table under DSCP (§3.3).
 
+    The critical section (identity check, merge, atomic replace) runs under an
+    exclusive ``.dscp_commit.lock`` advisory lock on the staging directory so
+    concurrent committers cannot interleave.
+
     Returns True if a new row was merged, or False if an exact duplicate no-op occurred.
     """
+    with file_lock(target_path.parent / DSCP_COMMIT_LOCK_NAME):
+        return _commit_staged_parquet_locked(target_path, tmp_path, identity)
+
+
+def _commit_staged_parquet_locked(
+    target_path: Path,
+    tmp_path: Path,
+    identity: CommitIdentity,
+) -> bool:
+    """Lock-free DSCP merge core; callers MUST hold the staging directory commit lock."""
     import duckdb
 
     target_sql = _validated_sql_path(target_path)
@@ -289,7 +307,6 @@ def run_schema_migrations(state_db_conn: sqlite3.Connection, discovery_root: Pat
             {
                 "schema_version": "0.5.2",
                 "sqlite_user_version": 3,
-                "migrated_at": time.time(),
             },
             f,
             indent=2,
@@ -299,8 +316,17 @@ def run_schema_migrations(state_db_conn: sqlite3.Connection, discovery_root: Pat
 def recover_pending_dscp_transactions(
     state_db_conn: sqlite3.Connection,
     discovery_root: Path,
-) -> Dict[str, int]:
-    """Execute deterministic DSCP recovery pass (INGEST-ADAPTERS.md §3.3)."""
+) -> Dict[str, Any]:
+    """Execute deterministic DSCP recovery pass (INGEST-ADAPTERS.md §3.3).
+
+    Failures are isolated per transaction: a row that cannot be recovered is
+    marked FAILED, recorded in the ``failed_transactions`` list of the result,
+    and recovery continues with the remaining rows.
+
+    Returns:
+        Dict with ``committed`` / ``failed`` / ``total_pending`` counts and a
+        ``failed_transactions`` list of ``{staging_tx_id, error}`` records.
+    """
     import duckdb
 
     target_map = {
@@ -318,62 +344,76 @@ def recover_pending_dscp_transactions(
     """)
     pending_rows = cursor.fetchall()
 
-    counts = {"committed": 0, "failed": 0, "total_pending": len(pending_rows)}
+    counts: Dict[str, Any] = {
+        "committed": 0,
+        "failed": 0,
+        "total_pending": len(pending_rows),
+        "failed_transactions": [],
+    }
 
     for tx_id, tmp_path_str, target_table, input_sha256, proposal_id in pending_rows:
-        target_path = target_map.get(target_table)
-        if target_path is None:
-            raise DSCPIntegrityError(
-                f"Unknown target_table '{target_table}' in commit_transactions "
-                f"(staging_tx_id={tx_id}). [E114]"
+        try:
+            target_path = target_map.get(target_table)
+            if target_path is None:
+                raise DSCPIntegrityError(
+                    f"Unknown target_table '{target_table}' in commit_transactions "
+                    f"(staging_tx_id={tx_id}). [E114]"
+                )
+
+            tmp_path = Path(tmp_path_str)
+            identity = CommitIdentity(
+                proposal_id=proposal_id,
+                input_sha256=input_sha256,
+                target_table=target_table,
             )
 
-        tmp_path = Path(tmp_path_str)
-        identity = CommitIdentity(
-            proposal_id=proposal_id,
-            input_sha256=input_sha256,
-            target_table=target_table,
-        )
+            already_committed = False
+            if target_path.exists():
+                target_sql = _validated_sql_path(target_path)
+                res = duckdb.sql(
+                    f"""
+                    SELECT COUNT(*) FROM parquet_scan('{target_sql}')
+                    WHERE proposal_id = ? AND input_sha256 = ?
+                    """,
+                    params=[identity.proposal_id, identity.input_sha256],
+                ).fetchone()
+                if res and res[0] > 0:
+                    already_committed = True
 
-        already_committed = False
-        if target_path.exists():
-            target_sql = _validated_sql_path(target_path)
-            res = duckdb.sql(
-                f"""
-                SELECT COUNT(*) FROM parquet_scan('{target_sql}')
-                WHERE proposal_id = ? AND input_sha256 = ?
-                """,
-                params=[identity.proposal_id, identity.input_sha256],
-            ).fetchone()
-            if res and res[0] > 0:
-                already_committed = True
-
-        if already_committed:
-            # CP-4 / CP-5 Recovery
-            _safe_delete(tmp_path)
-            state_db_conn.execute(
-                "UPDATE commit_transactions SET status='COMMITTED', "
-                "updated_at=CURRENT_TIMESTAMP WHERE staging_tx_id=?",
-                (tx_id,),
-            )
-            counts["committed"] += 1
-        elif tmp_path.exists():
-            # CP-2 / CP-3 Recovery
-            commit_staged_parquet(target_path, tmp_path, identity)
-            state_db_conn.execute(
-                "UPDATE commit_transactions SET status='COMMITTED', "
-                "updated_at=CURRENT_TIMESTAMP WHERE staging_tx_id=?",
-                (tx_id,),
-            )
-            counts["committed"] += 1
-        else:
-            # CP-1 Recovery
+            if already_committed:
+                # CP-4 / CP-5 Recovery
+                _safe_delete(tmp_path)
+                state_db_conn.execute(
+                    "UPDATE commit_transactions SET status='COMMITTED', "
+                    "updated_at=CURRENT_TIMESTAMP WHERE staging_tx_id=?",
+                    (tx_id,),
+                )
+                counts["committed"] += 1
+            elif tmp_path.exists():
+                # CP-2 / CP-3 Recovery
+                commit_staged_parquet(target_path, tmp_path, identity)
+                state_db_conn.execute(
+                    "UPDATE commit_transactions SET status='COMMITTED', "
+                    "updated_at=CURRENT_TIMESTAMP WHERE staging_tx_id=?",
+                    (tx_id,),
+                )
+                counts["committed"] += 1
+            else:
+                # CP-1 Recovery
+                state_db_conn.execute(
+                    "UPDATE commit_transactions SET status='FAILED', "
+                    "updated_at=CURRENT_TIMESTAMP WHERE staging_tx_id=?",
+                    (tx_id,),
+                )
+                counts["failed"] += 1
+        except Exception as e:
             state_db_conn.execute(
                 "UPDATE commit_transactions SET status='FAILED', "
                 "updated_at=CURRENT_TIMESTAMP WHERE staging_tx_id=?",
                 (tx_id,),
             )
             counts["failed"] += 1
+            counts["failed_transactions"].append({"staging_tx_id": tx_id, "error": str(e)})
 
     state_db_conn.commit()
     return counts
@@ -410,10 +450,10 @@ class ParquetStagingBackend(StagingBackend):
 
     def run_migrations(self) -> None:
         """Execute dual-engine migrations."""
-        with self._get_state_conn() as conn:
+        with contextlib.closing(self._get_state_conn()) as conn, conn:
             run_schema_migrations(conn, self.discovery_root)
 
-    def recover_transactions(self) -> Dict[str, int]:
+    def recover_transactions(self) -> Dict[str, Any]:
         """Sweep orphan tmp files and recover pending DSCP transactions."""
         # 1. Startup orphan sweep (§9.2): unlink dangling .tmp_commit_* and .tmp_proposals_*
         now_ts = time.time()
@@ -432,7 +472,7 @@ class ParquetStagingBackend(StagingBackend):
                     pass
 
         # 2. Recover pending transactions
-        with self._get_state_conn() as conn:
+        with contextlib.closing(self._get_state_conn()) as conn, conn:
             return recover_pending_dscp_transactions(conn, self.discovery_root)
 
     def commit_proposal(
@@ -486,7 +526,7 @@ class ParquetStagingBackend(StagingBackend):
         )
 
         # Register transaction in SQLite
-        with self._get_state_conn() as conn:
+        with contextlib.closing(self._get_state_conn()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO commit_transactions (
@@ -504,17 +544,19 @@ class ParquetStagingBackend(StagingBackend):
                     now_iso,
                 ),
             )
-            conn.commit()
 
-        # Execute DSCP merge
+        # Execute DSCP merge and state update as one critical section under the
+        # staging directory commit lock (identity check -> merge -> replace ->
+        # state-DB stamp must not interleave with concurrent committers).
         try:
-            merged = commit_staged_parquet(target_path, tmp_parquet, identity)
-            with self._get_state_conn() as conn:
-                conn.execute(
-                    "UPDATE commit_transactions SET status='COMMITTED', updated_at=? WHERE staging_tx_id=?",
-                    (current_iso_timestamp(), tx_id),
-                )
-                conn.commit()
+            with file_lock(self.discovery_root / DSCP_COMMIT_LOCK_NAME):
+                merged = _commit_staged_parquet_locked(target_path, tmp_parquet, identity)
+                with contextlib.closing(self._get_state_conn()) as conn, conn:
+                    conn.execute(
+                        "UPDATE commit_transactions SET status='COMMITTED', "
+                        "updated_at=? WHERE staging_tx_id=?",
+                        (current_iso_timestamp(), tx_id),
+                    )
             return CommitResult(
                 proposal_id=record.proposal_id,
                 input_sha256=record.input_sha256,
@@ -522,12 +564,12 @@ class ParquetStagingBackend(StagingBackend):
                 is_noop=not merged,
             )
         except Exception:
-            with self._get_state_conn() as conn:
+            with contextlib.closing(self._get_state_conn()) as conn, conn:
                 conn.execute(
-                    "UPDATE commit_transactions SET status='FAILED', updated_at=? WHERE staging_tx_id=?",
+                    "UPDATE commit_transactions SET status='FAILED', "
+                    "updated_at=? WHERE staging_tx_id=?",
                     (current_iso_timestamp(), tx_id),
                 )
-                conn.commit()
             raise
 
     def get_proposal(

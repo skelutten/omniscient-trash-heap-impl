@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Tuple
 
 import yaml
 
+from trashheap.constants import DEFAULT_SCHEMA_VERSION
 from trashheap.models import KnowledgeObject
 
 
@@ -140,7 +141,7 @@ def import_bundle(
             fm_dict: Dict[str, Any] = {
                 "id": node_id,
                 "title": raw_fm.get("title") or node_id,
-                "schema_version": th_ext.get("schema_version", "3.8.10"),
+                "schema_version": th_ext.get("schema_version", DEFAULT_SCHEMA_VERSION),
                 "scope": target_scope,
                 "taxonomy_path": taxonomy_path,
                 "taxonomy_id": taxonomy_id,
@@ -197,7 +198,7 @@ def import_bundle(
             fm_dict = {
                 "id": node_id,
                 "title": raw_fm.get("title") or node_id,
-                "schema_version": "3.8.10",
+                "schema_version": DEFAULT_SCHEMA_VERSION,
                 "scope": target_scope,
                 "taxonomy_path": "01. Domain & Architecture",
                 "taxonomy_id": "TX-GEN-01",

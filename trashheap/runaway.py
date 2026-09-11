@@ -1,17 +1,27 @@
 """Runaway-loop circuit breaker (VAL-014, E052).
 
-Agent execution harnesses MUST maintain an in-memory sliding ring of recent
+Agent execution harnesses MUST maintain an in-memory sliding hash ring of recent
 tool-call signatures (tool name + canonicalised arguments). If identical
-signatures repeat ``>= 5`` times without state mutation, OR if repeated
-identical failures consume ``>= 40%`` of the allocated token/turn budget, the
-harness MUST trip the breaker, abort execution, and emit ``E052:
+signatures repeat ``>= 5`` times within the ring without state mutation, OR if
+repeated identical failures consume ``>= 40%`` of the allocated token/turn
+budget, the harness MUST trip the breaker, abort execution, and emit ``E052:
 RunawayLoopError`` rather than burn compute in a degenerate loop.
+
+The ring-window count (not merely a consecutive streak) is the trip criterion,
+so alternating degenerate patterns (A-B-A-B-...) are also detected, exactly as
+VAL-014 requires. Once tripped, the guard stays tripped until the caller
+observes a state mutation (``mutated=True``) — circuit-breaker semantics.
 """
 
 from __future__ import annotations
 
+import re
 from collections import deque
 from typing import Any, Optional
+
+_DEFAULT_WINDOW_SIZE = 20
+
+_ADDRESS_RE = re.compile(r"0x[0-9a-fA-F]+")
 
 
 class RunawayLoopError(RuntimeError):
@@ -25,13 +35,14 @@ def _canon(value: Any) -> Any:
     if value is None or isinstance(value, (str, int, float, bool, bytes)):
         return value
     if isinstance(value, dict):
-        return tuple(sorted((str(k), _canon(v)) for k, v in value.items()))
+        return tuple(sorted(((str(k), _canon(v)) for k, v in value.items()), key=str))
     if isinstance(value, (list, tuple)):
         return tuple(_canon(v) for v in value)
     if isinstance(value, (set, frozenset)):
-        return tuple(sorted(_canon(v) for v in value))
-    # Fallback: canonicalise by stable repr.
-    return repr(value)
+        return tuple(sorted((_canon(v) for v in value), key=str))
+    # Fallback: stable repr with memory addresses neutralised, so logically
+    # identical objects with default reprs produce identical signatures.
+    return _ADDRESS_RE.sub("0x?", repr(value))
 
 
 def signature(tool_name: str, args: Any = None) -> tuple:
@@ -40,15 +51,21 @@ def signature(tool_name: str, args: Any = None) -> tuple:
 
 
 class RunawayLoopGuard:
-    """Sliding-ring guard that trips on degenerate repetition."""
+    """Sliding-ring guard that trips on degenerate repetition (VAL-014)."""
 
-    def __init__(self, max_identical_signatures: int = 5, budget_fraction: float = 0.40):
+    def __init__(
+        self,
+        max_identical_signatures: int = 5,
+        budget_fraction: float = 0.40,
+        window_size: Optional[int] = None,
+    ):
         self.max_identical_signatures = max_identical_signatures
         self.budget_fraction = budget_fraction
-        self._ring: deque = deque(maxlen=max_identical_signatures)
-        self._last_signature: Optional[tuple] = None
-        self._streak: int = 0
+        self.window_size = window_size or max(_DEFAULT_WINDOW_SIZE, max_identical_signatures * 2)
+        self._ring: deque = deque(maxlen=self.window_size)
         self._fail_tokens: int = 0
+        self._last_fail_sig: Optional[tuple] = None
+        self._last_budget: Optional[int] = None
 
     @property
     def recent(self) -> list:
@@ -66,42 +83,46 @@ class RunawayLoopGuard:
     ) -> None:
         """Record one tool call and trip if the breaker threshold is crossed.
 
-        Raises ``RunawayLoopError`` (E052) when an identical signature repeats
-        ``max_identical_signatures`` times without mutation, or when a run of
-        identical failures consumes ``budget_fraction`` of ``budget``.
+        Raises ``RunawayLoopError`` (E052) when the identical signature occurs
+        ``max_identical_signatures`` times within the sliding ring without an
+        intervening state mutation, or when a run of identical failures consumes
+        ``budget_fraction`` of ``budget`` (the most recently supplied budget is
+        remembered across calls).
         """
         sig = signature(tool_name, args)
         self._ring.append(sig)
 
-        # A state mutation breaks the repetition streak.
+        # A state mutation breaks the repetition window.
         if mutated:
-            self._last_signature = sig
-            self._streak = 0
+            self._ring.clear()
             self._fail_tokens = 0
+            self._last_fail_sig = None
             return
 
-        if sig == self._last_signature:
-            self._streak += 1
-        else:
-            self._streak = 1
-            self._fail_tokens = 0
-        self._last_signature = sig
+        if budget is not None:
+            self._last_budget = budget
+        effective_budget = budget if budget is not None else self._last_budget
 
         if failed:
+            if sig != self._last_fail_sig:
+                self._fail_tokens = 0
+            self._last_fail_sig = sig
             self._fail_tokens += tokens_spent
             if (
-                budget is not None
-                and budget > 0
-                and self._fail_tokens >= self.budget_fraction * budget
+                effective_budget is not None
+                and effective_budget > 0
+                and self._fail_tokens >= self.budget_fraction * effective_budget
             ):
                 raise RunawayLoopError(
                     "E052: repeated identical tool-call failures consumed "
                     f"{self._fail_tokens} tokens, exceeding {self.budget_fraction:.0%} "
-                    f"of the {budget}-token budget (The 40% Rule / VAL-014)"
+                    f"of the {effective_budget}-token budget (The 40% Rule / VAL-014)"
                 )
 
-        if self._streak >= self.max_identical_signatures:
+        occurrences = sum(1 for s in self._ring if s == sig)
+        if occurrences >= self.max_identical_signatures:
             raise RunawayLoopError(
-                f"E052: identical tool-call signature repeated {self._streak} times "
-                f"without state mutation (VAL-014)"
+                f"E052: identical tool-call signature repeated {occurrences} times "
+                f"within the sliding ring of {len(self._ring)} recent calls "
+                "without state mutation (VAL-014)"
             )

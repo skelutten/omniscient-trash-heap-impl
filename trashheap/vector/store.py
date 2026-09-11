@@ -169,6 +169,14 @@ class VectorIndex:
             return []
 
         q_vec = embedder.embed_query(query)
+        # Defensive validation (identical contract to score_query)
+        if len(q_vec) != embedder.dimension:
+            raise ValueError(
+                f"Query vector dimension mismatch: {len(q_vec)} != {embedder.dimension}"
+            )
+        if not is_unit_norm(q_vec):
+            raise ValueError("Query vector is not unit-normalized")
+
         hits: List[VectorHit] = []
         target_ids = (
             set(self.chunk_records.keys())
@@ -241,21 +249,44 @@ class VectorIndex:
         }
 
     def from_dict(self, data: Dict[str, Any]) -> None:
-        """Hydrate index from serialized dictionary."""
-        self.fingerprint = data.get("fingerprint", "")
-        self.corpus_hash = data.get("corpus_hash", "")
+        """Hydrate index from serialized dictionary with fail-closed validation (D80).
+
+        Mirrors the defensive checks in :meth:`build`: every restored vector
+        must match the serialized dimension and be unit-normalized within
+        tolerance. Raises ValueError on any violation before mutating state, so
+        a corrupt index is never partially hydrated.
+        """
+        fingerprint = data.get("fingerprint", "")
+        corpus_hash = data.get("corpus_hash", "")
         m_name = data.get("model_name", "")
         dim = data.get("dimension", 0)
         is_double = data.get("is_double", False)
+
+        restored_records: Dict[str, List[Tuple[int, List[float], str]]] = {}
+        for node_id, chunks in data.get("records", {}).items():
+            restored_chunks: List[Tuple[int, List[float], str]] = []
+            for c in chunks:
+                vec = c["vector"]
+                if len(vec) != dim:
+                    raise ValueError(
+                        f"Vector dimension mismatch for node '{node_id}' chunk "
+                        f"{c['chunk_index']}: {len(vec)} != {dim}"
+                    )
+                if not is_unit_norm(vec):
+                    raise ValueError(
+                        f"Vector for node '{node_id}' chunk {c['chunk_index']} "
+                        f"is not unit-normalized (||v|| != 1.0)"
+                    )
+                restored_chunks.append((c["chunk_index"], vec, c["text"]))
+            restored_records[node_id] = restored_chunks
+
+        self.fingerprint = fingerprint
+        self.corpus_hash = corpus_hash
         self.embedder_identity = EmbeddingIdentity(
             model_name=m_name,
             dimension=dim,
             is_double=is_double,
             provider="restored",
-            fingerprint=self.fingerprint,
+            fingerprint=fingerprint,
         )
-        self.chunk_records.clear()
-        for node_id, chunks in data.get("records", {}).items():
-            self.chunk_records[node_id] = [
-                (c["chunk_index"], c["vector"], c["text"]) for c in chunks
-            ]
+        self.chunk_records = restored_records
